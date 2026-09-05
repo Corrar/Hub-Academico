@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+<template id="__bundler_thumbnail" data-bg-color="#2E4756">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#2E4756"/>
+    <text x="600" y="400" font-family="Plus Jakarta Sans, sans-serif" font-size="150" font-weight="800" fill="#ffffff" text-anchor="middle">Fatec</text>
+    <text x="600" y="500" font-family="Plus Jakarta Sans, sans-serif" font-size="70" font-weight="800" fill="#E11D2A" text-anchor="middle">Adamantina</text>
+  </svg>
+</template>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  .fx-scroll::-webkit-scrollbar { width: 0; height: 0; }
+  a { color: #E11D2A; text-decoration: none; }
+  a:hover { color: #C8102E; }
+  @keyframes fx-pop { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fx-fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fx-slide-up { from { opacity: 0; transform: translateY(34px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fx-spin { to { transform: rotate(360deg); } }
+  @keyframes fx-confetti { 0% { transform: translateY(-10px) rotate(0deg); opacity: 1; } 100% { transform: translateY(720px) rotate(720deg); opacity: 0; } }
+  @keyframes fx-badge-in { 0% { transform: scale(.3); opacity: 0; } 55% { transform: scale(1.12); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+  @keyframes fx-ring { 0% { transform: scale(.5); opacity: .55; } 100% { transform: scale(2.4); opacity: 0; } }
+  @keyframes fx-logo { 0% { opacity: 0; transform: scale(.9); } 100% { opacity: 1; transform: scale(1); } }
+</style>
+<script src="./image-slot.js"></script>
+</helmet>
+
+<div style="min-height:100dvh;width:100%;background:#F4F5F7;display:flex;align-items:stretch;justify-content:center;font-family:'Plus Jakarta Sans',system-ui,sans-serif;">
+
+  <div style="width:100%;max-width:460px;min-height:100dvh;background:#F4F5F7;position:relative;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 0 60px -20px rgba(20,24,27,.25);">
+
+    <!-- ===== SCREENS ===== -->
+    <div class="fx-scroll" style="flex:1;overflow-y:auto;overflow-x:hidden;">
+
+      <!-- SPLASH -->
+      <sc-if value="{{ isSplash }}" hint-placeholder-val="{{ true }}">
+      <div style="min-height:844px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;animation:fx-fade .4s ease;">
+        <div style="text-align:center;animation:fx-logo .6s ease;">
+          <div style="font-size:52px;font-weight:800;letter-spacing:-2px;color:#2E4756;line-height:.9;">Fatec</div>
+          <div style="font-size:20px;font-weight:800;color:#C8102E;letter-spacing:-.5px;">Adamantina</div>
+        </div>
+        <div style="position:absolute;bottom:110px;left:0;right:0;display:flex;justify-content:center;">
+          <div style="width:34px;height:34px;border-radius:50%;border:3px solid #f0e0e1;border-top-color:#E11D2A;animation:fx-spin .8s linear infinite;"></div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ONBOARDING 1 -->
+      <sc-if value="{{ isOnb1 }}" hint-placeholder-val="{{ true }}">
+      <div style="min-height:844px;background:#E11D2A;display:flex;flex-direction:column;animation:fx-slide-up .85s cubic-bezier(.16,1,.3,1);">
+        <div style="position:relative;flex:1;background:#fff;border-radius:0 0 40px 40px;padding:60px 28px 0;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;">
+            <div style="line-height:.9;"><div style="font-size:26px;font-weight:800;letter-spacing:-1px;color:#2E4756;">Fatec</div><div style="font-size:11px;font-weight:800;color:#C8102E;">Adamantina</div></div>
+            <button onClick="{{ goLogin }}" style="border:none;background:none;cursor:pointer;font-family:inherit;font-size:16px;font-weight:600;color:#14181B;">Skip</button>
+          </div>
+          <div style="position:absolute;left:28px;right:28px;top:110px;bottom:47%;display:flex;align-items:center;">
+            <h1 style="font-size:38px;font-weight:800;color:#14181B;text-align:center;letter-spacing:-1.2px;line-height:1.08;margin:0;width:100%;">Centralize suas atividades</h1>
+          </div>
+          <image-slot id="onb1-illus" src="./assets/onb1.png" fit="contain" shape="rect" placeholder="Ilustração — lupa/estudante" style="position:absolute;left:0;right:0;bottom:0;height:47%;"></image-slot>
+        </div>
+        <div style="padding:20px 28px 34px;">
+          <div style="display:flex;justify-content:center;gap:7px;margin-bottom:22px;">
+            <span style="width:22px;height:7px;border-radius:8px;background:#fff;"></span>
+            <span style="width:7px;height:7px;border-radius:8px;background:rgba(255,255,255,.5);"></span>
+            <span style="width:7px;height:7px;border-radius:8px;background:rgba(255,255,255,.5);"></span>
+          </div>
+          <button onClick="{{ goOnb2 }}" style="width:100%;height:62px;border:none;border-radius:20px;background:#14181B;color:#fff;font-family:inherit;font-size:17px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;">Avançar <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ONBOARDING 2 -->
+      <sc-if value="{{ isOnb2 }}" hint-placeholder-val="{{ true }}">
+      <div style="min-height:844px;background:#2E4756;display:flex;flex-direction:column;animation:fx-slide-up .85s cubic-bezier(.16,1,.3,1);">
+        <div style="position:relative;flex:1;background:#fff;border-radius:0 0 40px 40px;padding:60px 28px 0;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;">
+            <div style="line-height:.9;"><div style="font-size:26px;font-weight:800;letter-spacing:-1px;color:#2E4756;">Fatec</div><div style="font-size:11px;font-weight:800;color:#C8102E;">Adamantina</div></div>
+            <button onClick="{{ goLogin }}" style="border:none;background:none;cursor:pointer;font-family:inherit;font-size:16px;font-weight:600;color:#2E4756;">Skip</button>
+          </div>
+          <div style="position:absolute;left:28px;right:28px;top:110px;bottom:50%;display:flex;align-items:center;">
+            <h1 style="font-size:36px;font-weight:800;color:#14181B;text-align:center;letter-spacing:-1.2px;line-height:1.08;margin:0;width:100%;">Tenha controle total sobre seu ambiente</h1>
+          </div>
+          <image-slot id="onb2-illus" src="./assets/onb2.png" fit="contain" shape="rect" placeholder="Ilustração — celular/notificações" style="position:absolute;left:0;right:0;bottom:0;height:50%;"></image-slot>
+        </div>
+        <div style="padding:20px 28px 34px;">
+          <div style="display:flex;justify-content:center;gap:7px;margin-bottom:22px;">
+            <span style="width:7px;height:7px;border-radius:8px;background:rgba(255,255,255,.5);"></span>
+            <span style="width:22px;height:7px;border-radius:8px;background:#fff;"></span>
+            <span style="width:7px;height:7px;border-radius:8px;background:rgba(255,255,255,.5);"></span>
+          </div>
+          <button onClick="{{ goOnb3 }}" style="width:100%;height:62px;border:none;border-radius:20px;background:#14181B;color:#fff;font-family:inherit;font-size:17px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;">Avançar <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ONBOARDING 3 -->
+      <sc-if value="{{ isOnb3 }}" hint-placeholder-val="{{ true }}">
+      <div style="min-height:844px;background:#E11D2A;display:flex;flex-direction:column;animation:fx-slide-up .85s cubic-bezier(.16,1,.3,1);">
+        <div style="position:relative;flex:1;background:#fff;border-radius:0 0 40px 40px;padding:60px 28px 0;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;">
+            <div style="line-height:.9;"><div style="font-size:26px;font-weight:800;letter-spacing:-1px;color:#2E4756;">Fatec</div><div style="font-size:11px;font-weight:800;color:#C8102E;">Adamantina</div></div>
+            <button onClick="{{ goLogin }}" style="border:none;background:none;cursor:pointer;font-family:inherit;font-size:16px;font-weight:600;color:#14181B;">Skip</button>
+          </div>
+          <div style="position:absolute;left:28px;right:28px;top:110px;bottom:56%;display:flex;align-items:center;">
+            <h1 style="font-size:35px;font-weight:800;color:#14181B;text-align:center;letter-spacing:-1.2px;line-height:1.08;margin:0;width:100%;">Fique por dentro das novidades da comunidade</h1>
+          </div>
+          <image-slot id="onb3-illus" src="./assets/onb3.png" fit="contain" shape="rect" placeholder="Ilustração — quadro/comunidade" style="position:absolute;left:0;right:0;bottom:0;height:56%;"></image-slot>
+        </div>
+        <div style="padding:20px 28px 34px;">
+          <div style="display:flex;justify-content:center;gap:7px;margin-bottom:22px;">
+            <span style="width:7px;height:7px;border-radius:8px;background:rgba(255,255,255,.5);"></span>
+            <span style="width:7px;height:7px;border-radius:8px;background:rgba(255,255,255,.5);"></span>
+            <span style="width:22px;height:7px;border-radius:8px;background:#fff;"></span>
+          </div>
+          <button onClick="{{ goLogin }}" style="width:100%;height:62px;border:none;border-radius:20px;background:#14181B;color:#fff;font-family:inherit;font-size:17px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;">Começar <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- LOGIN -->
+      <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+      <div style="min-height:844px;display:flex;flex-direction:column;background:linear-gradient(180deg,#2E4756 0%,#2E4756 34%,#eef1f4 34%,#eef1f4 100%);">
+        <div style="padding:72px 32px 40px;text-align:center;">
+          <div style="font-size:52px;font-weight:800;letter-spacing:-2px;color:#fff;line-height:.9;">Fatec</div>
+          <div style="font-size:20px;font-weight:800;color:#E11D2A;letter-spacing:-.5px;">Adamantina</div>
+        </div>
+        <div style="flex:1;background:#fff;border-radius:32px 32px 0 0;padding:34px 32px 40px;box-shadow:0 -18px 40px -24px rgba(20,24,27,.4);display:flex;flex-direction:column;">
+        <div style="margin-bottom:24px;">
+          <h1 style="font-size:26px;font-weight:800;color:#14181B;margin:0 0 6px;letter-spacing:-.6px;">Bem-vindo de volta</h1>
+          <p style="font-size:14px;color:#6B7580;margin:0;">Entre com seu e-mail institucional</p>
+        </div>
+        <label style="font-size:12px;font-weight:700;color:#2E4756;">E-mail ou prontuário</label>
+        <div style="display:flex;align-items:center;gap:10px;margin:8px 0 18px;padding:0 16px;height:56px;background:#F4F5F7;border-radius:16px;border:1.5px solid #cdd3da;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E4756" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg>
+          <input type="email" placeholder="aluno@fatec.sp.gov.br" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:inherit;font-size:15px;color:#14181B;">
+        </div>
+        <label style="font-size:12px;font-weight:700;color:#2E4756;">Senha</label>
+        <div style="display:flex;align-items:center;gap:10px;margin:8px 0 10px;padding:0 16px;height:56px;background:#F4F5F7;border-radius:16px;border:1.5px solid #cdd3da;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E4756" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          <input type="password" placeholder="••••••••" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:inherit;font-size:15px;letter-spacing:2px;color:#14181B;">
+          <svg style="margin-left:auto" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9aa2ab" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <div style="text-align:right;margin-bottom:24px;"><a href="#" style="font-size:13px;font-weight:600;color:#C8102E;">Esqueci minha senha</a></div>
+        <button onClick="{{ goHome }}" style="height:60px;border:none;border-radius:18px;background:linear-gradient(135deg,#E11D2A,#C8102E);color:#fff;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 16px 30px -14px rgba(200,16,46,.6);">
+          Entrar <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+        <div style="display:flex;align-items:center;gap:14px;margin:22px 0;">
+          <div style="flex:1;height:1px;background:#eceef1;"></div>
+          <span style="font-size:12px;font-weight:600;color:#9aa2ab;">ou continue com</span>
+          <div style="flex:1;height:1px;background:#eceef1;"></div>
+        </div>
+        <button onClick="{{ goHome }}" style="height:58px;border:1.5px solid #e3e6ea;border-radius:18px;background:#fff;color:#14181B;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:12px;">
+          <svg width="20" height="20" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/><rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/></svg>
+          Entrar com a Microsoft
+        </button>
+        <div style="flex:1;"></div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:22px;margin-top:40px;">
+          <img src="./assets/logo-sp-t.png" alt="São Paulo — Governo do Estado" style="height:18px;width:auto;object-fit:contain;">
+          <div style="width:1px;height:20px;background:#e2e5e9;"></div>
+          <img src="./assets/logo-cps-t.png" alt="Centro Paula Souza" style="height:26px;width:auto;object-fit:contain;">
+        </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- HOME -->
+      <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:64px 20px 120px;animation:fx-pop .35s ease;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;">
+          <div>
+            <img src="./assets/logo-fatec.png" alt="Fatec Adamantina" style="height:38px;width:auto;object-fit:contain;display:block;margin-bottom:30px;">
+            <div style="font-size:16px;font-weight:800;color:#14181B;letter-spacing:-.4px;">Lucas Silveira</div>
+            <div style="font-size:12px;color:#aab1b9;font-weight:500;">lucas.silveira@fatec.sp.gov.br</div>
+          </div>
+          <button onClick="{{ goLembretes }}" style="position:relative;width:46px;height:46px;border-radius:15px;border:1.5px solid #eceef1;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2E4756" stroke-width="1.8"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+            <span style="position:absolute;top:8px;right:9px;width:9px;height:9px;border-radius:50%;background:#E11D2A;border:2px solid #fff;"></span>
+          </button>
+        </div>
+
+        <!-- hero next deadline -->
+        <div onClick="{{ goDetalhe }}" style="border-radius:24px;background:linear-gradient(135deg,#E11D2A 0%,#C8102E 100%);padding:22px;color:#fff;position:relative;overflow:hidden;cursor:pointer;box-shadow:0 20px 40px -18px rgba(200,16,46,.7);margin-bottom:18px;">
+          <div style="position:absolute;right:-30px;top:-30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.12);"></div>
+          <div style="position:absolute;right:34px;bottom:-40px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.1);"></div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;opacity:.9;margin-bottom:14px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            PRÓXIMO PRAZO · ENTREGA AMANHÃ
+          </div>
+          <div style="font-size:22px;font-weight:800;letter-spacing:-.5px;line-height:1.15;margin-bottom:6px;">Plano de Marketing<br>Digital</div>
+          <div style="font-size:13px;opacity:.92;">Gestão Comercial · Prof. Renata Alves</div>
+        </div>
+
+        <!-- barra de pesquisa -->
+        <div style="display:flex;align-items:center;gap:10px;background:#fff;border-radius:18px;padding:0 16px;height:54px;margin-bottom:16px;border:1.5px solid #e7eaee;box-shadow:0 8px 22px -16px rgba(20,24,27,.4);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9aa2ab" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+          <input type="text" placeholder="Buscar eventos, aulas, materiais..." style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:inherit;font-size:14px;color:#14181B;">
+          <div style="width:1px;height:22px;background:#e7eaee;"></div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E4756" stroke-width="2"><path d="M4 6h11M18 6h2M4 12h2M9 12h11M4 18h7M15 18h5"/><circle cx="16" cy="6" r="2" fill="#fff"/><circle cx="7" cy="12" r="2" fill="#fff"/><circle cx="13" cy="18" r="2" fill="#fff"/></svg>
+        </div>
+
+        <!-- filtros -->
+        <div class="fx-scroll" style="display:flex;gap:9px;overflow-x:auto;margin:0 -20px 22px;padding:0 20px 2px;">
+          <sc-for list="{{ homeChips }}" as="c" hint-placeholder-count="4">
+            <button onClick="{{ c.open }}" style="flex:none;display:flex;align-items:center;gap:7px;border:1.5px solid {{ c.bd }};cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;padding:9px 15px;border-radius:14px;background:{{ c.bg }};color:{{ c.fg }};">
+              <span style="display:flex;">{{ c.icon }}</span>{{ c.label }}
+            </button>
+          </sc-for>
+        </div>
+
+        <!-- quick stats -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:16px 0 24px;">
+          <div style="background:#fff;border-radius:18px;padding:14px;text-align:center;">
+            <div style="font-size:24px;font-weight:800;color:#E11D2A;">3</div>
+            <div style="font-size:11px;color:#6B7580;font-weight:600;">Pendentes</div>
+          </div>
+          <div style="background:#fff;border-radius:18px;padding:14px;text-align:center;">
+            <div style="font-size:24px;font-weight:800;color:#2E4756;">2</div>
+            <div style="font-size:11px;color:#6B7580;font-weight:600;">Aulas hoje</div>
+          </div>
+          <div style="background:#fff;border-radius:18px;padding:14px;text-align:center;">
+            <div style="font-size:24px;font-weight:800;color:#f0a500;">5</div>
+            <div style="font-size:11px;color:#6B7580;font-weight:600;">Materiais</div>
+          </div>
+        </div>
+
+        <!-- aulas de hoje -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <h2 style="font-size:16px;font-weight:800;color:#14181B;margin:0;letter-spacing:-.3px;">Aulas de hoje</h2>
+          <a onClick="{{ goCronograma }}" style="font-size:13px;font-weight:700;cursor:pointer;">Ver tudo</a>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px;">
+          <sc-for list="{{ aulasHoje }}" as="a" hint-placeholder-count="2">
+            <div style="display:flex;gap:14px;align-items:center;background:#fff;border-radius:18px;padding:14px;">
+              <div style="text-align:center;min-width:52px;">
+                <div style="font-size:15px;font-weight:800;color:#14181B;">{{ a.hora }}</div>
+                <div style="font-size:10px;color:#6B7580;font-weight:600;">{{ a.fim }}</div>
+              </div>
+              <div style="width:4px;height:38px;border-radius:4px;background:{{ a.cor }};"></div>
+              <div style="flex:1;">
+                <div style="font-size:14px;font-weight:700;color:#14181B;">{{ a.disciplina }}</div>
+                <div style="font-size:12px;color:#6B7580;">{{ a.sala }} · {{ a.prof }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- eventos -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <h2 style="font-size:16px;font-weight:800;color:#14181B;margin:0;letter-spacing:-.3px;">Eventos da faculdade</h2>
+          <a onClick="{{ goEventos }}" style="font-size:13px;font-weight:700;cursor:pointer;">Ver tudo</a>
+        </div>
+        <div id="ev-carousel" class="fx-scroll" style="display:flex;gap:14px;overflow-x:auto;scroll-behavior:smooth;margin:0 -20px;padding:8px 20px 26px;">
+          <sc-for list="{{ eventos }}" as="e" hint-placeholder-count="2">
+            <div onClick="{{ e.open }}" style="flex:none;width:300px;border-radius:22px;overflow:hidden;cursor:pointer;position:relative;background:{{ e.grad }};box-shadow:0 22px 30px -14px rgba(20,24,27,.45),0 6px 14px -6px rgba(20,24,27,.3);">
+              <div style="position:absolute;right:0;top:0;bottom:0;width:46%;opacity:.9;">
+                <image-slot id="{{ e.slot }}" src="{{ e.img }}" fit="cover" shape="rect" placeholder="Imagem" style="position:absolute;inset:0;"></image-slot>
+                <div style="position:absolute;inset:0;background:linear-gradient(90deg,{{ e.gradEdge }} 0%,rgba(0,0,0,0) 55%);"></div>
+              </div>
+              <div style="position:relative;padding:18px 16px 18px;width:64%;">
+                <span style="display:inline-block;background:rgba(255,255,255,.22);border-radius:8px;padding:4px 9px;font-size:10px;font-weight:800;color:#fff;margin-bottom:10px;">{{ e.data }}</span>
+                <div style="font-size:18px;font-weight:800;color:#fff;line-height:1.15;letter-spacing:-.3px;">{{ e.titulo }}</div>
+                <div style="font-size:12px;color:rgba(255,255,255,.82);margin:6px 0 14px;line-height:1.4;">{{ e.desc }}</div>
+                <span style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#14181B;font-size:12px;font-weight:800;padding:9px 14px;border-radius:12px;">Saiba mais <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#14181B" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- CRONOGRAMA -->
+      <sc-if value="{{ isCronograma }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:64px 20px 120px;animation:fx-pop .35s ease;">
+        <h1 style="font-size:26px;font-weight:800;color:#14181B;margin:0 0 4px;letter-spacing:-.6px;">Cronograma</h1>
+        <p style="font-size:13px;color:#6B7580;margin:0 0 18px;">Sua grade da semana</p>
+        <div class="fx-scroll" style="display:flex;gap:8px;overflow-x:auto;margin:0 -20px 20px;padding:0 20px;">
+          <sc-for list="{{ semana }}" as="d" hint-placeholder-count="6">
+            <button onClick="{{ d.open }}" style="min-width:52px;border:none;cursor:pointer;border-radius:16px;padding:10px 0;font-family:inherit;background:{{ d.bg }};color:{{ d.fg }};">
+              <div style="font-size:11px;font-weight:700;opacity:.8;">{{ d.dia }}</div>
+              <div style="font-size:19px;font-weight:800;margin-top:2px;">{{ d.num }}</div>
+            </button>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <sc-for list="{{ gradeDia }}" as="a" hint-placeholder-count="3">
+            <div style="display:flex;gap:14px;">
+              <div style="min-width:48px;text-align:right;padding-top:4px;">
+                <div style="font-size:14px;font-weight:800;color:#14181B;">{{ a.hora }}</div>
+                <div style="font-size:11px;color:#6B7580;">{{ a.fim }}</div>
+              </div>
+              <div style="flex:1;background:#fff;border-radius:18px;padding:16px;border-left:5px solid {{ a.cor }};">
+                <div style="font-size:15px;font-weight:800;color:#14181B;">{{ a.disciplina }}</div>
+                <div style="font-size:12px;color:#6B7580;margin:4px 0 8px;">{{ a.prof }}</div>
+                <div style="display:flex;gap:14px;font-size:12px;color:#2E4756;font-weight:600;">
+                  <span style="display:flex;align-items:center;gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6B7580" stroke-width="2"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11Z"/><circle cx="12" cy="10" r="2.4"/></svg>{{ a.sala }}</span>
+                  <span style="display:flex;align-items:center;gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6B7580" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>{{ a.dur }}</span>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ gradeVazia }}" hint-placeholder-val="{{ false }}">
+            <div style="text-align:center;padding:36px 20px;color:#9aa2ab;">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#c3c9cf" stroke-width="1.8" style="margin-bottom:10px;"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/><path d="M9 15l6 0"/></svg>
+              <div style="font-size:14px;font-weight:700;color:#6B7580;">Sem aulas neste dia</div>
+              <div style="font-size:12px;">Aproveite para revisar os materiais.</div>
+            </div>
+          </sc-if>
+        </div>
+        <button onClick="{{ goCalendario }}" style="margin-top:24px;width:100%;height:54px;border-radius:16px;border:1.5px solid #eceef1;background:#fff;color:#2E4756;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2E4756" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+          Ver calendário mensal
+        </button>
+      </div>
+      </sc-if>
+
+      <!-- CALENDARIO -->
+      <sc-if value="{{ isCalendario }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:64px 20px 120px;animation:fx-pop .35s ease;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
+          <button onClick="{{ goCronograma }}" style="width:40px;height:40px;border-radius:13px;border:1.5px solid #eceef1;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E4756" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>
+          <h1 style="font-size:22px;font-weight:800;color:#14181B;margin:0;letter-spacing:-.5px;">Setembro 2026</h1>
+        </div>
+        <div style="background:#fff;border-radius:24px;padding:18px 14px;">
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:11px;font-weight:700;color:#9aa2ab;margin-bottom:8px;">
+            <div>D</div><div>S</div><div>T</div><div>Q</div><div>Q</div><div>S</div><div>S</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;">
+            <sc-for list="{{ dias }}" as="d" hint-placeholder-count="35">
+              <div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:12px;background:{{ d.bg }};position:relative;">
+                <span style="font-size:13px;font-weight:{{ d.peso }};color:{{ d.fg }};">{{ d.num }}</span>
+                <span style="width:5px;height:5px;border-radius:50%;background:{{ d.dot }};margin-top:2px;"></span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <h2 style="font-size:15px;font-weight:800;color:#14181B;margin:22px 0 12px;">Compromissos · 24 set</h2>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <sc-for list="{{ compromissos }}" as="c" hint-placeholder-count="3">
+            <div style="display:flex;gap:12px;align-items:center;background:#fff;border-radius:16px;padding:14px;">
+              <div style="width:38px;height:38px;border-radius:12px;background:{{ c.bg }};display:flex;align-items:center;justify-content:center;font-size:18px;">{{ c.icone }}</div>
+              <div style="flex:1;"><div style="font-size:14px;font-weight:700;color:#14181B;">{{ c.titulo }}</div><div style="font-size:12px;color:#6B7580;">{{ c.sub }}</div></div>
+              <span style="font-size:12px;font-weight:700;color:#2E4756;">{{ c.hora }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- EVENTOS -->
+      <sc-if value="{{ isEventos }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:64px 20px 120px;animation:fx-pop .35s ease;">
+        <h1 style="font-size:26px;font-weight:800;color:#14181B;margin:0 0 4px;letter-spacing:-.6px;">Eventos</h1>
+        <p style="font-size:13px;color:#6B7580;margin:0 0 18px;">Comunidade Fatec Adamantina</p>
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <sc-for list="{{ eventosFull }}" as="e" hint-placeholder-count="3">
+            <div style="background:#fff;border-radius:22px;overflow:hidden;">
+              <div style="height:120px;background:{{ e.bg }};display:flex;align-items:center;justify-content:center;position:relative;">
+                <span style="font-size:46px;">{{ e.icone }}</span>
+                <span style="position:absolute;top:12px;left:12px;background:rgba(255,255,255,.92);border-radius:11px;padding:6px 12px;text-align:center;line-height:1;"><div style="font-size:16px;font-weight:800;color:#C8102E;">{{ e.dia }}</div><div style="font-size:10px;font-weight:700;color:#6B7580;">{{ e.mes }}</div></span>
+              </div>
+              <div style="padding:16px;">
+                <div style="font-size:16px;font-weight:800;color:#14181B;letter-spacing:-.3px;">{{ e.titulo }}</div>
+                <p style="font-size:13px;color:#6B7580;margin:6px 0 12px;line-height:1.45;">{{ e.desc }}</p>
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                  <span style="font-size:12px;color:#2E4756;font-weight:600;display:flex;align-items:center;gap:6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7580" stroke-width="2"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11Z"/><circle cx="12" cy="10" r="2.4"/></svg>{{ e.local }} · {{ e.hora }}</span>
+                  <span style="font-size:12px;font-weight:800;color:{{ e.tagCor }};background:{{ e.tagBg }};padding:5px 10px;border-radius:9px;">{{ e.tag }}</span>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ATIVIDADES -->
+      <sc-if value="{{ isAtividades }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:64px 20px 120px;animation:fx-pop .35s ease;">
+        <h1 style="font-size:26px;font-weight:800;color:#14181B;margin:0 0 14px;letter-spacing:-.6px;">Atividades</h1>
+        <div style="display:flex;align-items:center;gap:10px;background:#fff;border-radius:16px;padding:0 14px;height:50px;margin-bottom:14px;border:1.5px solid #e7eaee;">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#9aa2ab" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+          <input type="text" placeholder="Buscar atividade ou disciplina..." style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:inherit;font-size:14px;color:#14181B;">
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:20px;">
+          <sc-for list="{{ filtros }}" as="f" hint-placeholder-count="3">
+            <button onClick="{{ f.open }}" style="border:1.5px solid {{ f.bd }};cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;padding:9px 16px;border-radius:12px;background:{{ f.bg }};color:{{ f.fg }};">{{ f.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <sc-for list="{{ atividadesView }}" as="a" hint-placeholder-count="4">
+            <div onClick="{{ a.open }}" style="background:{{ a.card }};border:1.5px solid {{ a.borda }};border-radius:24px;padding:16px 16px 18px;cursor:pointer;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+                  <div style="width:38px;height:38px;border-radius:50%;background:{{ a.cor }};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;">{{ a.iniciais }}</div>
+                  <div style="display:flex;flex-direction:column;gap:2px;min-width:0;">
+                    <div style="font-size:13px;font-weight:800;color:#14181B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ a.prof }}</div>
+                    <div style="font-size:11px;color:#6B7580;font-weight:600;">Professor</div>
+                  </div>
+                </div>
+                <div style="width:34px;height:34px;border-radius:50%;background:#14181B;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-left:10px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><path d="M7 17 17 7M8 7h9v9"/></svg>
+                </div>
+              </div>
+              <div style="font-size:11px;font-weight:700;color:#6B7580;text-transform:uppercase;letter-spacing:.4px;">{{ a.disciplina }}</div>
+              <div style="font-size:22px;font-weight:800;color:#14181B;letter-spacing:-.5px;margin:2px 0 14px;">{{ a.titulo }}</div>
+              <div style="display:flex;align-items:center;gap:16px;">
+                <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#2E4756;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{{ a.cor }}" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>{{ a.prazo }}
+                </span>
+                <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:{{ a.statusCor }};">
+                  <span style="width:7px;height:7px;border-radius:50%;background:{{ a.statusCor }};"></span>{{ a.status }}
+                </span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- DETALHE -->
+      <sc-if value="{{ isDetalhe }}" hint-placeholder-val="{{ true }}">
+      <div style="animation:fx-pop .35s ease;padding-bottom:120px;">
+        <div style="background:linear-gradient(135deg,#E11D2A,#C8102E);padding:64px 20px 26px;color:#fff;position:relative;overflow:hidden;">
+          <div style="position:absolute;right:-40px;top:-20px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.1);"></div>
+          <button onClick="{{ goAtividades }}" style="width:40px;height:40px;border-radius:13px;border:none;background:rgba(255,255,255,.2);cursor:pointer;display:flex;align-items:center;justify-content:center;margin-bottom:20px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>
+          <span style="font-size:11px;font-weight:800;opacity:.9;text-transform:uppercase;letter-spacing:.5px;">Trabalho · Gestão Comercial</span>
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin:8px 0 14px;">
+            <h1 style="font-size:24px;font-weight:800;margin:0;letter-spacing:-.5px;line-height:1.15;">Plano de Marketing Digital</h1>
+            <div style="text-align:right;flex-shrink:0;line-height:1.1;padding-top:2px;"><div style="font-size:12px;font-weight:700;opacity:.85;">Pontos</div><div style="font-size:14px;font-weight:800;">Sem pontos</div></div>
+          </div>
+          <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,0,0,.22);padding:8px 14px;border-radius:12px;font-size:13px;font-weight:700;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Entrega amanhã · 25 set, 23:59
+          </div>
+        </div>
+        <div style="padding:22px 20px;">
+          <h2 style="font-size:15px;font-weight:800;color:#14181B;margin:0 0 8px;">Instruções</h2>
+          <p style="font-size:14px;color:#4a545e;line-height:1.6;margin:0 0 22px;">Elaborar um plano de marketing digital para um negócio local de Adamantina. Incluir análise de público-alvo, canais, cronograma de postagens e KPIs. Entrega em PDF, máximo 8 páginas.</p>
+
+          <div style="border-radius:22px;background:linear-gradient(160deg,#fbf1f2,#f4f6f8);border:1.5px solid #f0dcdf;padding:16px;margin-bottom:22px;">
+            <div style="display:flex;align-items:center;gap:11px;margin-bottom:14px;">
+              <div style="width:40px;height:40px;border-radius:50%;background:#2E4756;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;">RA</div>
+              <div style="flex:1;line-height:1.2;">
+                <div style="font-size:14px;font-weight:800;color:#14181B;">Material de apoio</div>
+                <div style="font-size:12px;color:#6B7580;font-weight:600;">Enviado por Prof. Renata Alves</div>
+              </div>
+              <span style="font-size:11px;font-weight:800;color:#C8102E;background:#fdeaec;padding:5px 11px;border-radius:20px;">2 arquivos</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <sc-for list="{{ anexos }}" as="m" hint-placeholder-count="2">
+                <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #eef0f2;border-radius:16px;padding:13px;box-shadow:0 6px 16px -12px rgba(20,24,27,.4);">
+                  <div style="width:44px;height:44px;border-radius:13px;background:{{ m.bg }};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:{{ m.fg }};flex-shrink:0;">{{ m.ext }}</div>
+                  <div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:700;color:#14181B;">{{ m.nome }}</div><div style="font-size:12px;color:#9aa2ab;font-weight:600;">{{ m.tam }}</div></div>
+                  <button style="width:38px;height:38px;border-radius:12px;border:none;background:#fdeaec;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E11D2A" stroke-width="2.2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></button>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- SUA ENTREGA (estilo Teams) -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin:0 0 12px;">
+            <h2 style="font-size:15px;font-weight:800;color:#14181B;margin:0;">Meu trabalho</h2>
+            <sc-if value="{{ entregue }}" hint-placeholder-val="{{ false }}">
+              <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:#0a7a3f;background:#e3f6ec;padding:5px 11px;border-radius:9px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0a7a3f" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>Entregue</span>
+            </sc-if>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;">
+            <sc-for list="{{ entregaArquivos }}" as="m" hint-placeholder-count="1">
+              <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid #eceef1;border-radius:16px;padding:14px;">
+                <div style="width:42px;height:42px;border-radius:12px;background:{{ m.bg }};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:{{ m.fg }};">{{ m.ext }}</div>
+                <div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:700;color:#14181B;">{{ m.nome }}</div><div style="font-size:12px;color:#6B7580;">{{ m.tam }}</div></div>
+                <sc-if value="{{ podeEditar }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ m.remover }}" style="border:none;background:none;cursor:pointer;padding:4px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9aa2ab" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ podeEditar }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ anexarArquivo }}" style="width:100%;height:56px;border:1.6px dashed #cdd3da;border-radius:16px;background:#fafbfc;color:#2E4756;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:16px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E4756" stroke-width="2"><path d="M21.4 11.05 12.25 20.2a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.48-8.49"/></svg>
+            Anexar trabalho
+          </button>
+          </sc-if>
+
+          <sc-if value="{{ entregue }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#e3f6ec;border-radius:16px;padding:16px;display:flex;gap:12px;align-items:flex-start;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0a7a3f" stroke-width="2.4" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5 11 15l4.5-5"/></svg>
+              <div><div style="font-size:14px;font-weight:800;color:#0a6a37;">Entrega enviada</div><div style="font-size:12px;color:#3f7a5a;margin-top:2px;">Enviada em 24 set, 21:14. Você pode desfazer antes do prazo.</div></div>
+            </div>
+          </sc-if>
+        </div>
+        <div style="padding:16px 20px 0;">
+          <sc-if value="{{ podeEditar }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ entregar }}" style="width:100%;height:58px;border:none;border-radius:18px;background:{{ entregarBg }};color:#fff;font-family:inherit;font-size:16px;font-weight:700;cursor:{{ entregarCursor }};opacity:{{ entregarOpacity }};display:flex;align-items:center;justify-content:center;gap:10px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 9l5-5 5 5M12 4v12"/></svg>Entregar
+          </button>
+          </sc-if>
+          <sc-if value="{{ entregue }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ desfazerEntrega }}" style="width:100%;height:56px;border:1.5px solid #f3d2d5;border-radius:18px;background:#fff5f5;color:#C8102E;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;">Desfazer entrega</button>
+          </sc-if>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- MATERIAIS -->
+      <sc-if value="{{ isMateriais }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:64px 20px 120px;animation:fx-pop .35s ease;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+          <sc-if value="{{ matPodeVoltar }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ matVoltar }}" style="width:40px;height:40px;border-radius:13px;border:1.5px solid #eceef1;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E4756" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>
+          </sc-if>
+          <h1 style="font-size:26px;font-weight:800;color:#14181B;margin:0;letter-spacing:-.6px;">{{ matTitulo }}</h1>
+        </div>
+        <p style="font-size:13px;color:#9aa2ab;font-weight:600;margin:0 0 18px;">{{ matBreadcrumb }}</p>
+
+        <div style="display:flex;align-items:center;gap:10px;background:#fff;border-radius:16px;padding:0 14px;height:50px;margin-bottom:22px;border:1.5px solid #eceef1;">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#9aa2ab" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+          <input type="text" placeholder="Buscar material..." style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:inherit;font-size:14px;color:#14181B;">
+        </div>
+
+        <!-- pastas -->
+        <sc-if value="{{ matMostraPastas }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <sc-for list="{{ matPastas }}" as="p" hint-placeholder-count="2">
+            <div onClick="{{ p.open }}" style="position:relative;margin-top:14px;cursor:pointer;">
+              <div style="position:absolute;top:-12px;left:14px;width:46%;height:16px;border-radius:8px 8px 0 0;background:{{ p.tab }};"></div>
+              <div style="position:relative;border-radius:6px 20px 20px 20px;background:{{ p.grad }};padding:18px 16px 20px;min-height:130px;box-shadow:0 16px 26px -16px {{ p.shadow }};display:flex;flex-direction:column;">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.8"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.17V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 3.6 15H3.5a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 5 9.4l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 6.6h.09A1.65 1.65 0 0 0 11 4.6V4.5a2 2 0 0 1 4 0"/></svg>
+                </div>
+                <div style="margin-top:auto;">
+                  <div style="font-size:17px;font-weight:800;color:#fff;letter-spacing:-.3px;line-height:1.15;">{{ p.nome }}</div>
+                  <div style="font-size:12px;color:rgba(255,255,255,.8);font-weight:600;margin-top:3px;">{{ p.contagem }}</div>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+
+        <!-- arquivos -->
+        <sc-if value="{{ matMostraArquivos }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <sc-for list="{{ matArquivos }}" as="m" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:16px;padding:13px;">
+              <div style="width:44px;height:44px;border-radius:13px;background:{{ m.bg }};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:{{ m.fg }};">{{ m.ext }}</div>
+              <div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:700;color:#14181B;">{{ m.nome }}</div><div style="font-size:12px;color:#6B7580;">{{ m.info }}</div></div>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E11D2A" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+      </div>
+      </sc-if>
+
+      <!-- LEMBRETES -->
+      <sc-if value="{{ isLembretes }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:64px 20px 120px;animation:fx-pop .35s ease;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+          <button onClick="{{ goHome }}" style="width:40px;height:40px;border-radius:13px;border:1.5px solid #eceef1;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E4756" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>
+          <h1 style="font-size:24px;font-weight:800;color:#14181B;margin:0;letter-spacing:-.5px;">Lembretes</h1>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <sc-for list="{{ lembretes }}" as="l" hint-placeholder-count="4">
+            <div style="display:flex;gap:13px;background:{{ l.card }};border-radius:18px;padding:15px;position:relative;">
+              <div style="width:44px;height:44px;border-radius:13px;background:{{ l.bg }};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <span style="display:flex;color:{{ l.fg }};">{{ l.icon }}</span>
+              </div>
+              <div style="flex:1;">
+                <div style="font-size:14px;font-weight:800;color:#14181B;">{{ l.titulo }}</div>
+                <div style="font-size:13px;color:#6B7580;line-height:1.4;margin:2px 0 4px;">{{ l.texto }}</div>
+                <div style="font-size:11px;color:#9aa2ab;font-weight:600;">{{ l.tempo }}</div>
+              </div>
+              <sc-if value="{{ l.novo }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:16px;right:16px;width:9px;height:9px;border-radius:50%;background:#E11D2A;"></span></sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- PERFIL -->
+      <sc-if value="{{ isPerfil }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:64px 20px 120px;animation:fx-pop .35s ease;">
+        <div style="background:#fff;border-radius:26px;padding:18px 16px;box-shadow:0 18px 40px -24px rgba(20,24,27,.4);">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;">
+            <div style="width:66px;height:66px;border-radius:50%;background:linear-gradient(135deg,#E11D2A,#C8102E);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;">LS</div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <button style="height:40px;padding:0 22px;border:none;border-radius:22px;background:#14181B;color:#fff;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;">Editar</button>
+            </div>
+          </div>
+          <div style="padding:12px 4px 0;">
+            <div style="font-size:20px;font-weight:800;color:#14181B;letter-spacing:-.3px;">Lucas Silveira</div>
+            <div style="font-size:13px;color:#9aa2ab;font-weight:500;">@lucas.silveira · Gestão Comercial</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:18px 0 16px;padding:0 4px;">
+            <div style="text-align:center;">
+              <div style="display:flex;align-items:center;justify-content:center;gap:6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="#f0a500" stroke="#f0a500" stroke-width="1"><path d="m12 2 3 6.5 7 .9-5 4.9 1.2 7L12 18l-6.4 3.3L6.8 14 1.8 9.4l7-.9z"/></svg><span style="font-size:19px;font-weight:800;color:#14181B;">8.4</span></div>
+              <div style="font-size:11px;color:#9aa2ab;font-weight:600;">Média</div>
+            </div>
+            <div style="text-align:center;border-left:1px solid #eef0f2;border-right:1px solid #eef0f2;">
+              <div style="display:flex;align-items:center;justify-content:center;gap:6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2E4756" stroke-width="2"><path d="M12 20V10M4 12a3 3 0 0 1 3-3h1.5"/><path d="M20 12a3 3 0 0 0-3-3h-1.5"/><path d="M7 20h10"/></svg><span style="font-size:19px;font-weight:800;color:#14181B;">92%</span></div>
+              <div style="font-size:11px;color:#9aa2ab;font-weight:600;">Frequência</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="display:flex;align-items:center;justify-content:center;gap:6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a7a3f" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span style="font-size:19px;font-weight:800;color:#14181B;">18</span></div>
+              <div style="font-size:11px;color:#9aa2ab;font-weight:600;">Entregas</div>
+            </div>
+          </div>
+          <button style="width:100%;height:56px;border:none;border-radius:20px;background:#14181B;color:#fff;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:12px;padding:0 8px;">
+            <span style="width:40px;height:40px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#14181B" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            <span style="flex:1;text-align:center;margin-right:40px;">Ver histórico acadêmico</span>
+          </button>
+        </div>
+        <div style="padding:24px 4px 0;">
+          <h2 style="font-size:13px;font-weight:800;color:#9aa2ab;text-transform:uppercase;letter-spacing:.5px;margin:0 0 12px;">Preferências</h2>
+          <sc-for list="{{ prefGrupos }}" as="g" hint-placeholder-count="2">
+            <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+              <sc-for list="{{ g.itens }}" as="p" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:16px;background:#fff;border-radius:18px;padding:16px 18px;box-shadow:0 8px 20px -16px rgba(20,24,27,.45);">
+                  <span style="display:flex;color:#14181B;flex-shrink:0;">{{ p.icon }}</span>
+                  <span style="flex:1;font-size:15px;font-weight:600;color:#14181B;">{{ p.label }}</span>
+                  <sc-if value="{{ p.toggle }}" hint-placeholder-val="{{ false }}">
+                    <div style="width:46px;height:27px;border-radius:20px;background:{{ p.tgBg }};position:relative;flex-shrink:0;"><span style="position:absolute;top:3px;left:{{ p.tgX }};width:21px;height:21px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);"></span></div>
+                  </sc-if>
+                  <sc-if value="{{ p.chevron }}" hint-placeholder-val="{{ true }}">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c3c9cf" stroke-width="2" style="flex-shrink:0;"><path d="M9 6l6 6-6 6"/></svg>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+          <button onClick="{{ goLogin }}" style="margin-top:6px;width:100%;height:54px;border-radius:16px;border:1.5px solid #f3d2d5;background:#fff5f5;color:#C8102E;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;">Sair da conta</button>
+        </div>
+      </div>
+      </sc-if>
+
+    </div>
+
+    <!-- TAB BAR -->
+    <sc-if value="{{ showTabs }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute;bottom:0;left:0;right:0;height:88px;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-top:1px solid #edeff1;display:flex;align-items:flex-start;padding:12px 14px 0;z-index:30;">
+      <button onClick="{{ goHome }}" style="flex:1;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;color:{{ tabHome }};">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z"/></svg>
+        <span style="font-size:10px;font-weight:700;">Início</span>
+      </button>
+      <button onClick="{{ goCronograma }}" style="flex:1;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;color:{{ tabAgenda }};">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+        <span style="font-size:10px;font-weight:700;">Agenda</span>
+      </button>
+      <button onClick="{{ goAtividades }}" style="flex:1;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;color:{{ tabAtiv }};">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
+        <span style="font-size:10px;font-weight:700;">Atividades</span>
+      </button>
+      <button onClick="{{ goMateriais }}" style="flex:1;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;color:{{ tabMat }};">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+        <span style="font-size:10px;font-weight:700;">Materiais</span>
+      </button>
+      <button onClick="{{ goPerfil }}" style="flex:1;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;color:{{ tabPerfil }};">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+        <span style="font-size:10px;font-weight:700;">Perfil</span>
+      </button>
+    </div>
+    </sc-if>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { screen: 'splash', filtro: 'Todas' };
+
+  componentDidMount() {
+    this._t = setTimeout(() => { if (this.state.screen === 'splash') this.go('onb1'); }, 1900);
+    this._carousel = setInterval(() => {
+      const el = document.getElementById('ev-carousel');
+      if (!el) return;
+      const step = 314;
+      const next = el.scrollLeft + step;
+      if (next > el.scrollWidth - el.clientWidth - 8) el.scrollTo({ left: 0, behavior: 'smooth' });
+      else el.scrollTo({ left: next, behavior: 'smooth' });
+    }, 3200);
+  }
+  componentWillUnmount() { clearTimeout(this._t); clearInterval(this._carousel); }
+
+  go(s) { this.setState({ screen: s }); const sc = document.querySelector('.fx-scroll'); if (sc) sc.scrollTop = 0; }
+
+  renderVals() {
+    const s = this.state.screen;
+    const RED = '#E11D2A', SLATE = '#2E4756', GOLD = '#f0a500', MUTED = '#c3c9cf';
+    const tab = (on) => on ? RED : MUTED;
+    const onAgenda = s === 'cronograma' || s === 'calendario';
+    const onAtiv = s === 'atividades' || s === 'detalhe';
+
+    const aulasHoje = [
+      { hora: '19:00', fim: '20:40', disciplina: 'Ciência de Dados', sala: 'Lab 03', prof: 'Prof. Marcelo', cor: RED },
+      { hora: '20:50', fim: '22:30', disciplina: 'Gestão Comercial', sala: 'Sala 12', prof: 'Prof. Renata', cor: SLATE },
+    ];
+
+    const eventos = [
+      { data: '02 OUT · 19h', titulo: 'Semana de Tecnologia', desc: 'Palestras, minicursos e feira de projetos no auditório.', grad: 'linear-gradient(135deg,#E11D2A,#C8102E)', gradEdge: '#C8102E', slot: 'ev-home-1', img: '', open: () => this.go('eventos') },
+      { data: '10 OUT · 20h', titulo: 'Mercado de Dados', desc: 'Bate-papo com profissionais sobre carreira e portfólio.', grad: 'linear-gradient(135deg,#2E4756,#1c2d38)', gradEdge: '#1c2d38', slot: 'ev-home-2', img: '', open: () => this.go('eventos') },
+      { data: '18 OUT · 08h', titulo: 'Visita Técnica', desc: 'Turmas de Gestão Comercial visitam cooperativa da região.', grad: 'linear-gradient(135deg,#E11D2A,#C8102E)', gradEdge: '#C8102E', slot: 'ev-home-3', img: '', open: () => this.go('eventos') },
+    ];
+
+    const homeFiltro = this.state.homeFiltro || 'Tudo';
+    const ico = (paths, extra) => React.createElement('svg', { width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, paths.map((d, i) => React.createElement('path', { key: i, d })), ...(extra || []));
+    const chipDefs = [
+      { label: 'Tudo', paths: ['M4 6h16', 'M4 12h16', 'M4 18h16'] },
+      { label: 'Eventos', el: () => React.createElement('svg', { width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, React.createElement('rect', { key: 'r', x: 3, y: 4, width: 18, height: 18, rx: 3 }), React.createElement('path', { key: 'p', d: 'M3 9h18M8 2v4M16 2v4' })) },
+      { label: 'Prazos', el: () => React.createElement('svg', { width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, React.createElement('circle', { key: 'c', cx: 12, cy: 12, r: 9 }), React.createElement('path', { key: 'p', d: 'M12 7v5l3 2' })) },
+      { label: 'Aulas', paths: ['M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z', 'M20 18v3H6.5A2.5 2.5 0 0 1 4 18.5'] },
+      { label: 'Materiais', paths: ['M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'] },
+    ];
+    const homeChips = chipDefs.map(c => {
+      const on = c.label === homeFiltro;
+      return { label: c.label, icon: c.el ? c.el() : ico(c.paths), bg: on ? '#E11D2A' : '#fff', fg: on ? '#fff' : '#2E4756', bd: on ? '#E11D2A' : '#e7eaee', open: () => this.setState({ homeFiltro: c.label }) };
+    });
+
+    const eventosFull = [
+      { dia: '02', mes: 'OUT', icone: '🚀', titulo: 'Semana de Tecnologia 2026', desc: 'Palestras, minicursos e feira de projetos dos alunos da Fatec Adamantina.', local: 'Auditório', hora: '19h', tag: 'Inscrições abertas', tagCor: '#0a7a3f', tagBg: '#e3f6ec' },
+      { dia: '10', mes: 'OUT', icone: '📊', titulo: 'Mercado de Ciência de Dados', desc: 'Bate-papo com profissionais da área sobre carreira e portfólio.', local: 'Sala 08', hora: '20h', tag: 'Gratuito', tagCor: '#2E4756', tagBg: '#eef2f5' },
+      { dia: '18', mes: 'OUT', icone: '🤝', titulo: 'Visita Técnica — Cooperativa', desc: 'Turmas de Gestão Comercial visitam cooperativa da região.', local: 'Saída 8h', hora: '8h', tag: 'Vagas limitadas', tagCor: '#C8102E', tagBg: '#fdeaec' },
+    ];
+
+    const semanaBase = [
+      { dia: 'SEG', num: '22' }, { dia: 'TER', num: '23' }, { dia: 'QUA', num: '24', ativo: true },
+      { dia: 'QUI', num: '25' }, { dia: 'SEX', num: '26' }, { dia: 'SÁB', num: '27' },
+    ];
+    const gradesPorDia = {
+      '22': [
+        { hora: '19:00', fim: '20:40', disciplina: 'Banco de Dados', prof: 'Prof. Aline Costa', sala: 'Lab 02', dur: '2h', cor: SLATE },
+        { hora: '20:50', fim: '22:30', disciplina: 'Estatística Aplicada', prof: 'Prof. Rogério Lima', sala: 'Sala 09', dur: '2h', cor: RED },
+      ],
+      '23': [
+        { hora: '19:00', fim: '20:40', disciplina: 'Gestão de Projetos', prof: 'Prof. Renata Alves', sala: 'Sala 12', dur: '2h', cor: SLATE },
+        { hora: '20:50', fim: '22:30', disciplina: 'Machine Learning', prof: 'Prof. Marcelo Dias', sala: 'Lab 03', dur: '2h', cor: RED },
+      ],
+      '24': [
+        { hora: '19:00', fim: '20:40', disciplina: 'Ciência de Dados', prof: 'Prof. Marcelo Dias', sala: 'Lab 03', dur: '2h', cor: RED },
+        { hora: '20:50', fim: '22:30', disciplina: 'Gestão Comercial', prof: 'Prof. Renata Alves', sala: 'Sala 12', dur: '2h', cor: SLATE },
+      ],
+      '25': [
+        { hora: '19:00', fim: '20:40', disciplina: 'Marketing Digital', prof: 'Prof. Renata Alves', sala: 'Sala 12', dur: '2h', cor: SLATE },
+        { hora: '20:50', fim: '22:30', disciplina: 'Visualização de Dados', prof: 'Prof. Marcelo Dias', sala: 'Lab 03', dur: '2h', cor: RED },
+      ],
+      '26': [
+        { hora: '19:00', fim: '20:40', disciplina: 'Empreendedorismo', prof: 'Prof. Carla Menezes', sala: 'Sala 07', dur: '2h', cor: SLATE },
+      ],
+      '27': [],
+    };
+    const diaAgenda = this.state.diaAgenda || '24';
+    const semana = semanaBase.map(d => {
+      const on = d.num === diaAgenda;
+      return { ...d, bg: on ? RED : '#fff', fg: on ? '#fff' : '#14181B', open: () => this.setState({ diaAgenda: d.num }) };
+    });
+
+    const gradeDia = gradesPorDia[diaAgenda] || [];
+
+    // calendar Sept 2026: 1st = Tuesday(col2). blanks before.
+    const marks = { 24: RED, 25: SLATE, 26: GOLD, 30: RED, 18: GOLD, 10: SLATE, 2: RED };
+    const dias = [];
+    for (let i = 0; i < 2; i++) dias.push({ num: '', bg: 'transparent', fg: 'transparent', dot: 'transparent', peso: '400' });
+    for (let n = 1; n <= 30; n++) {
+      const today = n === 24;
+      dias.push({ num: String(n), bg: today ? RED : 'transparent', fg: today ? '#fff' : '#14181B', dot: marks[n] || 'transparent', peso: today ? '800' : '500' });
+    }
+
+    const compromissos = [
+      { icone: '📝', bg: '#fdeaec', titulo: 'Entrega: Plano de Marketing', sub: 'Gestão Comercial', hora: '23:59' },
+      { icone: '📚', bg: '#eef2f5', titulo: 'Aula: Ciência de Dados', sub: 'Lab 03', hora: '19:00' },
+      { icone: '📚', bg: '#eef2f5', titulo: 'Aula: Gestão Comercial', sub: 'Sala 12', hora: '20:50' },
+    ];
+
+    const AT = [
+      { tipo: 'Trabalho', titulo: 'Plano de Marketing Digital', disciplina: 'Gestão Comercial', prof: 'Renata Alves', iniciais: 'RA', card: '#fdecec', prazo: 'Entrega amanhã', cor: RED, status: 'Urgente', statusCor: '#C8102E', estado: 'pendente' },
+      { tipo: 'Lista', titulo: 'Exercícios Pandas & NumPy', disciplina: 'Ciência de Dados', prof: 'Marcelo Dias', iniciais: 'MD', card: '#eaf1f6', prazo: 'Em 3 dias · 27 set', cor: SLATE, status: 'Pendente', statusCor: '#2E4756', estado: 'pendente' },
+      { tipo: 'Prova', titulo: 'Avaliação Bimestral', disciplina: 'Gestão Comercial', prof: 'Renata Alves', iniciais: 'RA', card: '#fdf4d8', prazo: 'Em 6 dias · 30 set', cor: GOLD, status: 'Prova', statusCor: '#8a6d00', estado: 'pendente' },
+      { tipo: 'Relatório', titulo: 'Análise Exploratória (EDA)', disciplina: 'Ciência de Dados', prof: 'Marcelo Dias', iniciais: 'MD', card: '#e4f5ea', prazo: 'Entregue · 18 set', cor: '#0a7a3f', status: 'Entregue', statusCor: '#0a7a3f', estado: 'entregue' },
+    ].map((a, i) => ({ ...a, borda: a.cor + '55', open: () => this.go('detalhe') }));
+
+    const filtroAtual = this.state.filtro;
+    const filtrosDefs = ['Todas', 'Pendentes', 'Provas'];
+    const filtros = filtrosDefs.map(f => ({ label: f, bg: f === filtroAtual ? '#14181B' : '#fff', fg: f === filtroAtual ? '#fff' : '#2E4756', bd: f === filtroAtual ? '#14181B' : '#e7eaee', open: () => this.setState({ filtro: f }) }));
+    let atividadesView = AT;
+    if (filtroAtual === 'Pendentes') atividadesView = AT.filter(a => a.estado === 'pendente');
+    if (filtroAtual === 'Provas') atividadesView = AT.filter(a => a.tipo === 'Prova');
+
+    const anexos = [
+      { ext: 'PDF', nome: 'Briefing do trabalho.pdf', tam: '1.2 MB', bg: '#fdeaec', fg: '#C8102E' },
+      { ext: 'PPT', nome: 'Modelo de apresentação.pptx', tam: '3.4 MB', bg: '#fff3cf', fg: '#8a6d00' },
+    ];
+
+    // fluxo de entrega (estilo Teams)
+    const entregue = !!this.state.entregue;
+    const arquivosEnviados = this.state.entregaArquivos || [];
+    const podeEditar = !entregue;
+    const entregaArquivos = arquivosEnviados.map((a, i) => ({ ...a, remover: () => this.setState({ entregaArquivos: arquivosEnviados.filter((_, j) => j !== i) }) }));
+    const modelos = [
+      { ext: 'PDF', nome: 'plano_marketing_lucas.pdf', tam: '2.1 MB · agora', bg: '#fdeaec', fg: '#C8102E' },
+      { ext: 'DOCX', nome: 'anexo_pesquisa.docx', tam: '640 KB · agora', bg: '#eaf1f6', fg: '#2E4756' },
+    ];
+    const anexarArquivo = () => this.setState({ entregaArquivos: [...arquivosEnviados, modelos[arquivosEnviados.length % modelos.length]] });
+    const temArquivo = arquivosEnviados.length > 0;
+    const entregar = () => { if (temArquivo) this.setState({ entregue: true }); };
+    const desfazerEntrega = () => this.setState({ entregue: false });
+
+    const arqPDF = (nome, info) => ({ ext: 'PDF', nome, info, bg: '#fdeaec', fg: '#C8102E' });
+    const cursosMat = [
+      { nome: 'Gestão Comercial', grad: 'linear-gradient(150deg,#3a5a70,#2E4756)', tab: '#263c49', shadow: 'rgba(46,71,86,.6)',
+        termos: [
+          { nome: '3º Semestre', grad: 'linear-gradient(150deg,#3a5a70,#2E4756)', tab: '#263c49', shadow: 'rgba(46,71,86,.6)', materias: [
+            { nome: 'Marketing Digital', itens: [ arqPDF('Fundamentos de Marketing.pdf', 'PDF · 4.0 MB · 21 set'), { ext: 'PPT', nome: 'Aula 04 — Funil de Vendas.pptx', info: 'Slides · 6.2 MB · 18 set', bg: '#fff3cf', fg: '#8a6d00' } ] },
+            { nome: 'Gestão de Projetos', itens: [ arqPDF('Metodologias Ágeis.pdf', 'PDF · 2.4 MB · 17 set'), { ext: 'XLS', nome: 'Cronograma do projeto.xlsx', info: 'Planilha · 180 KB · 16 set', bg: '#e3f6ec', fg: '#0a7a3f' } ] },
+          ]},
+          { nome: '2º Semestre', grad: 'linear-gradient(150deg,#3a5a70,#2E4756)', tab: '#263c49', shadow: 'rgba(46,71,86,.6)', materias: [
+            { nome: 'Economia', itens: [ arqPDF('Microeconomia — resumo.pdf', 'PDF · 1.8 MB · ago') ] },
+          ]},
+        ] },
+      { nome: 'Ciência de Dados', grad: 'linear-gradient(150deg,#e8434f,#C8102E)', tab: '#a50d24', shadow: 'rgba(200,16,46,.55)',
+        termos: [
+          { nome: '3º Semestre', grad: 'linear-gradient(150deg,#e8434f,#C8102E)', tab: '#a50d24', shadow: 'rgba(200,16,46,.55)', materias: [
+            { nome: 'Aprendizado de Máquina', itens: [ arqPDF('Aula 05 — Regressão Linear.pdf', 'PDF · 2.1 MB · 22 set'), { ext: 'IPYNB', nome: 'notebook_pandas.ipynb', info: 'Notebook · 340 KB · 20 set', bg: '#eef2f5', fg: '#2E4756' } ] },
+            { nome: 'Visualização de Dados', itens: [ { ext: 'MP4', nome: 'Gravação — Visualização de dados', info: 'Vídeo · 48 min · 15 set', bg: '#e9e2fb', fg: '#5b3fd6' }, arqPDF('Boas práticas de dashboards.pdf', 'PDF · 3.1 MB · 14 set') ] },
+          ]},
+          { nome: '1º Semestre', grad: 'linear-gradient(150deg,#e8434f,#C8102E)', tab: '#a50d24', shadow: 'rgba(200,16,46,.55)', materias: [
+            { nome: 'Estatística', itens: [ arqPDF('Distribuições de probabilidade.pdf', 'PDF · 2.0 MB · jul') ] },
+          ]},
+        ] },
+    ];
+    const conta = (n, sing, plur) => n + ' ' + (n === 1 ? sing : plur);
+    const matCurso = this.state.matCurso, matTermo = this.state.matTermo, matMateria = this.state.matMateria;
+    let matNivel = 'cursos', matPastas = [], matArquivos = [], matTitulo = 'Materiais', matBreadcrumb = 'Escolha um curso';
+    if (matCurso == null) {
+      matPastas = cursosMat.map((c, i) => ({ nome: c.nome, grad: c.grad, tab: c.tab, shadow: c.shadow, contagem: conta(c.termos.length, 'termo', 'termos'), open: () => this.setState({ matCurso: i }) }));
+    } else if (matTermo == null) {
+      const c = cursosMat[matCurso];
+      matTitulo = c.nome; matBreadcrumb = 'Curso · escolha o termo';
+      matPastas = c.termos.map((t, i) => ({ nome: t.nome, grad: t.grad, tab: t.tab, shadow: t.shadow, contagem: conta(t.materias.length, 'matéria', 'matérias'), open: () => this.setState({ matTermo: i }) }));
+    } else if (matMateria == null) {
+      const t = cursosMat[matCurso].termos[matTermo];
+      matTitulo = t.nome; matBreadcrumb = cursosMat[matCurso].nome + ' · escolha a matéria';
+      matPastas = t.materias.map((m, i) => ({ nome: m.nome, grad: t.grad, tab: t.tab, shadow: t.shadow, contagem: conta(m.itens.length, 'arquivo', 'arquivos'), open: () => this.setState({ matMateria: i }) }));
+    } else {
+      matNivel = 'arquivos';
+      const m = cursosMat[matCurso].termos[matTermo].materias[matMateria];
+      matTitulo = m.nome; matBreadcrumb = cursosMat[matCurso].nome + ' · ' + cursosMat[matCurso].termos[matTermo].nome;
+      matArquivos = m.itens;
+    }
+    const matVoltar = () => {
+      if (matMateria != null) this.setState({ matMateria: null });
+      else if (matTermo != null) this.setState({ matTermo: null });
+      else if (matCurso != null) this.setState({ matCurso: null });
+    };
+    const matPodeVoltar = matCurso != null;
+
+    const svgIco = (children) => React.createElement('svg', { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, children);
+    const lembretes = [
+      { icon: svgIco([React.createElement('circle', { key: 'c', cx: 12, cy: 12, r: 9 }), React.createElement('path', { key: 'p', d: 'M12 7v5l3 2' })]), fg: '#C8102E', bg: '#fdeaec', card: '#fff', titulo: 'Prazo se aproximando', texto: 'Plano de Marketing Digital entrega amanhã às 23:59.', tempo: 'há 10 min', novo: true },
+      { icon: svgIco([React.createElement('path', { key: 'p', d: 'M14 3v5h5M8 3h7l5 5v11a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z' }), React.createElement('path', { key: 'l', d: 'M10.5 13h5M10.5 16h5' })]), fg: '#2E4756', bg: '#eef2f5', card: '#fff', titulo: 'Novo material postado', texto: 'Prof. Marcelo adicionou "Aula 05 — Regressão Linear" em Ciência de Dados.', tempo: 'há 2 horas', novo: true },
+      { icon: svgIco([React.createElement('path', { key: 'p', d: 'M12 20h9' }), React.createElement('path', { key: 'e', d: 'M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z' })]), fg: '#8a6d00', bg: '#fff3cf', card: '#fff', titulo: 'Prova agendada', texto: 'Avaliação Bimestral de Gestão Comercial marcada para 30 set.', tempo: 'ontem', novo: false },
+      { icon: svgIco([React.createElement('path', { key: 'p', d: 'M14 3v5h5M8 3h7l5 5v11a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z' }), React.createElement('path', { key: 'l', d: 'M10.5 13h5M10.5 16h5' })]), fg: '#2E4756', bg: '#eef2f5', card: '#fff', titulo: 'Novo material postado', texto: 'Planilha de KPIs disponível em Gestão Comercial.', tempo: 'há 2 dias', novo: false },
+    ];
+
+    const pIco = (paths) => React.createElement('svg', { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' }, paths.map((d, i) => React.createElement('path', { key: i, d })));
+    const prefGrupos = [
+      { itens: [
+        { icon: pIco(['M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9', 'M10.3 21a1.94 1.94 0 0 0 3.4 0']), label: 'Notificações push', toggle: true, tgBg: RED, tgX: '22px' },
+        { icon: pIco(['M4 4h16v12H5.2L4 17.2z', 'M8 9h8M8 12h5']), label: 'Resumo por e-mail', toggle: true, tgBg: '#dfe3e7', tgX: '3px' },
+        { icon: pIco(['M12 3 3 8l9 5 9-5-9-5z', 'M3 8v6l9 5 9-5V8', 'M6.5 10.3V15c0 1 2.5 2 5.5 2s5.5-1 5.5-2v-4.7']), label: 'Minhas turmas', chevron: true },
+      ]},
+      { itens: [
+        { icon: pIco(['M9 3h6l1 4H8zM8 7h8v13a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1z', 'M12 12v4']), label: 'Segurança da conta', chevron: true },
+        { icon: pIco(['M7 3h10a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z', 'M11 18h2']), label: 'Dispositivos', chevron: true },
+        { icon: pIco(['M12 2 4 5v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V5z', 'M9.5 12.5 11 14l3.5-3.5']), label: 'Alterar senha', chevron: true },
+        { icon: pIco(['M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 'M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.17V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 3.6 15H3.5a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 5 9.4l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 6.6h.09A1.65 1.65 0 0 0 11 4.6V4.5a2 2 0 0 1 4 0V4.6a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9h.1a2 2 0 0 1 0 4h-.1a1.65 1.65 0 0 0-1.5 1z']), label: 'Configurações', chevron: true },
+      ]},
+    ];
+
+    return {
+      statusInk: s === 'perfil' ? '#14181B' : '#14181B',
+      isSplash: s === 'splash', isOnb1: s === 'onb1', isOnb2: s === 'onb2', isOnb3: s === 'onb3',
+      isLogin: s === 'login', isHome: s === 'home', isCronograma: s === 'cronograma',
+      isCalendario: s === 'calendario', isEventos: s === 'eventos', isAtividades: s === 'atividades',
+      isDetalhe: s === 'detalhe', isMateriais: s === 'materiais', isLembretes: s === 'lembretes', isPerfil: s === 'perfil',
+      showTabs: !['splash', 'onb1', 'onb2', 'onb3', 'login'].includes(s),
+      goOnb2: () => this.go('onb2'), goOnb3: () => this.go('onb3'),
+      tabHome: tab(s === 'home'), tabAgenda: tab(onAgenda), tabAtiv: tab(onAtiv), tabMat: tab(s === 'materiais'), tabPerfil: tab(s === 'perfil'),
+      goLogin: () => this.go('login'), goHome: () => this.go('home'), goCronograma: () => this.go('cronograma'),
+      goCalendario: () => this.go('calendario'), goEventos: () => this.go('eventos'), goAtividades: () => this.go('atividades'),
+      goDetalhe: () => this.go('detalhe'), goMateriais: () => this.go('materiais'), goLembretes: () => this.go('lembretes'), goPerfil: () => this.go('perfil'),
+      aulasHoje, eventos, homeChips, eventosFull, semana, gradeDia, gradeVazia: gradeDia.length === 0, dias, compromissos,
+      filtros, atividadesView, anexos, lembretes, prefGrupos,
+      entregue, entregaArquivos, podeEditar, anexarArquivo, entregar, desfazerEntrega,
+      entregarBg: temArquivo ? '#14181B' : '#c3c9cf', entregarCursor: temArquivo ? 'pointer' : 'not-allowed', entregarOpacity: temArquivo ? '1' : '.7',
+      matPastas, matArquivos, matTitulo, matBreadcrumb, matVoltar, matPodeVoltar,
+      matMostraPastas: matNivel !== 'arquivos', matMostraArquivos: matNivel === 'arquivos',
+    };
+  }
+}
+</script>
+</body>
+</html>

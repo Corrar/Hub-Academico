@@ -1,0 +1,155 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    a { color: #C8102E; text-decoration: none; }
+    a:hover { color: #E11D2A; }
+    .fx-scroll::-webkit-scrollbar { width: 0; height: 0; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2.5px solid #E11D2A; outline-offset: 2px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid #f1f3f5; font-size: 13.5px; }
+    thead th { font-size: 11px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: #5A6873; background: #fafbfc; border-bottom: 1.5px solid #e7eaee; }
+    tbody tr:last-child td { border-bottom: none; }
+  </style>
+</helmet>
+
+<div style="width:1280px;height:800px;background:#F4F5F7;font-family:'Plus Jakarta Sans',system-ui,sans-serif;display:flex;overflow:hidden;">
+
+  <div style="width:248px;flex-shrink:0;background:#2E4756;display:flex;flex-direction:column;padding:24px 14px 18px;">
+    <div style="padding:0 10px 22px;">
+      <div style="font-size:20px;font-weight:800;letter-spacing:-.9px;color:#fff;line-height:.95;">Fatec</div>
+      <div style="font-size:10px;font-weight:800;color:#ff8a94;">Adamantina</div>
+      <span style="display:inline-block;margin-top:10px;font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#2E4756;background:#fff;padding:3px 9px;border-radius:6px;">Coordenação</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px;flex:1;">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="8">
+        <button style="width:100%;text-align:left;display:flex;align-items:center;gap:11px;min-height:42px;padding:0 10px;border:none;border-radius:11px;background:{{ n.bg }};color:{{ n.fg }};cursor:pointer;font-family:inherit;font-size:13.5px;font-weight:{{ n.peso }};">
+          <span style="display:flex;flex-shrink:0;">{{ n.icone }}</span>
+          <span style="flex:1;min-width:0;">{{ n.label }}</span>
+          <sc-if value="{{ n.temBadge }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:11px;font-weight:800;background:#E11D2A;color:#fff;padding:2px 7px;border-radius:7px;flex-shrink:0;">{{ n.badge }}</span>
+          </sc-if>
+        </button>
+      </sc-for>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 10px 0;border-top:1px solid rgba(255,255,255,.14);">
+      <div style="width:34px;height:34px;border-radius:50%;background:#E11D2A;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;">CS</div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;">
+        <span style="font-size:13px;font-weight:700;color:#fff;">Carla Souza</span>
+        <span style="font-size:11px;color:rgba(255,255,255,.6);font-weight:600;">Coordenação</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="fx-scroll" style="flex:1;min-width:0;overflow-y:auto;">
+    <div style="padding:30px 32px 36px;display:flex;flex-direction:column;gap:22px;">
+      
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px;">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <h1 style="font-size:25px;font-weight:800;color:#14181B;margin:0;letter-spacing:-.7px;">Estrutura acadêmica</h1>
+          <p style="font-size:14px;color:#5A6873;margin:0;font-weight:500;">A espinha de tudo: cursos, termos e disciplinas. Materiais e turmas penduram aqui.</p>
+        </div>
+        <div style="display:flex;gap:10px;flex-shrink:0;"><button style="min-height:42px;padding:0 16px;border:none;border-radius:12px;background:#E11D2A;color:#fff;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:8px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg>Novo curso</button></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:14px;align-items:start;">
+        <sc-for list="{{ colunas }}" as="c" hint-placeholder-count="3">
+          <div style="background:#fff;border:1.5px solid #eceef1;border-radius:16px;overflow:hidden;">
+            <div style="padding:13px 15px;border-bottom:1.5px solid #e7eaee;background:#fafbfc;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+              <span style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#5A6873;">{{ c.titulo }}</span>
+              <span style="font-size:11px;font-weight:800;color:#5A6873;">{{ c.contagem }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;padding:6px;">
+              <sc-for list="{{ c.itens }}" as="i" hint-placeholder-count="4">
+                <button style="width:100%;text-align:left;display:flex;align-items:center;gap:10px;min-height:48px;padding:0 11px;border:none;border-radius:11px;background:{{ i.bg }};cursor:pointer;font-family:inherit;">
+                  <span style="width:5px;height:26px;border-radius:3px;background:{{ i.cor }};flex-shrink:0;"></span>
+                  <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;">
+                    <span style="font-size:13.5px;font-weight:{{ i.peso }};color:#14181B;">{{ i.nome }}</span>
+                    <span style="font-size:11.5px;color:#5A6873;font-weight:600;">{{ i.sub }}</span>
+                  </span>
+                  <sc-if value="{{ i.aberto }}" hint-placeholder-val="{{ false }}">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2E4756" stroke-width="2.4" style="flex-shrink:0;"><path d="M9 6l6 6-6 6"/></svg>
+                  </sc-if>
+                </button>
+              </sc-for>
+              <button style="width:100%;min-height:44px;margin-top:4px;border:1.5px dashed #cdd3da;border-radius:11px;background:none;color:#2E4756;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer;">{{ c.adicionar }}</button>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex;align-items:flex-start;gap:11px;background:#eef2f5;border-radius:14px;padding:15px 17px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2E4756" stroke-width="2" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>
+        <span style="font-size:13.5px;color:#2E4756;font-weight:600;line-height:1.5;">Apagar uma disciplina não remove os materiais nem as entregas dos alunos — ela sai do ar e o conteúdo fica arquivado. Nada aqui é exclusão definitiva.</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const ico = (paths, size) => React.createElement('svg',
+      { width: size || 18, height: size || 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round', strokeLinejoin: 'round' },
+      paths.map((d, i) => React.createElement('path', { key: i, d })));
+    const navDefs = [
+      { label: 'Visão geral', paths: ['M3 12h7V3H3zM14 21h7v-9h-7zM14 8h7V3h-7zM3 21h7v-5H3z'] },
+      { label: 'Eventos', paths: ['M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', 'M3 10h18M8 3v4M16 3v4'] },
+      { label: 'Avisos', paths: ['M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9', 'M10.3 21a1.94 1.94 0 0 0 3.4 0'] },
+      { label: 'Estrutura acadêmica', paths: ['M12 3 3 8l9 5 9-5-9-5z', 'M3 8v6l9 5 9-5V8'] },
+      { label: 'Turmas e grade', paths: ['M3 5h18v16H3z', 'M3 10h18M9 10v11M15 10v11'] },
+      { label: 'Matrículas', paths: ['M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2', 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M19 8v6M22 11h-6'] },
+      { label: 'Usuários e papéis', badge: '3', temBadge: true, paths: ['M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2', 'M9.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M16 3.1a4 4 0 0 1 0 7.8'] },
+      { label: 'Auditoria', paths: ['M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4', 'M8 13h5M8 17h8', 'M14 3h7v7'] },
+    ];
+    const nav = navDefs.map(n => {
+      const on = n.label === "Estrutura acadêmica";
+      return { label: n.label, icone: ico(n.paths),
+        bg: on ? 'rgba(255,255,255,.14)' : 'transparent',
+        fg: on ? '#fff' : 'rgba(255,255,255,.66)',
+        peso: on ? '800' : '600',
+        badge: n.badge || '', temBadge: !!n.temBadge };
+    });
+
+    const RED = '#E11D2A', SLATE = '#2E4756', GOLD = '#f0a500';
+    const it = (nome, sub, cor, aberto) => ({ nome, sub, cor, aberto: !!aberto, bg: aberto ? '#eef2f5' : 'transparent', peso: aberto ? '800' : '600' });
+    const colunas = [
+      { titulo: 'Cursos', contagem: '4', adicionar: '+ Curso', itens: [
+        it('Ciência de Dados', '3 termos ativos', RED, true),
+        it('Gestão Comercial', '4 termos ativos', SLATE),
+        it('Desenvolvimento de Software', '2 termos ativos', SLATE),
+        it('Gestão de RH', '3 termos ativos', GOLD),
+      ]},
+      { titulo: 'Termos · Ciência de Dados', contagem: '3', adicionar: '+ Termo', itens: [
+        it('1º semestre', '6 disciplinas · 41 alunos', RED),
+        it('3º semestre', '5 disciplinas · 32 alunos', RED, true),
+        it('5º semestre', '4 disciplinas · 16 alunos', RED),
+      ]},
+      { titulo: 'Disciplinas · 3º semestre', contagem: '5', adicionar: '+ Disciplina', itens: [
+        it('Ciência de Dados', 'Prof. Marcelo Dias', RED),
+        it('Aprendizado de Máquina', 'Prof. Marcelo Dias', RED),
+        it('Visualização de Dados', 'Prof. Marcelo Dias', RED),
+        it('Banco de Dados', 'Prof. Aline Costa', RED),
+        it('Estatística Aplicada', 'Sem professor', '#dfe3e7'),
+      ]},
+    ];
+    
+    return { nav, colunas };
+  }
+}
+</script>
+</body>
+</html>

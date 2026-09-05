@@ -1,0 +1,43 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1280, "h": 800, "title": "1 · Visão geral", "is_interactive": true },
+    { "file": "Avisos.dc.html", "x": 1400, "y": 0, "w": 1280, "h": 800, "title": "2 · Avisos", "is_interactive": true },
+    { "file": "Eventos.dc.html", "x": 2800, "y": 0, "w": 1280, "h": 800, "title": "3 · Eventos e inscritos", "is_interactive": true },
+    { "file": "Usuarios.dc.html", "x": 4200, "y": 0, "w": 1280, "h": 800, "title": "4 · Usuários e papéis", "is_interactive": true },
+    { "file": "Estrutura.dc.html", "x": 0, "y": 960, "w": 1280, "h": 800, "title": "5 · Estrutura acadêmica", "is_interactive": true },
+    { "file": "Turmas.dc.html", "x": 1400, "y": 960, "w": 1280, "h": 800, "title": "6 · Turmas e grade", "is_interactive": true },
+    { "file": "Matriculas.dc.html", "x": 2800, "y": 960, "w": 1280, "h": 800, "title": "7 · Matrículas", "is_interactive": true },
+    { "file": "Auditoria.dc.html", "x": 4200, "y": 960, "w": 1280, "h": 800, "title": "8 · Auditoria", "is_interactive": true }
+  ],
+  "annotations": [
+    {
+      "id": "linha-operacao",
+      "x": 0,
+      "y": -210,
+      "w": 900,
+      "text": "OPERAÇÃO CORRENTE\n\nO que a coordenação faz toda semana: acompanhar o que pede ação, publicar aviso e evento, e liberar acesso de quem entrou."
+    },
+    {
+      "id": "linha-base",
+      "x": 0,
+      "y": 780,
+      "w": 900,
+      "text": "A BASE — precisa vir primeiro\n\nSem curso, termo, disciplina, turma, grade e matrícula cadastrados aqui, o app do aluno e o do professor abrem vazios. É por isso que este painel é o primeiro software utilizável do projeto."
+    },
+    {
+      "id": "nota-publico",
+      "x": 1400,
+      "y": -210,
+      "w": 1280,
+      "text": "Aqui está o bloqueador nº 1 da auditoria, resolvido: \"Quem recebe\" é campo obrigatório, com quatro escopos (instituição / curso / termo / turma) e uma linha que diz o alcance real antes de publicar — em vermelho quando atinge todo mundo. Abaixo, agendamento, expiração e fixar. Clique nos escopos para ver o alcance mudar."
+    },
+    {
+      "id": "nota-auditoria",
+      "x": 4200,
+      "y": 780,
+      "w": 1280,
+      "text": "A trilha registra as três origens de escrita — coordenação, professor e aluno — inclusive alteração de nota e hash do arquivo entregue. É o que resolve disputa acadêmica."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

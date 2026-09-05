@@ -1,0 +1,1187 @@
+<title>Fatec Adamantina — Do Protótipo ao App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+
+<style>
+  :root {
+    --ground: #F4F6F7;
+    --surface: #FFFFFF;
+    --surface-2: #EDF0F2;
+    --line: #D9E0E4;
+    --line-soft: #E7ECEF;
+    --ink: #14181B;
+    --ink-2: #4E5C67;
+    --ink-3: #6B7A85;
+    --slate: #2E4756;
+    --slate-soft: #E7EEF2;
+    --red: #B00D28;
+    --red-soft: #FBE9EC;
+    --amber: #7A6000;
+    --amber-soft: #FBF1D4;
+    --green: #08693A;
+    --green-soft: #DFF2E7;
+    --rail: 268px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #11161A;
+      --surface: #191F24;
+      --surface-2: #212930;
+      --line: #303941;
+      --line-soft: #262E35;
+      --ink: #E9EEF1;
+      --ink-2: #AEBDC7;
+      --ink-3: #8C9AA5;
+      --slate: #8FB6CC;
+      --slate-soft: #22303A;
+      --red: #FF8A97;
+      --red-soft: #33191E;
+      --amber: #E5BC55;
+      --amber-soft: #302713;
+      --green: #6BD69B;
+      --green-soft: #142B1F;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #11161A;
+    --surface: #191F24;
+    --surface-2: #212930;
+    --line: #303941;
+    --line-soft: #262E35;
+    --ink: #E9EEF1;
+    --ink-2: #AEBDC7;
+    --ink-3: #8C9AA5;
+    --slate: #8FB6CC;
+    --slate-soft: #22303A;
+    --red: #FF8A97;
+    --red-soft: #33191E;
+    --amber: #E5BC55;
+    --amber-soft: #302713;
+    --green: #6BD69B;
+    --green-soft: #142B1F;
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: 'Source Sans 3', system-ui, sans-serif;
+    font-size: 16.5px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Archivo', system-ui, sans-serif;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  code, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+  a { color: var(--slate); }
+
+  :focus-visible {
+    outline: 2.5px solid var(--red);
+    outline-offset: 3px;
+    border-radius: 3px;
+  }
+
+  /* ---------- shell ---------- */
+
+  .shell {
+    display: grid;
+    grid-template-columns: var(--rail) minmax(0, 1fr);
+    gap: 0;
+    max-width: 1220px;
+    margin: 0 auto;
+    align-items: start;
+  }
+
+  .rail {
+    position: sticky;
+    top: 0;
+    max-height: 100dvh;
+    overflow-y: auto;
+    padding: 40px 26px 40px 28px;
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+
+  .rail-mark {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: -0.3px;
+    line-height: 1.15;
+    color: var(--ink);
+  }
+  .rail-mark span { display: block; color: var(--red); font-size: 12.5px; letter-spacing: 0.2px; }
+
+  .rail nav { display: flex; flex-direction: column; gap: 1px; }
+  .rail nav a {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    padding: 6px 0;
+    color: var(--ink-2);
+    text-decoration: none;
+    font-size: 14.5px;
+    border-bottom: 1px solid transparent;
+  }
+  .rail nav a:hover { color: var(--red); }
+  .rail nav a b {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    font-size: 11.5px;
+    color: var(--ink-3);
+    min-width: 16px;
+  }
+
+  .tracks { display: flex; flex-direction: column; gap: 11px; }
+  .tracks h4 {
+    font-size: 11px; font-weight: 600; letter-spacing: 1.1px;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  .track { display: grid; grid-template-columns: 1fr auto; gap: 3px 8px; align-items: center; }
+  .track-name { font-size: 13.5px; color: var(--ink-2); }
+  .track-val {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--ink-3); font-variant-numeric: tabular-nums;
+  }
+  .track-bar {
+    grid-column: 1 / -1; height: 5px; border-radius: 3px;
+    background: var(--surface-2); overflow: hidden;
+  }
+  .track-bar i { display: block; height: 100%; border-radius: 3px; background: var(--slate); }
+  .track-bar i.hot { background: var(--red); }
+
+  main { padding: 46px 0 90px 48px; min-width: 0; }
+
+  /* ---------- masthead ---------- */
+
+  .masthead { max-width: 70ch; margin-bottom: 40px; }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing: 0.6px;
+    color: var(--ink-3); margin-bottom: 14px;
+  }
+  .masthead h1 {
+    font-size: clamp(31px, 4.4vw, 45px);
+    font-weight: 700; letter-spacing: -1.4px; line-height: 1.06;
+  }
+  .masthead .lede {
+    margin: 18px 0 0; font-size: 18.5px; color: var(--ink-2); max-width: 62ch;
+  }
+
+  .verdict {
+    margin-top: 28px; padding: 20px 22px;
+    background: var(--surface); border: 1px solid var(--line);
+    border-left: 4px solid var(--red); border-radius: 4px;
+  }
+  .verdict p { margin: 0; font-size: 16px; color: var(--ink-2); }
+  .verdict p + p { margin-top: 10px; }
+  .verdict strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- sections ---------- */
+
+  section { max-width: 74ch; margin-bottom: 62px; scroll-margin-top: 24px; }
+
+  .sec-head {
+    display: flex; align-items: baseline; gap: 12px;
+    padding-bottom: 11px; margin-bottom: 22px;
+    border-bottom: 2px solid var(--ink);
+  }
+  .sec-num {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    font-weight: 500; color: var(--red);
+  }
+  .sec-head h2 {
+    font-size: 25px; font-weight: 700; letter-spacing: -0.7px; flex: 1;
+  }
+  .sec-count {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--ink-3); font-variant-numeric: tabular-nums;
+  }
+
+  section > p { max-width: 66ch; color: var(--ink-2); }
+  section > p strong { color: var(--ink); font-weight: 600; }
+
+  h3.sub {
+    font-size: 13px; font-weight: 600; letter-spacing: 1.2px;
+    text-transform: uppercase; color: var(--ink-3);
+    margin: 34px 0 14px;
+  }
+
+  /* ---------- findings ---------- */
+
+  .findings { display: flex; flex-direction: column; gap: 1px; background: var(--line-soft); border-radius: 4px; overflow: hidden; }
+
+  .f {
+    display: grid;
+    grid-template-columns: 4px 1fr;
+    background: var(--surface);
+  }
+  .f > .stripe { background: var(--ink-3); }
+  .f.crit > .stripe { background: var(--red); }
+  .f.high > .stripe { background: #D97706; }
+  .f.med  > .stripe { background: var(--slate); }
+  .f.low  > .stripe { background: var(--line); }
+
+  .f-body { padding: 15px 18px 16px; min-width: 0; }
+  .f-top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 5px; }
+  .f-title { font-family: 'Archivo', sans-serif; font-weight: 600; font-size: 16.5px; letter-spacing: -0.2px; }
+  .chip {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 3px; white-space: nowrap;
+  }
+  .chip.crit { background: var(--red-soft); color: var(--red); }
+  .chip.high { background: var(--amber-soft); color: var(--amber); }
+  .chip.med  { background: var(--slate-soft); color: var(--slate); }
+  .chip.low  { background: var(--surface-2); color: var(--ink-3); }
+  .chip.ok   { background: var(--green-soft); color: var(--green); }
+
+  .f-body p { margin: 0; font-size: 15.5px; color: var(--ink-2); }
+  .f-body p + p { margin-top: 7px; }
+  .f-fix {
+    margin-top: 9px; padding-top: 9px;
+    border-top: 1px dashed var(--line);
+    font-size: 15px; color: var(--ink-2);
+  }
+  .f-fix b {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    letter-spacing: 0.5px; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 500; margin-right: 7px;
+  }
+
+  code {
+    font-size: 0.87em; background: var(--surface-2);
+    padding: 1px 5px; border-radius: 3px; color: var(--ink);
+  }
+
+  /* ---------- plain lists ---------- */
+
+  ul.plain { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  ul.plain li {
+    display: grid; grid-template-columns: auto 1fr; gap: 11px;
+    font-size: 15.5px; color: var(--ink-2); align-items: baseline;
+  }
+  ul.plain li::before {
+    content: "—"; color: var(--ink-3);
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  }
+  ul.plain li b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- tables ---------- */
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line-soft); }
+  thead th {
+    font-family: 'JetBrains Mono', monospace; font-weight: 500;
+    font-size: 11px; letter-spacing: 0.7px; text-transform: uppercase;
+    color: var(--ink-3); background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.small { color: var(--ink-2); font-size: 14px; }
+
+  .swatch {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px; white-space: nowrap;
+  }
+  .swatch i {
+    width: 30px; height: 18px; border-radius: 3px;
+    border: 1px solid var(--line); display: grid; place-items: center;
+    font-family: 'Archivo', sans-serif; font-size: 11px; font-weight: 700;
+  }
+  .verdict-cell { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 500; }
+  .fail { color: var(--red); }
+  .pass { color: var(--green); }
+  .edge { color: var(--amber); }
+
+  /* ---------- roadmap ---------- */
+
+  .phases { display: flex; flex-direction: column; gap: 0; }
+  .phase {
+    display: grid; grid-template-columns: 74px 1fr; gap: 22px;
+    padding: 22px 0; border-top: 1px solid var(--line);
+  }
+  .phase:last-child { border-bottom: 1px solid var(--line); }
+  .phase-tag { display: flex; flex-direction: column; gap: 3px; }
+  .phase-tag .n {
+    font-family: 'Archivo', sans-serif; font-weight: 700;
+    font-size: 30px; letter-spacing: -1.5px; line-height: 1; color: var(--red);
+  }
+  .phase-tag .t {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--ink-3); letter-spacing: 0.3px;
+  }
+  .phase h3 { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; margin-bottom: 4px; }
+  .phase > div > p { margin: 0 0 10px; font-size: 15.5px; color: var(--ink-2); }
+  .gate {
+    margin-top: 10px; font-size: 14.5px; color: var(--ink-2);
+    padding: 9px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 4px;
+  }
+  .gate b {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    letter-spacing: 0.6px; text-transform: uppercase; color: var(--red);
+    display: block; margin-bottom: 2px; font-weight: 500;
+  }
+
+  /* ---------- decisions ---------- */
+
+  .decisions { display: flex; flex-direction: column; gap: 14px; }
+  .decision {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 4px; padding: 17px 19px;
+  }
+  .decision h3 { font-size: 16.5px; font-weight: 600; letter-spacing: -0.2px; margin-bottom: 6px; }
+  .decision p { margin: 0; font-size: 15.5px; color: var(--ink-2); }
+  .decision .rec {
+    margin-top: 10px; font-size: 15px; color: var(--ink);
+    padding-left: 12px; border-left: 3px solid var(--green);
+  }
+  .decision .rec b {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    letter-spacing: 0.6px; text-transform: uppercase; color: var(--green);
+    display: block; margin-bottom: 1px; font-weight: 500;
+  }
+
+  footer {
+    max-width: 74ch; margin-top: 20px; padding-top: 20px;
+    border-top: 1px solid var(--line);
+    font-size: 13.5px; color: var(--ink-3);
+  }
+  footer code { background: none; padding: 0; font-size: 12.5px; }
+
+  /* ---------- responsive ---------- */
+
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; }
+    .rail {
+      position: static; max-height: none; border-right: none;
+      border-bottom: 1px solid var(--line);
+      padding: 26px 22px 22px; flex-direction: column; gap: 20px;
+    }
+    .rail nav { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; }
+    main { padding: 32px 22px 70px; }
+    .phase { grid-template-columns: 54px 1fr; gap: 16px; }
+    .phase-tag .n { font-size: 24px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="shell">
+
+  <aside class="rail">
+    <div class="rail-mark">Fatec Adamantina<span>Auditoria do bundle de design</span></div>
+
+    <nav aria-label="Seções do relatório">
+      <a href="#diagnostico"><b>00</b> Diagnóstico</a>
+      <a href="#decisoes"><b>01</b> Decisões abertas</a>
+      <a href="#papeis"><b>02</b> Papéis e permissões</a>
+      <a href="#superficies"><b>03</b> Superfícies que faltam</a>
+      <a href="#completo"><b>04</b> Completo</a>
+      <a href="#seguro"><b>05</b> Seguro</a>
+      <a href="#acessivel"><b>06</b> Acessível</a>
+      <a href="#contraste"><b>07</b> Contraste medido</a>
+      <a href="#peso"><b>08</b> Peso e assets</a>
+      <a href="#roadmap"><b>09</b> Roteiro</a>
+    </nav>
+
+    <div class="tracks">
+      <h4>Estado por frente</h4>
+      <div class="track">
+        <span class="track-name">Design de telas</span>
+        <span class="track-val">13 de ~25</span>
+        <span class="track-bar"><i style="width:52%"></i></span>
+      </div>
+      <div class="track">
+        <span class="track-name">Front-end real</span>
+        <span class="track-val">0%</span>
+        <span class="track-bar"><i class="hot" style="width:2%"></i></span>
+      </div>
+      <div class="track">
+        <span class="track-name">Back-end / dados</span>
+        <span class="track-val">0%</span>
+        <span class="track-bar"><i class="hot" style="width:2%"></i></span>
+      </div>
+      <div class="track">
+        <span class="track-name">Infra e versionamento</span>
+        <span class="track-val">0%</span>
+        <span class="track-bar"><i class="hot" style="width:2%"></i></span>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+
+    <div class="masthead">
+      <div class="eyebrow">Auditoria · 05 set 2026 · rev. 2 · fatec-adamantina-app</div>
+      <h1>Do protótipo ao hub: o que falta</h1>
+      <p class="lede">Levantamento de completude, segurança e acessibilidade sobre o bundle de handoff do Claude Design — 914 linhas de protótipo, 13 telas, 25 MB em disco.</p>
+
+      <div class="verdict">
+        <p><strong>O que você tem hoje é um protótipo de alta fidelidade, não um aplicativo.</strong> As 13 telas existem, a navegação entre elas funciona, e o desenho está maduro o bastante para virar código. Mas não há back-end, não há dados reais, não há repositório git, não há testes e não há <code>package.json</code> — nenhuma linha de código de produção foi escrita ainda.</p>
+        <p>Isso muda a natureza desta auditoria: a maior parte do que segue não é <em>bug a corrigir</em>, e sim <strong>requisito a decidir antes de escrever a primeira linha</strong>. A exceção é a acessibilidade, onde o protótipo já carrega 14 padrões concretos que, se copiados para a implementação, ficam caros de desfazer depois.</p>
+      </div>
+
+      <div class="verdict" style="border-left-color:var(--slate);">
+        <p><b class="mono" style="display:block;font-size:10.5px;letter-spacing:.6px;text-transform:uppercase;color:var(--slate);margin-bottom:6px;font-weight:500;">Atualização de escopo</b><strong>Nada vem de sistema externo: o hub é a origem do dado.</strong> Alunos, professores e coordenação usam a mesma plataforma, e a coordenação gere eventos e avisos. Isso responde duas das quatro decisões abertas — e reclassifica o projeto: não é um aplicativo que <em>mostra</em> informação acadêmica, é a plataforma onde ela <em>nasce</em>.</p>
+        <p>Três consequências percorrem o resto deste documento. <strong>Um:</strong> o desenho cobre só um dos três papéis — faltam as superfícies de professor e de coordenação, cerca de 12 telas (seção 03). <strong>Dois:</strong> onde havia só leitura, agora há escrita, então permissão deixa de ser detalhe de back-end e vira o núcleo do modelo (seção 02). <strong>Três:</strong> sendo origem, perda de dado é perda definitiva — backup, exclusão reversível e trilha de auditoria saem da lista de boas práticas e entram na de requisitos.</p>
+      </div>
+    </div>
+
+    <!-- ================= 00 ================= -->
+    <section id="diagnostico">
+      <div class="sec-head">
+        <span class="sec-num">00</span>
+        <h2>Diagnóstico do que existe</h2>
+      </div>
+
+      <p>O diretório contém um <em>handoff bundle</em> exportado do Claude Design. O arquivo principal é <code>Fatec Adamantina App.dc.html</code>, acompanhado de dois runtimes gerados (<code>support.js</code>, <code>image-slot.js</code>) que só funcionam dentro do editor de design. O <code>(offline).html</code> de 5,5 MB é um instantâneo autocontido para visualização — não é fonte.</p>
+
+      <h3 class="sub">O que está pronto</h3>
+      <ul class="plain">
+        <li><b>13 telas desenhadas:</b> splash, 3 de onboarding, login, home, cronograma, calendário, eventos, atividades, detalhe da atividade, materiais, lembretes e perfil.</li>
+        <li><b>Fluxo de entrega no estilo Teams:</b> anexar, entregar, desfazer — com estados <code>entregue</code> e <code>podeEditar</code> já modelados.</li>
+        <li><b>Navegação em pastas de materiais</b> com 4 níveis (curso → termo → matéria → arquivos) e breadcrumb funcionando.</li>
+        <li><b>Identidade visual coerente:</b> vermelho <code>#E11D2A</code>/<code>#C8102E</code>, slate <code>#2E4756</code>, Plus Jakarta Sans, e os brasões oficiais de SP e Centro Paula Souza já aplicados.</li>
+      </ul>
+
+      <h3 class="sub">O que não existe</h3>
+      <ul class="plain">
+        <li><b>Nenhum código de aplicação.</b> Sem <code>package.json</code>, sem framework escolhido, sem estrutura de projeto.</li>
+        <li><b>Nenhum controle de versão.</b> O diretório não é um repositório git — sem histórico, sem backup, sem revisão, sem possibilidade de trabalho em equipe.</li>
+        <li><b>Nenhum back-end.</b> Todos os dados estão literais dentro do <code>renderVals()</code>: aulas, eventos, atividades, materiais, lembretes e até o nome do aluno.</li>
+        <li><b>Nenhum teste, lint, CI ou tipagem.</b></li>
+      </ul>
+    </section>
+
+    <!-- ================= 01 ================= -->
+    <section id="decisoes">
+      <div class="sec-head">
+        <span class="sec-num">01</span>
+        <h2>Decisões abertas</h2>
+        <span class="sec-count">4 respondidas · 3 abertas</span>
+      </div>
+
+      <p>Quatro estão resolvidas. As respostas abriram perguntas novas — todas ainda anteriores à Fase 1 do roteiro, e uma delas é hoje o maior risco do projeto.</p>
+
+      <div class="decisions">
+
+        <div class="decision" style="border-left:3px solid var(--green);">
+          <h3>De onde vêm os dados? <span class="chip ok">Respondida</span></h3>
+          <p>De lugar nenhum — <strong>o hub é a origem</strong>. Não há integração com sistema acadêmico, e o dado passa a existir quando alguém o cadastra aqui.</p>
+          <div class="rec"><b>O que isso impõe</b>Alguém precisa semear a base antes do primeiro aluno entrar: cursos, termos, disciplinas, turmas, professores e a matrícula de cada aluno. A tela que precisa existir primeiro não é a do aluno — é a da coordenação. E o dado deixa de ser cópia descartável: exige backup com restauração testada e exclusão reversível.</div>
+        </div>
+
+        <div class="decision" style="border-left:3px solid var(--green);">
+          <h3>Quem usa? <span class="chip ok">Respondida</span></h3>
+          <p><strong>Três papéis:</strong> aluno, professor e coordenação — esta última gerindo eventos e avisos. Deixa de ser um app de consumo e vira plataforma com escrita nos três níveis.</p>
+          <div class="rec"><b>O que isso impõe</b>Modelo de permissões explícito (seção 02) e cerca de 12 telas novas que ninguém desenhou ainda (seção 03).</div>
+        </div>
+
+        <div class="decision" style="border-left:3px solid var(--green);">
+          <h3>Nota e frequência entram no MVP? <span class="chip ok">Respondida</span></h3>
+          <p><strong>As duas entram.</strong> O professor avalia a atividade no hub — o campo "Pontos" já estava no desenho — e <strong>faz chamada no app</strong>, o que dá origem real à frequência que o perfil exibe. Os <strong>92%</strong> deixam de ser número órfão.</p>
+          <div class="rec"><b>O que isso impõe</b>Uma tela de chamada por aula, mudança na rotina de toda aula, e o hub guardando registro de presença — com contestação, retificação e retenção. A média exibida continua sendo <em>média das atividades do hub</em>, e precisa ser rotulada assim: sobre boletim oficial o hub não tem autoridade. Ver o risco de chamada duplicada, adiante.</div>
+        </div>
+
+        <div class="decision" style="border-left:3px solid var(--red);">
+          <h3>O professor vai lançar presença duas vezes?</h3>
+          <p>Se o Centro Paula Souza mantém diário de classe próprio, a chamada no app vira trabalho dobrado. Ninguém sustenta isso por muito tempo, e o lado abandonado costuma ser o novo — o que esvazia a frequência e, com ela, uma das três razões de o hub existir.</p>
+          <div class="rec" style="border-left-color:var(--red);"><b style="color:var(--red);">Verificar antes de construir</b>Confirmar com a coordenação como a presença é registrada hoje. Este é o maior risco de ado&#231;&#227;o do projeto, e ele é barato de checar e caro de descobrir depois.</div>
+        </div>
+
+        <div class="decision" style="border-left:3px solid var(--green);">
+          <h3>Um app para todos, ou app + painel? <span class="chip ok">Respondida</span></h3>
+          <p>Aluno e professor usam no celular, no campus, entre aulas. A coordenação faz cadastro em massa: matricular turma inteira, montar grade do semestre, gerir usuários — trabalho de tabela, teclado e tela grande, sofrível no celular e caro de fazer bem lá.</p>
+          <div class="rec"><b>Recomendação</b>App móvel com a interface variando por papel para <strong>aluno e professor</strong>, e <strong>painel web</strong> separado para a coordenação. Mesmo back-end e mesma API para os dois. Isso corta pela metade o esforço de desenho das telas administrativas e evita o pior dos mundos, que é gestão institucional feita em tela de 460px.</div>
+        </div>
+
+        <div class="decision">
+          <h3>Quem diz que você é professor?</h3>
+          <p>O Entra ID autentica — prova que a pessoa é dona de um e-mail <code>@fatec.sp.gov.br</code> — mas não diz se ela é aluna, professora ou da coordenação. Esse papel só existe no seu banco. Sem regra, qualquer pessoa com e-mail institucional entra como qualquer coisa.</p>
+          <div class="rec"><b>Recomendação</b>Primeiro acesso cria o usuário <em>sem papel</em>, em fila de aprovação; a coordenação atribui papel e vínculo de turma. O primeiro administrador é criado à mão na instalação (bootstrap) — nunca por auto-cadastro.</div>
+        </div>
+
+        <div class="decision" style="border-left:3px solid var(--green);">
+          <h3>Qual stack? <span class="chip ok">Respondida</span></h3>
+          <p>O desenho é inequivocamente de celular: <code>max-width: 460px</code>, telas de <code>844px</code> de altura, tab bar inferior fixa, notificações push previstas nas preferências. E com o hub como origem, push deixa de ser refinamento — é como o aviso da coordenação chega ao aluno.</p>
+          <div class="rec"><b>Recomendação</b>Expo (React Native) para o app de aluno e professor: Android e iOS do mesmo código, push nativo resolvido, token guardado em Keychain/Keystore via <code>expo-secure-store</code>, e o layout de 460px vira tela cheia sem adaptação. Painel da coordenação em web comum, consumindo a mesma API. Um PWA único é alternativa se distribuir na loja não for requisito — mas push no iOS fica limitado, e é justamente o canal dos avisos.</div>
+        </div>
+
+        <div class="decision">
+          <h3>Como as pessoas entram?</h3>
+          <p>A tela de login oferece <strong>duas</strong> formas: e-mail + senha, e "Entrar com a Microsoft". Manter as duas dobra a superfície de ataque e obriga você a guardar senhas de professores e da coordenação — não só de alunos.</p>
+          <div class="rec"><b>Recomendação</b>Só Microsoft Entra ID (OIDC com PKCE) — é a conta <code>@fatec.sp.gov.br</code> que todos os três papéis já têm. Elimina armazenar senha, herda o MFA da instituição, e o desligamento ao fim do curso ou do contrato passa a ser automático. Remover os campos de e-mail e senha do desenho.</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= 02 ================= -->
+    <section id="papeis">
+      <div class="sec-head">
+        <span class="sec-num">02</span>
+        <h2>Papéis e permissões</h2>
+        <span class="sec-count">3 papéis · núcleo do sistema</span>
+      </div>
+
+      <p>Com três papéis escrevendo na mesma base, a permissão deixa de ser um detalhe de implementação e passa a ser a peça central do modelo. Esta matriz é o contrato: cada célula precisa virar uma verificação <strong>no servidor</strong>, e nenhuma delas pode depender de a tela estar escondida no cliente.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Capacidade</th>
+              <th scope="col">Aluno</th>
+              <th scope="col">Professor</th>
+              <th scope="col">Coordenação</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="small">Ver grade, prazos e materiais</td><td class="small">Suas turmas</td><td class="small">Suas turmas</td><td class="small">Todas</td></tr>
+            <tr><td class="small">Entregar trabalho</td><td class="small"><b style="color:var(--green)">Sim</b></td><td class="small">—</td><td class="small">—</td></tr>
+            <tr><td class="small">Ver e baixar entrega</td><td class="small">Só a própria</td><td class="small">Suas turmas</td><td class="small">Todas</td></tr>
+            <tr><td class="small">Criar atividade e material</td><td class="small">—</td><td class="small">Suas turmas</td><td class="small"><b style="color:var(--green)">Sim</b></td></tr>
+            <tr><td class="small">Avaliar entrega</td><td class="small">—</td><td class="small">Suas turmas</td><td class="small">—</td></tr>
+            <tr><td class="small">Publicar evento e aviso</td><td class="small">—</td><td class="small">Só na turma</td><td class="small"><b style="color:var(--green)">Institucional</b></td></tr>
+            <tr><td class="small">Gerir cursos, turmas, disciplinas</td><td class="small">—</td><td class="small">—</td><td class="small"><b style="color:var(--green)">Sim</b></td></tr>
+            <tr><td class="small">Matricular aluno e atribuir papel</td><td class="small">—</td><td class="small">—</td><td class="small"><b style="color:var(--green)">Sim</b></td></tr>
+            <tr><td class="small">Ler a trilha de auditoria</td><td class="small">—</td><td class="small">—</td><td class="small"><b style="color:var(--green)">Sim</b></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="sub">O que a matriz revela</h3>
+      <ul class="plain">
+        <li><b>"Suas turmas" é a regra mais frequente da tabela</b> — e a mais fácil de esquecer. Ela precisa existir como uma função única no back-end, aplicada em toda rota, e não reescrita caso a caso.</li>
+        <li><b>Professor é o papel de maior risco</b>, não a coordenação: tem acesso a documentos que alunos enviaram, em volume, e é o vínculo mais mutável (professor troca de turma todo semestre). Vínculo de professor com turma precisa ter início e fim, não ser permanente.</li>
+        <li><b>Aviso institucional é a ação de maior alcance do sistema</b> — atinge todo mundo, instantaneamente, por push. Merece confirmação explícita antes de publicar, autoria visível e possibilidade de despublicar.</li>
+        <li><b>Todo papel expira.</b> O aluno se forma, o professor encerra o contrato, a coordenação muda. Sem data de fim no vínculo, no segundo semestre ninguém sabe quem ainda deveria ter acesso.</li>
+      </ul>
+
+      <h3 class="sub">Entidades mínimas</h3>
+      <p>Como nada vem de fora, o modelo precisa nascer completo. O conjunto mínimo para as 13 telas existentes funcionarem com dado real:</p>
+      <p class="mono" style="font-size:13.5px;line-height:2;color:var(--ink-2);">Usuario · Papel · Curso · Termo · Disciplina · Turma · Matricula · VinculoProfessor · Aula · Atividade · Entrega · Arquivo · Pasta · Material · Evento · Inscricao · Aviso · Notificacao · LogAuditoria</p>
+    </section>
+
+    <!-- ================= 03 ================= -->
+    <section id="superficies">
+      <div class="sec-head">
+        <span class="sec-num">03</span>
+        <h2>Superfícies que faltam</h2>
+        <span class="sec-count">~12 telas não desenhadas</span>
+      </div>
+
+      <p>As 13 telas do bundle são <strong>todas do aluno</strong>. Professor e coordenação — os dois papéis que produzem tudo que o aluno consome — não têm uma única tela. Este é o maior buraco de escopo do projeto, e ele quase dobra o trabalho de design.</p>
+
+      <h3 class="sub">Professor · no app, ~5 telas</h3>
+      <ul class="plain">
+        <li><b>Minhas turmas</b> — ponto de entrada do papel; hoje o app abre direto em "Aulas de hoje" do aluno.</li>
+        <li><b>Criar e editar atividade</b> — título, disciplina, instruções, anexos de apoio, prazo, pontuação.</li>
+        <li><b>Entregas de uma atividade</b> — quem entregou, quem não entregou, quem entregou atrasado. É a tela que o professor mais vai abrir, e é a que não existe.</li>
+        <li><b>Abrir e avaliar uma entrega</b> — baixar o arquivo, lançar pontos, devolver comentário.</li>
+        <li><b>Publicar material</b> — dentro da estrutura curso → termo → matéria que o aluno já navega.</li>
+      </ul>
+
+      <h3 class="sub">Coordenação · no painel web, ~7 telas</h3>
+      <ul class="plain">
+        <li><b>Eventos</b> — criar, editar, despublicar, e ver os inscritos. O desenho já promete "Inscrições abertas" e "Vagas limitadas": isso implica limite de vagas, lista de inscritos e o que fazer quando lota.</li>
+        <li><b>Avisos</b> — criar, agendar, fixar e expirar.</li>
+        <li><b>Cursos, termos e disciplinas</b> — a espinha de toda a navegação de materiais.</li>
+        <li><b>Turmas e grade horária</b> — sem isso, "Aulas de hoje" e o cronograma ficam vazios.</li>
+        <li><b>Matrículas</b> — vincular alunos às turmas, preferencialmente com importação em massa; matricular turma inteira à mão, um a um, é inviável.</li>
+        <li><b>Usuários e papéis</b> — a fila de aprovação do primeiro acesso e a atribuição de papel.</li>
+        <li><b>Trilha de auditoria</b> — quem publicou, editou ou removeu o quê.</li>
+      </ul>
+
+      <h3 class="sub">O que "avisos" precisa e o desenho não previu</h3>
+      <div class="findings">
+        <div class="f crit">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Aviso sem público-alvo</span><span class="chip crit">Bloqueador</span></div>
+            <p>A tela de Lembretes trata tudo como notificação pessoal. Não há noção de <em>para quem</em> um aviso vai: instituição inteira, um curso, um termo ou uma turma. Sem esse recorte, todo aviso vai para todos, o aluno de Gestão Comercial recebe aviso de Ciência de Dados, e em duas semanas ele desliga as notificações — matando o canal principal do hub.</p>
+            <p class="f-fix"><b>Correção</b>Público-alvo obrigatório na criação do aviso, e preferência de notificação por <em>tipo</em> (aviso institucional / prazo de atividade / material novo) em vez do interruptor único "Notificações push" que está no perfil.</p>
+          </div>
+        </div>
+        <div class="f high">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Sem rascunho, agendamento ou expiração</span><span class="chip high">Alto</span></div>
+            <p>Coordenação publica com antecedência e retira o que passou. Sem estado de rascunho, sem data de publicação e sem expiração, a lista de eventos acumula o que já aconteceu e o aviso da matrícula do semestre passado continua no topo.</p>
+          </div>
+        </div>
+        <div class="f high">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Sem autoria nem histórico de edição</span><span class="chip high">Alto</span></div>
+            <p>Conteúdo institucional publicado por pessoas precisa dizer quem publicou e quando foi alterado. Um aviso com informação errada — data de prova, prazo de matrícula — atinge todos os alunos por push em segundos, e alguém vai precisar responder por ele.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 04 ================= -->
+    <section id="completo">
+      <div class="sec-head">
+        <span class="sec-num">04</span>
+        <h2>Completo</h2>
+        <span class="sec-count">10 destinos mortos · 6 funções vazias</span>
+      </div>
+
+      <p>Esta seção cobre apenas a <strong>superfície do aluno</strong> — a única desenhada. Mesmo dentro dela, o protótipo promete mais telas do que entrega. Abaixo, tudo que tem um controle visível mas nenhum destino.</p>
+
+      <h3 class="sub">Telas prometidas que não existem</h3>
+      <div class="findings">
+        <div class="f crit">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Esqueci minha senha</span><span class="chip crit">Bloqueador</span></div>
+            <p>Link na tela de login com <code>href="#"</code>. Sem ele, um aluno trancado fora da conta não tem saída dentro do app.</p>
+            <p class="f-fix"><b>Se adotar Entra ID</b>o link deixa de existir — a recuperação passa a ser a da conta institucional. Essa é mais uma razão para a decisão 01.4.</p>
+          </div>
+        </div>
+        <div class="f high">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Histórico acadêmico</span><span class="chip high">Alto</span></div>
+            <p>Botão de destaque no perfil, ocupando largura inteira, sem <code>onClick</code>. É o segundo maior elemento da tela e não faz nada.</p>
+          </div>
+        </div>
+        <div class="f high">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Notas e frequência</span><span class="chip high">Alto</span></div>
+            <p>O perfil exibe média <strong>8.4</strong> e frequência <strong>92%</strong> como números grandes, mas não há tela de boletim nem de faltas por disciplina. Números sem detalhamento geram mais dúvida do que informação.</p>
+            <p class="f-fix"><b>Resolvido pelo escopo</b>Os <strong>92%</strong> passam a ter origem: o professor faz chamada no app. Falta a tela de frequência por disciplina — o número sem detalhamento continua gerando mais dúvida que informação. E os <strong>8.4</strong> precisam ser rotulados como média das atividades do hub, não como média oficial.</p>
+          </div>
+        </div>
+        <div class="f med">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Cinco itens de Preferências</span><span class="chip med">Médio</span></div>
+            <p><em>Minhas turmas</em>, <em>Segurança da conta</em>, <em>Dispositivos</em>, <em>Alterar senha</em> e <em>Configurações</em> têm chevron indicando navegação — e nenhum destino. Cinco becos sem saída em uma tela só.</p>
+          </div>
+        </div>
+        <div class="f med">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Editar perfil</span><span class="chip med">Médio</span></div>
+            <p>Botão preto no topo do perfil, sem ação.</p>
+          </div>
+        </div>
+        <div class="f med">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Detalhe do evento</span><span class="chip med">Médio</span></div>
+            <p>"Saiba mais" nos cards da home leva à <em>lista</em> de eventos, não ao evento. E na lista completa não há como abrir um evento nem se inscrever, embora as tags digam "Inscrições abertas" e "Vagas limitadas".</p>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="sub">Controles que não fazem nada</h3>
+      <ul class="plain">
+        <li><b>Três campos de busca</b> (home, atividades, materiais) sem nenhuma lógica de filtragem por trás.</li>
+        <li><b>Botão de filtro/ordenar</b> ao lado da busca da home: é um SVG solto, nem botão é.</li>
+        <li><b>Chips da home</b> (Tudo / Eventos / Prazos / Aulas / Materiais) mudam de cor ao clicar — gravam <code>homeFiltro</code> no state — mas nenhum conteúdo da tela consulta esse valor.</li>
+        <li><b>Download de anexos:</b> os botões de seta para baixo, tanto no detalhe da atividade quanto na lista de materiais, não têm ação.</li>
+        <li><b>Anexar trabalho</b> adiciona um arquivo falso fixo de um array <code>modelos[]</code> — não abre seletor de arquivo.</li>
+        <li><b>Onboarding sem persistência:</b> as três telas reaparecem a cada abertura, porque nada registra que já foram vistas.</li>
+      </ul>
+
+      <h3 class="sub">Estados ausentes</h3>
+      <p>O protótipo só desenhou o caminho feliz. Falta desenhar e implementar: <strong>carregando</strong>, <strong>erro de rede</strong>, <strong>offline</strong>, <strong>erro de login</strong>, <strong>validação de formulário</strong> e <strong>vazio</strong> — existe apenas um estado vazio no app inteiro ("Sem aulas neste dia"). Para um app que os alunos vão abrir no campus com sinal instável, o modo offline não é refinamento: as aulas do dia e os prazos precisam abrir sem rede.</p>
+
+      <h3 class="sub">Datas hardcoded</h3>
+      <div class="findings">
+        <div class="f high">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">O calendário só funciona em setembro de 2026</span><span class="chip high">Alto</span></div>
+            <p>O mês é o texto literal "Setembro 2026". A grade é montada com <code>for (let n = 1; n &lt;= 30; n++)</code> — 30 dias fixos — precedida de <strong>duas células em branco</strong> geradas por um laço fixo, porque 1º/09/2026 cai numa terça. Em qualquer outro mês, os dias alinham na coluna errada.</p>
+            <p class="f-fix"><b>Correção</b>Derivar mês, quantidade de dias e deslocamento inicial da data corrente; navegação entre meses; "hoje" calculado, não a constante <code>24</code>.</p>
+          </div>
+        </div>
+        <div class="f med">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Semana, "hoje" e prazos são literais</span><span class="chip med">Médio</span></div>
+            <p>O cronograma tem a semana fixa 22–27, com <code>diaAgenda</code> iniciando em <code>'24'</code>. O card de destaque diz "ENTREGA AMANHÃ" e o detalhe, "25 set, 23:59" — texto, não data. Nada disso muda com o passar dos dias.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 05 ================= -->
+    <section id="seguro">
+      <div class="sec-head">
+        <span class="sec-num">05</span>
+        <h2>Seguro</h2>
+        <span class="sec-count">requisitos, não bugs</span>
+      </div>
+
+      <p>Não existe back-end, então não há vulnerabilidade a explorar hoje. O que segue é a lista do que precisa estar em pé <strong>antes</strong> do app tocar em dado real. Está ordenado por risco no contexto específico deste hub — e os dois primeiros itens subiram de posição justamente porque o hub é a origem do dado.</p>
+
+      <div class="findings">
+
+        <div class="f crit">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Autorização por objeto, na leitura e na escrita</span><span class="chip crit">Risco nº 1</span></div>
+            <p>No protótipo, <code>goDetalhe</code> abre uma atividade sem parâmetro. Num back-end real isso vira <code>GET /atividades/{id}</code>. Se o servidor devolver a atividade só porque o usuário está logado, qualquer aluno lê — e possivelmente baixa — a entrega de qualquer outro trocando um número na URL. É a falha mais comum e mais grave em sistemas acadêmicos.</p>
+            <p>Com três papéis escrevendo, o problema dobra: agora também é preciso impedir que um professor publique atividade em turma que não é dele, avalie entrega de turma alheia, ou que alguém sem papel de coordenação publique um aviso institucional.</p>
+            <p class="f-fix"><b>Exigência</b>Toda rota valida no servidor o vínculo do usuário com o objeto — matrícula para aluno, vínculo vigente para professor, papel para coordenação. Filtro no cliente não é controle de acesso; a tela escondida continua sendo uma rota aberta.</p>
+          </div>
+        </div>
+
+        <div class="f crit">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">O dado só existe aqui</span><span class="chip crit">Bloqueador</span></div>
+            <p>Enquanto o app espelhasse outro sistema, um bug apagaria uma cópia. Sendo o hub a origem, uma entrega perdida está perdida — não há de onde restaurar, e é a nota do aluno.</p>
+            <p class="f-fix"><b>Exigência</b>Backup automático com <strong>restauração testada</strong> — backup nunca verificado não é backup; exclusão reversível em tudo que um humano possa apagar (atividade, material, entrega, turma); e confirmação explícita em ações de alcance amplo, como remover uma turma ou publicar aviso institucional.</p>
+          </div>
+        </div>
+
+        <div class="f crit">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Upload de trabalho</span><span class="chip crit">Bloqueador</span></div>
+            <p>"Anexar trabalho" aceita arquivo do aluno — é a porta de entrada mais perigosa do app.</p>
+            <p class="f-fix"><b>Exigência</b>Validar tipo pelo conteúdo (não pela extensão), limitar tamanho, varredura antivírus, sanitizar o nome contra <em>path traversal</em>, guardar fora da raiz web, e servir sempre por URL assinada de curta duração com <code>Content-Disposition: attachment</code> e Content-Type fixo — nunca o enviado pelo usuário.</p>
+          </div>
+        </div>
+
+        <div class="f crit">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Prazo e auditoria da entrega no servidor</span><span class="chip crit">Bloqueador</span></div>
+            <p>Hoje <code>entregar()</code> e <code>desfazerEntrega()</code> são apenas <code>setState</code>. Entrega de trabalho é ato acadêmico com consequência de nota — vai virar disputa com o professor mais cedo ou mais tarde.</p>
+            <p class="f-fix"><b>Exigência</b>Prazo verificado com o relógio do servidor, janela de "desfazer" definida em regra, e log de auditoria imutável: quem entregou, quando, qual arquivo e o hash dele.</p>
+          </div>
+        </div>
+
+        <div class="f high">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Armazenamento do token de sessão</span><span class="chip high">Alto</span></div>
+            <p>O erro clássico é guardar o token em <code>localStorage</code>, onde qualquer XSS o lê.</p>
+            <p class="f-fix"><b>Exigência</b>Cookie <code>httpOnly; Secure; SameSite=Lax</code> no web, ou <code>expo-secure-store</code> (Keychain/Keystore) no nativo. Refresh token rotativo, expiração curta, e revogação por dispositivo — a tela "Dispositivos" do perfil já prevê exatamente isso.</p>
+          </div>
+        </div>
+
+        <div class="f high">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">LGPD</span><span class="chip high">Alto</span></div>
+            <p>O app trata nome, e-mail institucional, prontuário, entregas, avaliações e token de notificação — todos dados pessoais. Sendo o Centro Paula Souza uma autarquia estadual, isso não é opcional.</p>
+            <p>E o hub sendo a origem, ele não é mais um intermediário que exibe dado de terceiro: passa a ser o <strong>lugar onde o dado é coletado e guardado</strong>, o que coloca a responsabilidade de controlador sobre a instituição por meio deste sistema — inclusive quanto ao que acontece com as entregas e avaliações quando o aluno se forma.</p>
+            <p class="f-fix"><b>Exigência</b>Base legal definida, aviso de privacidade na primeira abertura, política de retenção (o que acontece com os dados quando o aluno se forma), canal de atendimento ao titular e alinhamento com o Encarregado de Dados do CPS antes de publicar.</p>
+          </div>
+        </div>
+
+        <div class="f high">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Se mantiver senha própria</span><span class="chip high">Alto</span></div>
+            <p>Caso a decisão 01.4 conserve o login por senha, o pacote mínimo é: hash <strong>Argon2id</strong>, limite de tentativas por IP e por conta, bloqueio progressivo, verificação contra listas de senhas vazadas, e recuperação por token de uso único e vida curta que <strong>não revele se o e-mail existe</strong>.</p>
+          </div>
+        </div>
+
+        <div class="f med">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Nenhum segredo no bundle do app</span><span class="chip med">Médio</span></div>
+            <p>O binário de um app mobile é público e descompilável. Chave de API embutida é chave vazada. Tudo que precisa de segredo passa pelo seu back-end.</p>
+          </div>
+        </div>
+
+        <div class="f med">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Fontes carregadas de terceiro</span><span class="chip med">Médio</span></div>
+            <p>O protótipo puxa Plus Jakarta Sans de <code>fonts.googleapis.com</code>. Em produção isso é uma dependência de rede na inicialização e uma transferência de dados de IP dos alunos a um terceiro fora do país.</p>
+            <p class="f-fix"><b>Correção</b>Empacotar a fonte junto com o app.</p>
+          </div>
+        </div>
+
+        <div class="f med">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Higiene de cadeia de dependências</span><span class="chip med">Médio</span></div>
+            <p>Sem git, não há histórico, revisão nem rastreabilidade de quem mudou o quê. Com o repositório criado: lockfile versionado, alerta automático de vulnerabilidade em dependência, HTTPS obrigatório com HSTS, e limite de requisições em login, busca e download.</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= 06 ================= -->
+    <section id="acessivel">
+      <div class="sec-head">
+        <span class="sec-num">06</span>
+        <h2>Acessível</h2>
+        <span class="sec-count">14 achados medidos</span>
+      </div>
+
+      <p>Esta é a seção com problemas <strong>já existentes</strong>, não apenas requisitos. Os números abaixo foram contados no arquivo, não estimados. Um protótipo não precisa ser acessível — mas estes padrões costumam ser copiados literalmente para a implementação, e aí ficam caros de desfazer. Trate a lista como o contrato dos componentes base da Fase 1.</p>
+
+      <h3 class="sub">Estrutura e semântica</h3>
+      <div class="findings">
+        <div class="f crit">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Documento sem idioma declarado</span><span class="chip crit">Bloqueador</span></div>
+            <p>A tag <code>&lt;html&gt;</code> não tem <code>lang</code>. O leitor de tela lê "Cronograma" e "Atividades" com fonética de inglês — o conteúdo fica ininteligível.</p>
+            <p class="f-fix"><b>Correção</b><code>&lt;html lang="pt-BR"&gt;</code>. Uma linha.</p>
+          </div>
+        </div>
+        <div class="f crit">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Zero semântica no documento inteiro</span><span class="chip crit">Bloqueador</span></div>
+            <p>Contagem exata: <strong>0</strong> atributos <code>aria-*</code>, <strong>0</strong> <code>role=</code>, <strong>0</strong> tags <code>main</code>/<code>nav</code>/<code>header</code>/<code>section</code>. Tudo são <code>div</code>. A barra de abas — o principal meio de navegação do app — é uma <code>div</code> com cinco botões soltos.</p>
+            <p class="f-fix"><b>Correção</b>Barra de abas em <code>&lt;nav&gt;</code> com estado atual anunciado; conteúdo da tela em <code>&lt;main&gt;</code>.</p>
+          </div>
+        </div>
+        <div class="f crit">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Campos de formulário sem rótulo programático</span><span class="chip crit">Bloqueador</span></div>
+            <p><strong>5</strong> <code>&lt;input&gt;</code> no arquivo, <strong>0</strong> com <code>id</code> ou <code>aria-label</code>. Existem 2 <code>&lt;label&gt;</code> (e-mail e senha do login) e <strong>nenhum</strong> com <code>for=</code> — a associação é só visual. Os três campos de busca não têm rótulo algum.</p>
+          </div>
+        </div>
+        <div class="f crit">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Botões só de ícone, sem nome acessível</span><span class="chip crit">Bloqueador</span></div>
+            <p><strong>6</strong> botões cujo conteúdo é apenas um SVG: o sino de notificações, os botões de voltar do calendário, do detalhe, dos materiais e dos lembretes, e o de download de anexo. O leitor de tela anuncia todos como "botão", sem mais nada.</p>
+            <p class="f-fix"><b>Correção</b><code>aria-label</code> em cada um — "Notificações", "Voltar", "Baixar Briefing do trabalho.pdf".</p>
+          </div>
+        </div>
+        <div class="f crit">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Cliques em <code>div</code> e em <code>a</code> sem <code>href</code></span><span class="chip crit">Bloqueador</span></div>
+            <p><strong>4</strong> <code>&lt;div onClick cursor:pointer&gt;</code> e <strong>2</strong> <code>&lt;a onClick&gt;</code> sem <code>href</code>. Como estão dentro de <code>sc-for</code>, multiplicam-se em execução: o card do próximo prazo, ×3 cards de evento, ×4 cards de atividade, ×2 cards de pasta, e os dois "Ver tudo". Nada disso recebe foco, responde a Enter/Espaço ou é anunciado como acionável — quem navega por teclado ou leitor de tela não consegue abrir uma atividade.</p>
+            <p class="f-fix"><b>Correção</b>Elemento clicável é <code>&lt;button&gt;</code> ou <code>&lt;a href&gt;</code>. Sem exceção.</p>
+          </div>
+        </div>
+        <div class="f high">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Mostrar senha não é um controle</span><span class="chip high">Alto</span></div>
+            <p>O ícone de olho no campo de senha é um <code>&lt;svg&gt;</code> solto — não é botão, não recebe foco, não tem estado. Ou vira <code>&lt;button aria-pressed&gt;</code>, ou sai do desenho.</p>
+          </div>
+        </div>
+        <div class="f high">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Interruptores de preferência são <code>div</code></span><span class="chip high">Alto</span></div>
+            <p>"Notificações push" e "Resumo por e-mail" são <code>div</code> pintadas — sem <code>role="switch"</code>, sem <code>aria-checked</code>, sem foco, e sem sequer <code>onClick</code>. Quem não enxerga não tem como saber se a notificação está ligada.</p>
+          </div>
+        </div>
+        <div class="f high">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Troca de tela não move o foco</span><span class="chip high">Alto</span></div>
+            <p><code>go()</code> apenas zera o <code>scrollTop</code>. Para quem usa leitor de tela, nada indica que a tela mudou: o foco continua no botão anterior e a nova tela não é anunciada.</p>
+            <p class="f-fix"><b>Correção</b>Ao trocar de tela, mover o foco para o título e anunciar a mudança em região <em>live</em>.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="sub">Foco, movimento e tempo</h3>
+      <div class="findings">
+        <div class="f crit">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Foco de teclado invisível</span><span class="chip crit">Bloqueador</span></div>
+            <p><strong>0</strong> estilos de <code>:focus</code> no arquivo, contra <strong>5</strong> declarações de <code>outline:none</code>. Navegar por Tab é navegar às cegas.</p>
+            <p class="f-fix"><b>Correção</b>Um <code>:focus-visible</code> global, visível sobre fundo claro e escuro, definido no componente base — não tela a tela.</p>
+          </div>
+        </div>
+        <div class="f high">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Carrossel que anda sozinho, sem pausa</span><span class="chip high">Alto</span></div>
+            <p>Um <code>setInterval</code> de <strong>3200 ms</strong> rola o carrossel de eventos da home indefinidamente, sem botão de pausar, parar ou ocultar. Conteúdo em movimento automático por mais de 5 segundos precisa de controle (WCAG 2.2.2) — e é ativamente hostil para quem tem dificuldade de leitura ou de motricidade fina.</p>
+          </div>
+        </div>
+        <div class="f med">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Splash com tempo fixo</span><span class="chip med">Médio</span></div>
+            <p>Avança sozinha após <strong>1900 ms</strong>, sem como adiantar ou estender (WCAG 2.2.1).</p>
+          </div>
+        </div>
+        <div class="f med">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Movimento sem escape</span><span class="chip med">Médio</span></div>
+            <p><strong>7</strong> animações declaradas — incluindo um <em>spinner</em> infinito, deslizes de 34px e confete — e <strong>0</strong> ocorrências de <code>prefers-reduced-motion</code>. Quem tem transtorno vestibular não tem como desligar.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="sub">Tamanho, alvo e cor</h3>
+      <div class="findings">
+        <div class="f high">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Tipografia miúda e rígida</span><span class="chip high">Alto</span></div>
+            <p><strong>53</strong> declarações de <code>font-size</code> entre 10px e 12px — rótulos da barra de abas, contagens, datas, breadcrumb. Tudo em <code>px</code> fixo, dentro de contêineres de altura fixa: o texto não acompanha o ajuste de fonte do sistema, e a 200% de zoom o conteúdo é cortado em vez de refluir.</p>
+            <p class="f-fix"><b>Correção</b>Unidades relativas, altura mínima em vez de altura fixa, piso de 12px para texto auxiliar e 14px para conteúdo. Testar com a fonte do sistema no maior tamanho.</p>
+          </div>
+        </div>
+        <div class="f high">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Alvos de toque abaixo do mínimo</span><span class="chip high">Alto</span></div>
+            <p>Os botões de voltar têm 40×40px, o de download 38×38px, o "×" de remover anexo cerca de 28px, e o interruptor 46×27px — todos abaixo dos 44px recomendados. Em um app usado em pé, no corredor, entre aulas, isso vira erro de toque constante.</p>
+          </div>
+        </div>
+        <div class="f med">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Calendário informa só por cor</span><span class="chip med">Médio</span></div>
+            <p>Os marcadores dos dias são pontos coloridos — vermelho, slate, dourado — sem legenda e sem texto. Quem não distingue as cores não sabe o que cada ponto significa; quem usa leitor de tela não recebe nada.</p>
+          </div>
+        </div>
+        <div class="f med">
+          <div class="stripe"></div>
+          <div class="f-body">
+            <div class="f-top"><span class="f-title">Emoji como ícone de conteúdo</span><span class="chip med">Médio</span></div>
+            <p>🚀 📊 🤝 nos cards de evento e 📝 📚 nos compromissos são lidos literalmente pelo leitor de tela ("foguete", "gráfico de barras"), no meio do título do evento.</p>
+            <p class="f-fix"><b>Correção</b>Marcar como decorativos ou substituir por ícone com rótulo textual.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 07 ================= -->
+    <section id="contraste">
+      <div class="sec-head">
+        <span class="sec-num">07</span>
+        <h2>Contraste medido</h2>
+        <span class="sec-count">5 reprovações</span>
+      </div>
+
+      <p>Razões calculadas pela fórmula WCAG 2.1 sobre os hex exatos do protótipo. O critério AA pede <strong>4,5:1</strong> para texto normal e <strong>3:1</strong> para texto grande e componentes de interface.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Cor / fundo</th>
+              <th scope="col">Onde aparece</th>
+              <th scope="col">Razão</th>
+              <th scope="col">AA</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="swatch"><i style="background:#F4F5F7;color:#aab1b9">Aa</i>#aab1b9</span></td>
+              <td class="small">E-mail do aluno na home</td>
+              <td class="num">1,98:1</td>
+              <td class="verdict-cell fail">REPROVA</td>
+            </tr>
+            <tr>
+              <td><span class="swatch"><i style="background:#ffffff;color:#c3c9cf">Aa</i>#c3c9cf</span></td>
+              <td class="small">Ícone inativo da barra de abas</td>
+              <td class="num">1,67:1</td>
+              <td class="verdict-cell fail">REPROVA</td>
+            </tr>
+            <tr>
+              <td><span class="swatch"><i style="background:#ffffff;color:#f0a500">Aa</i>#f0a500</span></td>
+              <td class="small">Contador "Materiais" na home</td>
+              <td class="num">2,08:1</td>
+              <td class="verdict-cell fail">REPROVA</td>
+            </tr>
+            <tr>
+              <td><span class="swatch"><i style="background:#F4F5F7;color:#9aa2ab">Aa</i>#9aa2ab</span></td>
+              <td class="small">Breadcrumb, rótulos de estatística</td>
+              <td class="num">2,37:1</td>
+              <td class="verdict-cell fail">REPROVA</td>
+            </tr>
+            <tr>
+              <td><span class="swatch"><i style="background:#ffffff;color:#9aa2ab">Aa</i>#9aa2ab</span></td>
+              <td class="small">Tamanho de arquivo, @usuário, "há 2 horas"</td>
+              <td class="num">2,58:1</td>
+              <td class="verdict-cell fail">REPROVA</td>
+            </tr>
+            <tr>
+              <td><span class="swatch"><i style="background:#F4F5F7;color:#6B7580">Aa</i>#6B7580</span></td>
+              <td class="small">Texto secundário sobre o fundo cinza</td>
+              <td class="num">4,30:1</td>
+              <td class="verdict-cell edge">NO LIMITE</td>
+            </tr>
+            <tr>
+              <td><span class="swatch"><i style="background:#fff3cf;color:#8a6d00">Aa</i>#8a6d00</span></td>
+              <td class="small">Etiqueta "Prova"</td>
+              <td class="num">4,45:1</td>
+              <td class="verdict-cell edge">NO LIMITE</td>
+            </tr>
+            <tr>
+              <td><span class="swatch"><i style="background:#ffffff;color:#6B7580">Aa</i>#6B7580</span></td>
+              <td class="small">Texto secundário sobre branco</td>
+              <td class="num">4,69:1</td>
+              <td class="verdict-cell pass">APROVA</td>
+            </tr>
+            <tr>
+              <td><span class="swatch"><i style="background:#ffffff;color:#E11D2A">Aa</i>#E11D2A</span></td>
+              <td class="small">Vermelho primário sobre branco</td>
+              <td class="num">4,76:1</td>
+              <td class="verdict-cell pass">APROVA</td>
+            </tr>
+            <tr>
+              <td><span class="swatch"><i style="background:#e3f6ec;color:#0a7a3f">Aa</i>#0a7a3f</span></td>
+              <td class="small">Etiqueta "Entregue"</td>
+              <td class="num">4,82:1</td>
+              <td class="verdict-cell pass">APROVA</td>
+            </tr>
+            <tr>
+              <td><span class="swatch"><i style="background:#ffffff;color:#2E4756">Aa</i>#2E4756</span></td>
+              <td class="small">Slate institucional</td>
+              <td class="num">9,76:1</td>
+              <td class="verdict-cell pass">APROVA</td>
+            </tr>
+            <tr>
+              <td><span class="swatch"><i style="background:#ffffff;color:#14181B">Aa</i>#14181B</span></td>
+              <td class="small">Texto principal</td>
+              <td class="num">17,85:1</td>
+              <td class="verdict-cell pass">APROVA</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p style="margin-top:18px;">A boa notícia: <strong>a identidade visual está salva</strong>. O vermelho, o slate e a tinta principal passam com folga — só os cinzas auxiliares reprovam, e são exatamente as cores mais fáceis de trocar. Escurecer <code>#9aa2ab</code> e <code>#aab1b9</code> para algo em torno de <code>#5A6873</code>, e o ícone inativo da barra de abas para <code>#6B7580</code>, resolve as cinco reprovações sem alterar em nada o caráter do desenho. O dourado <code>#f0a500</code> continua servindo como preenchimento de estrela, mas não como texto sobre branco.</p>
+    </section>
+
+    <!-- ================= 08 ================= -->
+    <section id="peso">
+      <div class="sec-head">
+        <span class="sec-num">08</span>
+        <h2>Peso e assets</h2>
+        <span class="sec-count">19 MB de excesso</span>
+      </div>
+
+      <p>Acessibilidade também é conseguir abrir o app na rede do campus. Os assets estão em resolução de impressão.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Arquivo</th>
+              <th scope="col">Dimensão</th>
+              <th scope="col">Peso</th>
+              <th scope="col">Exibido a</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="mono" style="font-size:13px">logo-cps-t.png</td><td class="num">2929 × 1933</td><td class="num">1,00 MB</td><td class="num">26 px de altura</td></tr>
+            <tr><td class="mono" style="font-size:13px">logo-sp-t.png</td><td class="num">3244 × 609</td><td class="num">0,97 MB</td><td class="num">18 px de altura</td></tr>
+            <tr><td class="mono" style="font-size:13px">logo-fatec.png</td><td class="num">2654 × 1092</td><td class="num">0,84 MB</td><td class="num">38 px de altura</td></tr>
+            <tr><td class="mono" style="font-size:13px">onb1–onb3.png</td><td class="num">~3200 × 2900</td><td class="num">2,15 MB</td><td class="num">~440 px de largura</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ul class="plain" style="margin-top:20px;">
+        <li><b>5,1 MB em <code>assets/</code></b> para 8 imagens. Redimensionadas para o uso real e convertidas para WebP, isso cai para algo em torno de 150–250 KB — <strong>redução de mais de 95%</strong>.</li>
+        <li><b>Os três brasões deveriam ser SVG.</b> São logotipos vetoriais servidos como PNG de 3000px para renderizar a 26px de altura. Em SVG ficam com poucos KB e nítidos em qualquer densidade de tela.</li>
+        <li><b>14 MB em <code>uploads/</code></b> são rascunho do editor de design — <code>pasted-*.png</code>, <code>Skip (1..3).png</code>, <code>cps_src.png</code>. Nada disso vai para o app; não deve entrar no repositório.</li>
+        <li><b><code>(offline).html</code> tem 5,5 MB</b> por ser um instantâneo com tudo embutido em base64. Serve para mostrar o protótipo sem servidor — não é fonte, e não deve ser versionado.</li>
+      </ul>
+    </section>
+
+    <!-- ================= 09 ================= -->
+    <section id="roadmap">
+      <div class="sec-head">
+        <span class="sec-num">09</span>
+        <h2>Roteiro</h2>
+        <span class="sec-count">6 fases · sequência obrigatória</span>
+      </div>
+
+      <p>A ordem mudou com o escopo. Antes, a tentação era começar pelas telas do aluno. Agora há uma razão mais forte para não começar por elas: <strong>sem a coordenação cadastrar curso, turma, disciplina e matrícula, o app do aluno abre vazio</strong> — não há o que testar, nem com dado de mentira que se pareça com o real. O painel da coordenação passa a ser o primeiro software utilizável do projeto.</p>
+
+      <div class="phases">
+
+        <div class="phase">
+          <div class="phase-tag"><span class="n">0</span><span class="t">antes do código</span></div>
+          <div>
+            <h3>Fundação</h3>
+            <p><code>git init</code> e repositório remoto — hoje o projeto inteiro existe em uma única pasta na área de trabalho, sem backup nem histórico. Depois, as três decisões ainda abertas da seção 01 (escopo de nota, app + painel, atribuição de papel) e o modelo de dados desenhado no papel a partir das entidades da seção 02.</p>
+            <div class="gate"><b>Portão</b>Decisões registradas por escrito, modelo de dados revisado, e o repositório com o bundle de design preservado — sem <code>uploads/</code> e sem o <code>(offline).html</code>.</div>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-tag"><span class="n">1</span><span class="t">desenho</span></div>
+          <div>
+            <h3>As superfícies que faltam</h3>
+            <p>Desenhar as ~12 telas de professor e coordenação da seção 03, no mesmo Claude Design onde as 13 do aluno já estão. Nesta passada, corrigir os cinco contrastes reprovados (seção 07) direto nos tokens — sai mais barato acertar a paleta uma vez aqui do que em cada tela depois.</p>
+            <div class="gate"><b>Portão</b>Um professor consegue percorrer no protótipo o caminho completo: abrir turma, criar atividade, ver quem entregou, avaliar.</div>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-tag"><span class="n">2</span><span class="t">alicerce</span></div>
+          <div>
+            <h3>Base técnica e componentes</h3>
+            <p>Projeto criado na stack escolhida, banco com o modelo da seção 02, login por Entra ID e o sistema de papéis funcionando ponta a ponta — incluindo o bootstrap do primeiro administrador e a fila de aprovação de primeiro acesso. Componentes base construídos acessíveis desde o primeiro commit: botão, campo com rótulo, interruptor, card clicável.</p>
+            <div class="gate"><b>Portão</b>Percorrer o app inteiro só pelo teclado, com foco sempre visível. Se não passar aqui, os 14 achados da seção 06 se multiplicam por cada tela nova.</div>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-tag"><span class="n">3</span><span class="t">a origem</span></div>
+          <div>
+            <h3>Painel da coordenação e semeadura</h3>
+            <p>O primeiro software que alguém usa de verdade. Cursos, termos, disciplinas, turmas, grade horária, matrículas com importação em massa, gestão de usuários e papéis, e a publicação de eventos e avisos com público-alvo, agendamento e expiração. Ao fim desta fase, a base tem um semestre real dentro dela.</p>
+            <div class="gate"><b>Portão</b>Uma turma real, com alunos reais e grade real, cadastrada de ponta a ponta pela coordenação — sem ninguém mexer no banco à mão.</div>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-tag"><span class="n">4</span><span class="t">o app</span></div>
+          <div>
+            <h3>Aluno e professor</h3>
+            <p>As 13 telas existentes ligadas ao dado real, mais os fluxos de professor. Datas passam a ser calculadas — o calendário deixa de ser setembro de 2026. Entra aqui tudo da seção 04: as telas mortas, busca e filtros de verdade, download real, seletor de arquivo nativo, persistência do onboarding, e os estados ausentes (carregando, erro, offline, vazio, validação). Upload validado, prazo verificado no servidor e trilha de auditoria da entrega. Push por último, porque depende de conta na loja.</p>
+            <div class="gate"><b>Portão</b>Autenticado como aluno A, tentar ler a entrega do aluno B trocando o id na requisição. Autenticado como professor, tentar publicar em turma alheia. Ambos têm que falhar.</div>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-tag"><span class="n">5</span><span class="t">entregar</span></div>
+          <div>
+            <h3>Qualidade e publicação</h3>
+            <p>Testes automatizados, verificação de acessibilidade no CI, e — o que nenhuma ferramenta substitui — <strong>uma sessão de teste real com TalkBack ou VoiceOver ligado</strong>, percorrendo login, ver o prazo, abrir a atividade e entregar. Backup com restauração testada, assets otimizados, aviso de privacidade publicado, alinhamento LGPD com o Encarregado do CPS.</p>
+            <div class="gate"><b>Portão</b>Um usuário de leitor de tela completa uma entrega de trabalho sem ajuda. E uma restauração de backup é executada com sucesso em ambiente separado.</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <footer>
+      Auditoria estática sobre <code>fatec-adamantina-app/project/Fatec Adamantina App.dc.html</code> (914 linhas), <code>support.js</code>, <code>image-slot.js</code> e os diretórios de assets. Contagens obtidas por varredura do arquivo; razões de contraste calculadas pela fórmula de luminância relativa da WCAG 2.1 sobre os valores hexadecimais do protótipo. Nenhuma execução em navegador — a conformidade final depende de teste com leitor de tela real.
+    </footer>
+
+  </main>
+</div>

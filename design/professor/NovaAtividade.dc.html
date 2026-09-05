@@ -1,0 +1,167 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    a { color: #C8102E; text-decoration: none; }
+    a:hover { color: #E11D2A; }
+    .fx-scroll::-webkit-scrollbar { width: 0; height: 0; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2.5px solid #2E4756; outline-offset: 2px; }
+  </style>
+</helmet>
+
+<div style="width:460px;height:844px;background:#F4F5F7;font-family:'Plus Jakarta Sans',system-ui,sans-serif;position:relative;overflow:hidden;display:flex;flex-direction:column;">
+
+  <div style="background:#fff;border-bottom:1px solid #eceef1;padding:56px 20px 14px;flex-shrink:0;display:flex;align-items:center;gap:12px;">
+    <button aria-label="Cancelar e voltar" style="width:44px;height:44px;border-radius:14px;border:1.5px solid #eceef1;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E4756" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <h1 style="flex:1;font-size:18px;font-weight:800;color:#14181B;margin:0;letter-spacing:-.4px;">Nova atividade</h1>
+    <button style="min-height:44px;padding:0 14px;border-radius:13px;border:none;background:none;cursor:pointer;font-family:inherit;font-size:14px;font-weight:800;color:#2E4756;">Rascunho</button>
+  </div>
+
+  <div class="fx-scroll" style="flex:1;overflow-y:auto;overflow-x:hidden;">
+    <div style="padding:20px;display:flex;flex-direction:column;gap:22px;">
+
+      <!-- título -->
+      <div style="display:flex;flex-direction:column;gap:9px;">
+        <label for="campo-titulo" style="font-size:12px;font-weight:800;color:#2E4756;letter-spacing:.2px;">Título</label>
+        <input id="campo-titulo" type="text" value="Projeto final — dataset livre" placeholder="Ex.: Lista de exercícios 04" style="width:100%;min-height:58px;border:1.5px solid #cdd3da;border-radius:16px;background:#fff;padding:0 16px;font-family:inherit;font-size:16px;font-weight:700;color:#14181B;outline:none;">
+      </div>
+
+      <!-- tipo -->
+      <div style="display:flex;flex-direction:column;gap:9px;">
+        <span style="font-size:12px;font-weight:800;color:#2E4756;letter-spacing:.2px;">Tipo</span>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          <sc-for list="{{ tipos }}" as="t" hint-placeholder-count="5">
+            <button onClick="{{ t.escolher }}" style="min-height:44px;padding:0 16px;border:1.5px solid {{ t.bd }};border-radius:13px;background:{{ t.bg }};color:{{ t.fg }};font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;">{{ t.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <!-- instruções -->
+      <div style="display:flex;flex-direction:column;gap:9px;">
+        <label for="campo-instrucoes" style="font-size:12px;font-weight:800;color:#2E4756;letter-spacing:.2px;">Instruções</label>
+        <textarea id="campo-instrucoes" rows="5" placeholder="O que o aluno precisa fazer e entregar..." style="width:100%;border:1.5px solid #cdd3da;border-radius:16px;background:#fff;padding:14px 16px;font-family:inherit;font-size:14px;line-height:1.55;color:#14181B;resize:none;outline:none;">Escolher um conjunto de dados público, formular três perguntas de negócio e respondê-las com análise exploratória. Entregar notebook e um resumo de 2 páginas em PDF.</textarea>
+      </div>
+
+      <!-- material de apoio -->
+      <div style="display:flex;flex-direction:column;gap:9px;">
+        <span style="font-size:12px;font-weight:800;color:#2E4756;letter-spacing:.2px;">Material de apoio</span>
+        <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid #eceef1;border-radius:16px;padding:12px 14px;">
+          <div style="width:42px;height:42px;border-radius:12px;background:#fdeaec;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#C8102E;flex-shrink:0;">PDF</div>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;">
+            <span style="font-size:14px;font-weight:700;color:#14181B;">Rubrica de avaliação.pdf</span>
+            <span style="font-size:12px;color:#5A6873;font-weight:600;">1.1 MB</span>
+          </div>
+          <button aria-label="Remover Rubrica de avaliação.pdf" style="width:44px;height:44px;border-radius:12px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6B7580" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <button style="width:100%;min-height:52px;border:1.6px dashed #cdd3da;border-radius:16px;background:#fff;color:#2E4756;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#2E4756" stroke-width="2"><path d="M21.4 11.05 12.25 20.2a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.48-8.49"/></svg>
+          Anexar arquivo
+        </button>
+      </div>
+
+      <!-- prazo e pontos -->
+      <div style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:12px;">
+        <div style="display:flex;flex-direction:column;gap:9px;">
+          <label for="campo-prazo" style="font-size:12px;font-weight:800;color:#2E4756;letter-spacing:.2px;">Prazo</label>
+          <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1.5px solid #cdd3da;border-radius:16px;padding:0 14px;min-height:58px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2E4756" stroke-width="1.9" style="flex-shrink:0;"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+            <input id="campo-prazo" type="text" value="30 out, 23:59" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:inherit;font-size:14px;font-weight:700;color:#14181B;">
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px;">
+          <label for="campo-pontos" style="font-size:12px;font-weight:800;color:#2E4756;letter-spacing:.2px;">Pontos</label>
+          <div style="display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #cdd3da;border-radius:16px;padding:0 14px;min-height:58px;">
+            <input id="campo-pontos" type="text" inputmode="decimal" value="10" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:inherit;font-size:16px;font-weight:800;color:#14181B;">
+            <span style="font-size:13px;font-weight:700;color:#5A6873;">pts</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- turmas que recebem -->
+      <div style="display:flex;flex-direction:column;gap:9px;">
+        <span style="font-size:12px;font-weight:800;color:#2E4756;letter-spacing:.2px;">Publicar para</span>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <sc-for list="{{ turmas }}" as="t" hint-placeholder-count="3">
+            <button onClick="{{ t.alternar }}" style="width:100%;text-align:left;display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid {{ t.bd }};border-radius:16px;padding:13px 14px;cursor:pointer;font-family:inherit;min-height:58px;">
+              <span style="width:24px;height:24px;border-radius:8px;border:2px solid {{ t.caixaBd }};background:{{ t.caixaBg }};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <sc-if value="{{ t.marcada }}" hint-placeholder-val="{{ true }}">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2"><path d="M20 6 9 17l-5-5"/></svg>
+                </sc-if>
+              </span>
+              <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;">
+                <span style="font-size:14px;font-weight:800;color:#14181B;">{{ t.nome }}</span>
+                <span style="font-size:12px;color:#5A6873;font-weight:600;">{{ t.detalhe }}</span>
+              </span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div style="flex-shrink:0;padding:14px 20px 26px;background:rgba(255,255,255,.96);backdrop-filter:blur(14px);border-top:1px solid #edeff1;">
+    <button style="width:100%;min-height:56px;border:none;border-radius:18px;background:#E11D2A;color:#fff;font-family:inherit;font-size:16px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 16px 30px -16px rgba(200,16,46,.6);">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>
+      Publicar para 60 alunos
+    </button>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":460,"height":844}}'>
+class Component extends DCLogic {
+  state = { tipo: 'Projeto', marcadas: { cd3: true, vd3: true, am3: false } };
+
+  renderVals() {
+    const tipoAtual = this.state.tipo;
+    const tipos = ['Trabalho', 'Lista', 'Prova', 'Relatório', 'Projeto'].map(label => {
+      const on = label === tipoAtual;
+      return {
+        label,
+        bg: on ? '#2E4756' : '#fff',
+        fg: on ? '#fff' : '#2E4756',
+        bd: on ? '#2E4756' : '#e7eaee',
+        escolher: () => this.setState({ tipo: label }),
+      };
+    });
+
+    const m = this.state.marcadas;
+    const turmaDefs = [
+      { id: 'cd3', nome: 'Ciência de Dados', detalhe: 'CD · 3º semestre · 32 alunos' },
+      { id: 'vd3', nome: 'Visualização de Dados', detalhe: 'CD · 3º semestre · 28 alunos' },
+      { id: 'am3', nome: 'Aprendizado de Máquina', detalhe: 'CD · 3º semestre · 28 alunos' },
+    ];
+    const turmas = turmaDefs.map(t => {
+      const on = !!m[t.id];
+      return {
+        nome: t.nome, detalhe: t.detalhe, marcada: on,
+        bd: on ? '#2E4756' : '#eceef1',
+        caixaBd: on ? '#2E4756' : '#cdd3da',
+        caixaBg: on ? '#2E4756' : '#fff',
+        alternar: () => this.setState({ marcadas: { ...m, [t.id]: !on } }),
+      };
+    });
+
+    return { tipos, turmas };
+  }
+}
+</script>
+</body>
+</html>

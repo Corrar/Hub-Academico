@@ -1,0 +1,23 @@
+# Artefatos de build dos canvas de design.
+# Regeráveis a partir dos .dc.html + canvas.json; cada um pesa ~2 MB porque
+# embute o editor inteiro. As fontes é que importam.
+design/**/app-*.html
+design/**/painel-*.html
+design/**/telas-*.html
+
+# Rascunho do editor de design que veio no bundle original: capturas coladas
+# durante a criação, ~14 MB, nada disso vai para o app.
+# Remover esta linha se quiser preservar o histórico visual.
+fatec-adamantina-app/project/uploads/
+
+# Instantâneo autocontido para visualizar o protótipo sem servidor (5,5 MB,
+# tudo embutido em base64). Não é fonte.
+fatec-adamantina-app/project/*(offline).html
+
+# Dependências
+node_modules/
+
+# Sistema operacional
+Thumbs.db
+desktop.ini
+.DS_Store

@@ -1,0 +1,36 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 460, "h": 844, "title": "Frequência", "is_interactive": true }
+  ],
+  "annotations": [
+    {
+      "id": "porque-existe",
+      "x": 560,
+      "y": 0,
+      "w": 460,
+      "text": "POR QUE ESTA TELA EXISTE\n\nA chamada feita pelo professor alimenta um dado que, até aqui, nada consumia — o aluno via \"92%\" no perfil e não tinha para onde clicar.\n\nFrequência é um dos três motivos de o hub existir; sem esta tela, a chamada só gera trabalho para o professor."
+    },
+    {
+      "id": "a-decisao",
+      "x": 560,
+      "y": 300,
+      "w": 460,
+      "text": "A DECISÃO DE DESIGN\n\nA pergunta real do estudante não é \"qual é minha porcentagem\" — é \"quantas aulas ainda posso faltar\". Então é isso que a linha de cada disciplina responde, em palavras, não em gráfico.\n\nE a média de 92% aparece pequena, com a ressalva de que ninguém reprova pela média: reprova por disciplina. Liderar com o número bonito esconderia justamente o risco."
+    },
+    {
+      "id": "interacao",
+      "x": 560,
+      "y": 640,
+      "w": 460,
+      "text": "Toque em qualquer disciplina para abrir as aulas perdidas, com data e tema. As cinco marcas são as cinco faltas permitidas — cheias, o limite acabou."
+    },
+    {
+      "id": "falta-desenhar",
+      "x": 0,
+      "y": 900,
+      "w": 460,
+      "text": "AINDA FALTA NESTA SUPERFÍCIE\n\nOs 10 destinos mortos do app do aluno mapeados na auditoria (histórico acadêmico, editar perfil, detalhe do evento, os cinco itens de Preferências) e os estados que ninguém desenhou: carregando, erro, offline, vazio e validação."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

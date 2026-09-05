@@ -1,0 +1,277 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    a { color: #C8102E; text-decoration: none; }
+    a:hover { color: #E11D2A; }
+    .fx-scroll::-webkit-scrollbar { width: 0; height: 0; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2.5px solid #E11D2A; outline-offset: 2px; }
+  </style>
+</helmet>
+
+<div style="width:1280px;height:800px;background:#F4F5F7;font-family:'Plus Jakarta Sans',system-ui,sans-serif;display:flex;overflow:hidden;">
+
+  <div style="width:248px;flex-shrink:0;background:#2E4756;display:flex;flex-direction:column;padding:24px 14px 18px;">
+    <div style="padding:0 10px 22px;">
+      <div style="font-size:20px;font-weight:800;letter-spacing:-.9px;color:#fff;line-height:.95;">Fatec</div>
+      <div style="font-size:10px;font-weight:800;color:#ff8a94;">Adamantina</div>
+      <span style="display:inline-block;margin-top:10px;font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#2E4756;background:#fff;padding:3px 9px;border-radius:6px;">Coordenação</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px;flex:1;">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="8">
+        <button style="width:100%;text-align:left;display:flex;align-items:center;gap:11px;min-height:42px;padding:0 10px;border:none;border-radius:11px;background:{{ n.bg }};color:{{ n.fg }};cursor:pointer;font-family:inherit;font-size:13.5px;font-weight:{{ n.peso }};">
+          <span style="display:flex;flex-shrink:0;">{{ n.icone }}</span>
+          <span style="flex:1;min-width:0;">{{ n.label }}</span>
+          <sc-if value="{{ n.temBadge }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:11px;font-weight:800;background:#E11D2A;color:#fff;padding:2px 7px;border-radius:7px;flex-shrink:0;">{{ n.badge }}</span>
+          </sc-if>
+        </button>
+      </sc-for>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 10px 0;border-top:1px solid rgba(255,255,255,.14);">
+      <div style="width:34px;height:34px;border-radius:50%;background:#E11D2A;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;">CS</div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;">
+        <span style="font-size:13px;font-weight:700;color:#fff;">Carla Souza</span>
+        <span style="font-size:11px;color:rgba(255,255,255,.6);font-weight:600;">Coordenação</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- lista de avisos -->
+  <div class="fx-scroll" style="width:352px;flex-shrink:0;border-right:1.5px solid #e4e8eb;background:#fff;overflow-y:auto;">
+    <div style="padding:26px 20px 20px;display:flex;flex-direction:column;gap:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+        <h1 style="font-size:21px;font-weight:800;color:#14181B;margin:0;letter-spacing:-.6px;">Avisos</h1>
+        <button style="min-height:38px;padding:0 13px;border:none;border-radius:11px;background:#E11D2A;color:#fff;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:7px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+          Novo
+        </button>
+      </div>
+
+      <div style="display:flex;gap:6px;">
+        <sc-for list="{{ filtros }}" as="f" hint-placeholder-count="3">
+          <button onClick="{{ f.abrir }}" style="flex:1;min-height:36px;border:1.5px solid {{ f.bd }};border-radius:10px;background:{{ f.bg }};color:{{ f.fg }};font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer;padding:0 4px;">{{ f.label }}</button>
+        </sc-for>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:9px;">
+        <sc-for list="{{ avisos }}" as="a" hint-placeholder-count="5">
+          <button onClick="{{ a.abrir }}" style="width:100%;text-align:left;border:1.5px solid {{ a.borda }};background:{{ a.fundo }};border-radius:14px;padding:13px;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;gap:7px;">
+            <div style="display:flex;align-items:center;gap:7px;width:100%;">
+              <sc-if value="{{ a.fixado }}" hint-placeholder-val="{{ false }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C8102E" stroke-width="2.2" style="flex-shrink:0;"><path d="M12 17v5M9 3h6l-1 7 4 3H6l4-3z"/></svg>
+              </sc-if>
+              <span style="font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:{{ a.statusFg }};background:{{ a.statusBg }};padding:3px 7px;border-radius:6px;">{{ a.status }}</span>
+              <span style="margin-left:auto;font-size:11.5px;color:#5A6873;font-weight:600;flex-shrink:0;">{{ a.quando }}</span>
+            </div>
+            <span style="font-size:14px;font-weight:800;color:#14181B;line-height:1.3;">{{ a.titulo }}</span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#5A6873;font-weight:600;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6B7580" stroke-width="2" style="flex-shrink:0;"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/></svg>
+              {{ a.publico }}
+            </span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <!-- editor -->
+  <div class="fx-scroll" style="flex:1;min-width:0;overflow-y:auto;">
+    <div style="padding:26px 28px 32px;display:flex;flex-direction:column;gap:20px;">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+        <span style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#8a6d00;background:#fff3cf;padding:5px 10px;border-radius:7px;">Rascunho · não publicado</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button style="min-height:40px;padding:0 14px;border:1.5px solid #dfe4e8;border-radius:11px;background:#fff;color:#2E4756;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;">Salvar rascunho</button>
+          <button style="min-height:40px;padding:0 16px;border:none;border-radius:11px;background:#E11D2A;color:#fff;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>
+            Publicar
+          </button>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <label for="aviso-titulo" style="font-size:12px;font-weight:800;color:#2E4756;letter-spacing:.2px;">Título</label>
+        <input id="aviso-titulo" type="text" value="Rematrícula 2027/1 — prazos e documentos" style="width:100%;min-height:50px;border:1.5px solid #cdd3da;border-radius:13px;background:#fff;padding:0 15px;font-family:inherit;font-size:16px;font-weight:700;color:#14181B;outline:none;">
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <label for="aviso-texto" style="font-size:12px;font-weight:800;color:#2E4756;letter-spacing:.2px;">Mensagem</label>
+        <textarea id="aviso-texto" rows="4" style="width:100%;border:1.5px solid #cdd3da;border-radius:13px;background:#fff;padding:13px 15px;font-family:inherit;font-size:14px;line-height:1.55;color:#14181B;resize:none;outline:none;">A rematrícula para o primeiro semestre de 2027 acontece de 12 a 24 de outubro, pelo portal do aluno. Quem tem pendência de documentação precisa resolver na secretaria antes do dia 20.</textarea>
+      </div>
+
+      <!-- público-alvo -->
+      <div style="background:#fff;border:1.5px solid #eceef1;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;align-items:center;gap:9px;">
+          <span style="font-size:13.5px;font-weight:800;color:#14181B;">Quem recebe</span>
+          <span style="font-size:11px;font-weight:800;color:#C8102E;background:#fdeaec;padding:3px 8px;border-radius:6px;">Obrigatório</span>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          <sc-for list="{{ escopos }}" as="e" hint-placeholder-count="4">
+            <button onClick="{{ e.escolher }}" style="min-height:40px;padding:0 15px;border:1.5px solid {{ e.bd }};border-radius:11px;background:{{ e.bg }};color:{{ e.fg }};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;">{{ e.label }}</button>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ mostrarSelecao }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-wrap:wrap;gap:7px;padding:12px;background:#F4F5F7;border-radius:12px;">
+            <sc-for list="{{ alvos }}" as="t" hint-placeholder-count="4">
+              <span style="display:inline-flex;align-items:center;gap:7px;background:#fff;border:1.5px solid #dfe4e8;border-radius:9px;padding:6px 10px;font-size:12.5px;font-weight:700;color:#2E4756;">
+                {{ t.nome }}
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6B7580" stroke-width="2.4"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </span>
+            </sc-for>
+            <button style="min-height:33px;padding:0 11px;border:1.5px dashed #b9c3cb;border-radius:9px;background:none;color:#2E4756;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer;">+ Adicionar</button>
+          </div>
+        </sc-if>
+
+        <div style="display:flex;align-items:center;gap:9px;padding:11px 13px;background:{{ alcanceBg }};border-radius:11px;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="{{ alcanceFg }}" stroke-width="2" style="flex-shrink:0;"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/></svg>
+          <span style="font-size:13px;font-weight:700;color:{{ alcanceFg }};">{{ alcanceTexto }}</span>
+        </div>
+      </div>
+
+      <!-- quando -->
+      <div style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:14px;">
+        <div style="background:#fff;border:1.5px solid #eceef1;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:11px;">
+          <label for="aviso-inicio" style="font-size:12px;font-weight:800;color:#2E4756;letter-spacing:.2px;">Publicar em</label>
+          <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #cdd3da;border-radius:12px;padding:0 13px;min-height:46px;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2E4756" stroke-width="1.9" style="flex-shrink:0;"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+            <input id="aviso-inicio" type="text" value="10 out 2026, 08:00" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:inherit;font-size:13.5px;font-weight:700;color:#14181B;">
+          </div>
+        </div>
+        <div style="background:#fff;border:1.5px solid #eceef1;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:11px;">
+          <label for="aviso-fim" style="font-size:12px;font-weight:800;color:#2E4756;letter-spacing:.2px;">Sai do ar em</label>
+          <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #cdd3da;border-radius:12px;padding:0 13px;min-height:46px;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2E4756" stroke-width="1.9" style="flex-shrink:0;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            <input id="aviso-fim" type="text" value="25 out 2026, 23:59" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:inherit;font-size:13.5px;font-weight:700;color:#14181B;">
+          </div>
+        </div>
+      </div>
+
+      <!-- opções -->
+      <div style="display:flex;flex-direction:column;gap:9px;">
+        <sc-for list="{{ opcoes }}" as="o" hint-placeholder-count="2">
+          <button onClick="{{ o.alternar }}" style="width:100%;text-align:left;display:flex;align-items:center;gap:13px;background:#fff;border:1.5px solid {{ o.bd }};border-radius:14px;padding:14px 16px;cursor:pointer;font-family:inherit;min-height:60px;">
+            <span style="display:flex;color:{{ o.icoFg }};flex-shrink:0;">{{ o.icone }}</span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;">
+              <span style="font-size:14px;font-weight:800;color:#14181B;">{{ o.titulo }}</span>
+              <span style="font-size:12.5px;color:#5A6873;font-weight:500;">{{ o.detalhe }}</span>
+            </span>
+            <span style="width:48px;height:28px;border-radius:20px;background:{{ o.tgBg }};position:relative;flex-shrink:0;">
+              <span style="position:absolute;top:3px;left:{{ o.tgX }};width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);"></span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  state = { escopo: 'curso', filtro: 'Todos', fixar: true, push: true };
+
+  renderVals() {
+    const ico = (paths, size) => React.createElement('svg',
+      { width: size || 18, height: size || 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round', strokeLinejoin: 'round' },
+      paths.map((d, i) => React.createElement('path', { key: i, d })));
+
+    const navDefs = [
+      { label: 'Visão geral', paths: ['M3 12h7V3H3zM14 21h7v-9h-7zM14 8h7V3h-7zM3 21h7v-5H3z'] },
+      { label: 'Eventos', paths: ['M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', 'M3 10h18M8 3v4M16 3v4'] },
+      { label: 'Avisos', ativo: true, paths: ['M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9', 'M10.3 21a1.94 1.94 0 0 0 3.4 0'] },
+      { label: 'Estrutura acadêmica', paths: ['M12 3 3 8l9 5 9-5-9-5z', 'M3 8v6l9 5 9-5V8'] },
+      { label: 'Turmas e grade', paths: ['M3 5h18v16H3z', 'M3 10h18M9 10v11M15 10v11'] },
+      { label: 'Matrículas', paths: ['M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2', 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M19 8v6M22 11h-6'] },
+      { label: 'Usuários e papéis', badge: '3', temBadge: true, paths: ['M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2', 'M9.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M16 3.1a4 4 0 0 1 0 7.8'] },
+      { label: 'Auditoria', paths: ['M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4', 'M8 13h5M8 17h8', 'M14 3h7v7'] },
+    ];
+    const nav = navDefs.map(n => ({
+      label: n.label, icone: ico(n.paths),
+      bg: n.ativo ? 'rgba(255,255,255,.14)' : 'transparent',
+      fg: n.ativo ? '#fff' : 'rgba(255,255,255,.66)',
+      peso: n.ativo ? '800' : '600',
+      badge: n.badge || '', temBadge: !!n.temBadge,
+    }));
+
+    const fAtual = this.state.filtro;
+    const filtros = ['Todos', 'No ar', 'Agendados'].map(label => {
+      const on = label === fAtual;
+      return { label, bg: on ? '#14181B' : '#fff', fg: on ? '#fff' : '#2E4756', bd: on ? '#14181B' : '#e7eaee', abrir: () => this.setState({ filtro: label }) };
+    });
+
+    const avisos = [
+      { titulo: 'Rematrícula 2027/1 — prazos e documentos', publico: 'Todos os alunos · 412', quando: 'Agendado 10 out', status: 'Rascunho', statusFg: '#8a6d00', statusBg: '#fff3cf', fixado: false, borda: '#2E4756', fundo: '#f7fafc' },
+      { titulo: 'Alteração no calendário de provas', publico: 'Todos os alunos · 412', quando: 'há 2 horas', status: 'No ar', statusFg: '#0a7a3f', statusBg: '#e3f6ec', fixado: true, borda: '#eceef1', fundo: '#fff' },
+      { titulo: 'Laboratório 03 em manutenção na quinta', publico: 'Ciência de Dados · 89', quando: 'ontem', status: 'No ar', statusFg: '#0a7a3f', statusBg: '#e3f6ec', fixado: false, borda: '#eceef1', fundo: '#fff' },
+      { titulo: 'Inscrições para monitoria abertas', publico: 'CD 3º, GC 3º · 60', quando: 'há 5 dias', status: 'No ar', statusFg: '#0a7a3f', statusBg: '#e3f6ec', fixado: false, borda: '#eceef1', fundo: '#fff' },
+      { titulo: 'Recesso de julho', publico: 'Todos os alunos · 412', quando: 'expirou 01 ago', status: 'Expirado', statusFg: '#5A6873', statusBg: '#eef0f2', fixado: false, borda: '#eceef1', fundo: '#fafbfc' },
+    ].map(a => ({ ...a, abrir: () => {} }));
+
+    const escopoAtual = this.state.escopo;
+    const escopoDefs = [
+      { id: 'todos', label: 'Toda a instituição' },
+      { id: 'curso', label: 'Por curso' },
+      { id: 'termo', label: 'Por termo' },
+      { id: 'turma', label: 'Por turma' },
+    ];
+    const escopos = escopoDefs.map(e => {
+      const on = e.id === escopoAtual;
+      return { label: e.label, bg: on ? '#2E4756' : '#fff', fg: on ? '#fff' : '#2E4756', bd: on ? '#2E4756' : '#dfe4e8', escolher: () => this.setState({ escopo: e.id }) };
+    });
+
+    const alvosPorEscopo = {
+      curso: [{ nome: 'Gestão Comercial' }, { nome: 'Ciência de Dados' }],
+      termo: [{ nome: 'GC · 3º semestre' }, { nome: 'CD · 3º semestre' }],
+      turma: [{ nome: 'Marketing Digital · GC 3º' }],
+    };
+    const alvos = alvosPorEscopo[escopoAtual] || [];
+    const alcancePorEscopo = {
+      todos: 'Chega a 412 alunos, 31 professores e 4 pessoas da coordenação.',
+      curso: 'Chega a 218 alunos dos 2 cursos selecionados.',
+      termo: 'Chega a 60 alunos dos 2 termos selecionados.',
+      turma: 'Chega a 32 alunos da turma selecionada.',
+    };
+    const amplo = escopoAtual === 'todos';
+
+    const fixar = this.state.fixar, push = this.state.push;
+    const opcoes = [
+      { titulo: 'Fixar no topo', detalhe: 'Fica acima dos demais avisos até sair do ar.',
+        icone: ico(['M12 17v5', 'M9 3h6l-1 7 4 3H6l4-3z'], 20),
+        icoFg: fixar ? '#C8102E' : '#6B7580', bd: fixar ? '#f3d2d5' : '#eceef1',
+        tgBg: fixar ? '#E11D2A' : '#dfe3e7', tgX: fixar ? '23px' : '3px',
+        alternar: () => this.setState({ fixar: !fixar }) },
+      { titulo: 'Notificar por push', detalhe: 'Envia notificação no celular no momento da publicação.',
+        icone: ico(['M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9', 'M10.3 21a1.94 1.94 0 0 0 3.4 0'], 20),
+        icoFg: push ? '#2E4756' : '#6B7580', bd: push ? '#c9d6de' : '#eceef1',
+        tgBg: push ? '#2E4756' : '#dfe3e7', tgX: push ? '23px' : '3px',
+        alternar: () => this.setState({ push: !push }) },
+    ];
+
+    return {
+      nav, filtros, avisos, escopos, alvos, opcoes,
+      mostrarSelecao: escopoAtual !== 'todos',
+      alcanceTexto: alcancePorEscopo[escopoAtual],
+      alcanceFg: amplo ? '#C8102E' : '#2E4756',
+      alcanceBg: amplo ? '#fdeaec' : '#eef2f5',
+    };
+  }
+}
+</script>
+</body>
+</html>

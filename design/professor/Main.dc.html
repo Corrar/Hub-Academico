@@ -1,0 +1,144 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    a { color: #C8102E; text-decoration: none; }
+    a:hover { color: #E11D2A; }
+    .fx-scroll::-webkit-scrollbar { width: 0; height: 0; }
+    button:focus-visible, a:focus-visible { outline: 2.5px solid #2E4756; outline-offset: 3px; }
+  </style>
+</helmet>
+
+<div style="width:460px;height:844px;background:#F4F5F7;font-family:'Plus Jakarta Sans',system-ui,sans-serif;position:relative;overflow:hidden;display:flex;flex-direction:column;">
+
+  <div class="fx-scroll" style="flex:1;overflow-y:auto;overflow-x:hidden;">
+    <div style="padding:64px 20px 24px;display:flex;flex-direction:column;gap:22px;">
+
+      <!-- cabeçalho -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;">
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0;">
+          <div style="line-height:.9;margin-bottom:14px;">
+            <div style="font-size:22px;font-weight:800;letter-spacing:-1px;color:#2E4756;">Fatec</div>
+            <div style="font-size:10px;font-weight:800;color:#C8102E;">Adamantina</div>
+          </div>
+          <div style="font-size:17px;font-weight:800;color:#14181B;letter-spacing:-.4px;">Prof. Marcelo Dias</div>
+          <div style="display:flex;align-items:center;gap:7px;">
+            <span style="font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#fff;background:#2E4756;padding:3px 8px;border-radius:6px;">Professor</span>
+            <span style="font-size:12px;color:#5A6873;font-weight:600;">Ciência de Dados</span>
+          </div>
+        </div>
+        <button aria-label="Notificações" style="position:relative;width:46px;height:46px;border-radius:15px;border:1.5px solid #eceef1;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2E4756" stroke-width="1.8"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          <span style="position:absolute;top:8px;right:9px;width:9px;height:9px;border-radius:50%;background:#E11D2A;border:2px solid #fff;"></span>
+        </button>
+      </div>
+
+      <!-- o que pede ação -->
+      <button style="width:100%;text-align:left;border:none;cursor:pointer;font-family:inherit;border-radius:24px;background:linear-gradient(135deg,#2E4756 0%,#1c2d38 100%);padding:20px;color:#fff;position:relative;overflow:hidden;box-shadow:0 20px 40px -20px rgba(46,71,86,.75);">
+        <div style="position:absolute;right:-34px;top:-34px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.09);"></div>
+        <div style="position:relative;display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.5px;opacity:.85;margin-bottom:12px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
+          AGUARDANDO AVALIAÇÃO
+        </div>
+        <div style="position:relative;display:flex;align-items:flex-end;gap:10px;">
+          <span style="font-size:38px;font-weight:800;letter-spacing:-2px;line-height:.85;">17</span>
+          <span style="font-size:14px;font-weight:600;opacity:.9;padding-bottom:3px;">entregas em 2 turmas</span>
+        </div>
+        <div style="position:relative;display:inline-flex;align-items:center;gap:7px;background:#E11D2A;padding:9px 15px;border-radius:12px;font-size:13px;font-weight:800;margin-top:16px;">
+          Começar a avaliar
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </div>
+      </button>
+
+      <!-- semestre -->
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <h1 style="font-size:20px;font-weight:800;color:#14181B;margin:0;letter-spacing:-.5px;">Minhas turmas</h1>
+        <button style="display:flex;align-items:center;gap:7px;height:36px;padding:0 13px;border-radius:12px;border:1.5px solid #e7eaee;background:#fff;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;color:#2E4756;">
+          2026/2
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5A6873" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+      </div>
+
+      <!-- turmas -->
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <sc-for list="{{ turmas }}" as="t" hint-placeholder-count="4">
+          <button style="width:100%;text-align:left;border:1.5px solid #eceef1;background:#fff;border-radius:22px;padding:16px;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;gap:14px;">
+            <div style="display:flex;align-items:flex-start;gap:12px;width:100%;">
+              <div style="width:4px;align-self:stretch;min-height:42px;border-radius:4px;background:{{ t.cor }};flex-shrink:0;"></div>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;">
+                <div style="font-size:16px;font-weight:800;color:#14181B;letter-spacing:-.3px;">{{ t.disciplina }}</div>
+                <div style="font-size:12px;color:#5A6873;font-weight:600;">{{ t.turma }} · {{ t.alunos }} alunos</div>
+              </div>
+              <sc-if value="{{ t.temPendencia }}" hint-placeholder-val="{{ true }}">
+                <span style="font-size:11px;font-weight:800;color:#C8102E;background:#fdeaec;padding:6px 10px;border-radius:9px;white-space:nowrap;flex-shrink:0;">{{ t.pendentes }} a avaliar</span>
+              </sc-if>
+            </div>
+            <div style="display:flex;align-items:center;gap:14px;padding-top:12px;border-top:1px solid #f1f3f5;width:100%;">
+              <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#2E4756;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5A6873" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>{{ t.proxima }}
+              </span>
+              <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#2E4756;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5A6873" stroke-width="2"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11Z"/><circle cx="12" cy="10" r="2.4"/></svg>{{ t.sala }}
+              </span>
+            </div>
+          </button>
+        </sc-for>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- tab bar do professor -->
+  <div style="height:88px;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-top:1px solid #edeff1;display:flex;align-items:flex-start;padding:12px 14px 0;flex-shrink:0;">
+    <button style="flex:1;min-height:56px;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;color:#2E4756;font-family:inherit;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 3 8l9 5 9-5-9-5z"/><path d="M3 8v6l9 5 9-5V8"/></svg>
+      <span style="font-size:10px;font-weight:800;">Turmas</span>
+    </button>
+    <button style="flex:1;min-height:56px;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;color:#6B7580;font-family:inherit;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+      <span style="font-size:10px;font-weight:700;">Agenda</span>
+    </button>
+    <button style="flex:1;min-height:56px;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;color:#6B7580;font-family:inherit;position:relative;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
+      <span style="font-size:10px;font-weight:700;">Avaliar</span>
+      <span style="position:absolute;top:-2px;right:24px;min-width:18px;height:18px;border-radius:9px;background:#E11D2A;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 5px;">17</span>
+    </button>
+    <button style="flex:1;min-height:56px;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;color:#6B7580;font-family:inherit;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+      <span style="font-size:10px;font-weight:700;">Materiais</span>
+    </button>
+    <button style="flex:1;min-height:56px;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;color:#6B7580;font-family:inherit;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+      <span style="font-size:10px;font-weight:700;">Perfil</span>
+    </button>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":460,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RED = '#E11D2A', SLATE = '#2E4756';
+    const turmas = [
+      { disciplina: 'Ciência de Dados', turma: 'CD · 3º semestre', alunos: '32', pendentes: '12', temPendencia: true, proxima: 'Hoje, 19:00', sala: 'Lab 03', cor: RED },
+      { disciplina: 'Visualização de Dados', turma: 'CD · 3º semestre', alunos: '28', pendentes: '5', temPendencia: true, proxima: 'Qui, 20:50', sala: 'Lab 03', cor: SLATE },
+      { disciplina: 'Aprendizado de Máquina', turma: 'CD · 3º semestre', alunos: '28', pendentes: '0', temPendencia: false, proxima: 'Ter, 20:50', sala: 'Lab 03', cor: SLATE },
+    ];
+    return { turmas };
+  }
+}
+</script>
+</body>
+</html>

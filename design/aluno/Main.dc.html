@@ -1,0 +1,207 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    a { color: #C8102E; text-decoration: none; }
+    a:hover { color: #E11D2A; }
+    .fx-scroll::-webkit-scrollbar { width: 0; height: 0; }
+    button:focus-visible { outline: 2.5px solid #C8102E; outline-offset: 3px; }
+  </style>
+</helmet>
+
+<div style="width:460px;height:844px;background:#F4F5F7;font-family:'Plus Jakarta Sans',system-ui,sans-serif;position:relative;overflow:hidden;display:flex;flex-direction:column;">
+
+  <div class="fx-scroll" style="flex:1;overflow-y:auto;overflow-x:hidden;">
+    <div style="padding:64px 20px 24px;display:flex;flex-direction:column;gap:18px;">
+
+      <!-- cabeçalho -->
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button aria-label="Voltar para o perfil" style="width:44px;height:44px;border-radius:14px;border:1.5px solid #eceef1;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E4756" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+        <div style="flex:1;min-width:0;">
+          <h1 style="font-size:24px;font-weight:800;color:#14181B;margin:0;letter-spacing:-.6px;">Frequência</h1>
+          <p style="font-size:13px;color:#5A6873;margin:2px 0 0;font-weight:600;">2026/2 · Gestão Comercial · 3º semestre</p>
+        </div>
+      </div>
+
+      <!-- alerta de risco -->
+      <div style="border-radius:24px;background:linear-gradient(135deg,#E11D2A 0%,#C8102E 100%);padding:20px;color:#fff;position:relative;overflow:hidden;box-shadow:0 20px 40px -18px rgba(200,16,46,.7);">
+        <div style="position:absolute;right:-32px;top:-32px;width:128px;height:128px;border-radius:50%;background:rgba(255,255,255,.12);"></div>
+        <div style="position:relative;display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.5px;opacity:.92;margin-bottom:12px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+          ATENÇÃO · MARKETING DIGITAL
+        </div>
+        <div style="position:relative;font-size:21px;font-weight:800;letter-spacing:-.5px;line-height:1.2;margin-bottom:8px;">Você não pode faltar<br>mais nenhuma aula</div>
+        <div style="position:relative;font-size:13.5px;opacity:.93;line-height:1.45;">Usou as 5 faltas permitidas. A próxima reprova por frequência, mesmo com as notas em dia.</div>
+      </div>
+
+      <!-- a média engana -->
+      <div style="display:flex;align-items:flex-start;gap:12px;background:#fff;border:1.5px solid #eceef1;border-radius:18px;padding:15px 16px;">
+        <span style="display:flex;flex-direction:column;align-items:center;gap:1px;flex-shrink:0;padding-right:13px;border-right:1px solid #eef0f2;">
+          <span style="font-size:22px;font-weight:800;color:#14181B;letter-spacing:-.8px;line-height:1;">92%</span>
+          <span style="font-size:10px;font-weight:700;color:#5A6873;">média</span>
+        </span>
+        <span style="flex:1;min-width:0;font-size:13px;color:#5A6873;font-weight:600;line-height:1.5;">Sua média geral está ótima — mas você <strong style="color:#14181B;font-weight:800;">não reprova pela média</strong>, e sim por disciplina. É por isso que a lista abaixo importa mais que esse número.</span>
+      </div>
+
+      <!-- por disciplina -->
+      <div style="display:flex;flex-direction:column;gap:11px;">
+        <h2 style="font-size:15px;font-weight:800;color:#14181B;margin:4px 0 0;letter-spacing:-.3px;">Por disciplina</h2>
+
+        <sc-for list="{{ disciplinas }}" as="d" hint-placeholder-count="5">
+          <div style="background:{{ d.fundo }};border:1.5px solid {{ d.borda }};border-radius:20px;overflow:hidden;">
+            <button onClick="{{ d.alternar }}" aria-label="{{ d.rotulo }}" style="width:100%;text-align:left;border:none;background:none;cursor:pointer;font-family:inherit;padding:15px 16px;display:flex;flex-direction:column;gap:12px;min-height:64px;">
+
+              <div style="display:flex;align-items:flex-start;gap:12px;width:100%;">
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;">
+                  <span style="font-size:15px;font-weight:800;color:#14181B;letter-spacing:-.3px;">{{ d.nome }}</span>
+                  <span style="font-size:12px;color:#5A6873;font-weight:600;">{{ d.prof }}</span>
+                </div>
+                <span style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                  <span style="font-size:15px;font-weight:800;color:{{ d.pctFg }};">{{ d.pct }}</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B7580" stroke-width="2.2" style="transform:rotate({{ d.giro }});"><path d="M6 9l6 6 6-6"/></svg>
+                </span>
+              </div>
+
+              <!-- faltas usadas, uma marca por falta -->
+              <div style="display:flex;align-items:center;gap:10px;width:100%;">
+                <span style="display:flex;gap:5px;flex-shrink:0;">
+                  <sc-for list="{{ d.marcas }}" as="m" hint-placeholder-count="5">
+                    <span style="width:26px;height:7px;border-radius:4px;background:{{ m.cor }};"></span>
+                  </sc-for>
+                </span>
+                <span style="flex:1;min-width:0;font-size:12.5px;font-weight:800;color:{{ d.saldoFg }};text-align:right;">{{ d.saldo }}</span>
+              </div>
+            </button>
+
+            <!-- aulas perdidas -->
+            <sc-if value="{{ d.aberta }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:0 16px 16px;display:flex;flex-direction:column;gap:7px;">
+                <span style="font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#5A6873;padding-top:12px;border-top:1px solid {{ d.divisor }};">Aulas que você perdeu</span>
+                <sc-for list="{{ d.ausencias }}" as="au" hint-placeholder-count="5">
+                  <span style="display:flex;align-items:center;gap:10px;font-size:13px;">
+                    <span style="width:7px;height:7px;border-radius:50%;background:#C8102E;flex-shrink:0;"></span>
+                    <span style="font-weight:700;color:#14181B;">{{ au.data }}</span>
+                    <span style="color:#5A6873;font-weight:600;">{{ au.tema }}</span>
+                  </span>
+                </sc-for>
+                <sc-if value="{{ d.semAusencia }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-size:13px;color:#0a7a3f;font-weight:700;">Nenhuma falta até aqui.</span>
+                </sc-if>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+
+      <!-- regra -->
+      <div style="display:flex;align-items:flex-start;gap:11px;padding:2px 4px 0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7580" stroke-width="2" style="flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>
+        <span style="font-size:12.5px;color:#5A6873;font-weight:600;line-height:1.5;">O limite é 25% das aulas — 5 faltas em 20 encontros por disciplina. A contagem vem da chamada feita pelo professor em aula.</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- tab bar do aluno -->
+  <div style="height:88px;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-top:1px solid #edeff1;display:flex;align-items:flex-start;padding:12px 14px 0;flex-shrink:0;">
+    <button style="flex:1;min-height:56px;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;color:#6B7580;font-family:inherit;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z"/></svg>
+      <span style="font-size:10px;font-weight:700;">Início</span>
+    </button>
+    <button style="flex:1;min-height:56px;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;color:#6B7580;font-family:inherit;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+      <span style="font-size:10px;font-weight:700;">Agenda</span>
+    </button>
+    <button style="flex:1;min-height:56px;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;color:#6B7580;font-family:inherit;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
+      <span style="font-size:10px;font-weight:700;">Atividades</span>
+    </button>
+    <button style="flex:1;min-height:56px;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;color:#6B7580;font-family:inherit;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+      <span style="font-size:10px;font-weight:700;">Materiais</span>
+    </button>
+    <button style="flex:1;min-height:56px;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;color:#E11D2A;font-family:inherit;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+      <span style="font-size:10px;font-weight:800;">Perfil</span>
+    </button>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":460,"height":844}}'>
+class Component extends DCLogic {
+  state = { aberta: 'md' };
+
+  renderVals() {
+    const LIMITE = 5; // 25% de 20 encontros
+    const abertaAtual = this.state.aberta;
+
+    const base = [
+      { id: 'md', nome: 'Marketing Digital', prof: 'Prof. Renata Alves', faltas: 5, ausencias: [
+        { data: '12 ago', tema: 'Público-alvo e personas' },
+        { data: '26 ago', tema: 'Canais e mídia paga' },
+        { data: '09 set', tema: 'Funil de vendas' },
+        { data: '16 set', tema: 'Métricas e KPIs' },
+        { data: '23 set', tema: 'Calendário de postagens' },
+      ]},
+      { id: 'gp', nome: 'Gestão de Projetos', prof: 'Prof. Renata Alves', faltas: 2, ausencias: [
+        { data: '19 ago', tema: 'Escopo e cronograma' },
+        { data: '02 set', tema: 'Metodologias ágeis' },
+      ]},
+      { id: 'gc', nome: 'Gestão Comercial', prof: 'Prof. Renata Alves', faltas: 1, ausencias: [
+        { data: '27 ago', tema: 'Negociação e proposta' },
+      ]},
+      { id: 'emp', nome: 'Empreendedorismo', prof: 'Prof. Carla Menezes', faltas: 0, ausencias: [] },
+      { id: 'cc', nome: 'Comportamento do Consumidor', prof: 'Prof. Sandra Vidotti', faltas: 0, ausencias: [] },
+    ];
+
+    const disciplinas = base.map(d => {
+      const restam = LIMITE - d.faltas;
+      const noLimite = restam <= 0;
+      const perto = restam === 1;
+      const pct = Math.round(((20 - d.faltas) / 20) * 100) + '%';
+
+      const marcas = [];
+      for (let i = 0; i < LIMITE; i++) {
+        marcas.push({ cor: i < d.faltas ? (noLimite ? '#C8102E' : (perto ? '#f0a500' : '#2E4756')) : '#e4e8eb' });
+      }
+
+      let saldo, saldoFg;
+      if (noLimite) { saldo = 'Limite atingido · a próxima reprova'; saldoFg = '#C8102E'; }
+      else if (perto) { saldo = 'Pode faltar mais 1 aula'; saldoFg = '#8a6d00'; }
+      else { saldo = 'Pode faltar mais ' + restam + ' aulas'; saldoFg = '#0a7a3f'; }
+
+      const aberta = d.id === abertaAtual;
+      return {
+        nome: d.nome, prof: d.prof, pct, marcas, saldo, saldoFg, aberta,
+        ausencias: d.ausencias, semAusencia: d.ausencias.length === 0,
+        rotulo: d.nome + ' — ' + saldo + (aberta ? '. Toque para recolher' : '. Toque para ver as aulas perdidas'),
+        pctFg: noLimite ? '#C8102E' : '#14181B',
+        fundo: noLimite ? '#fff7f8' : '#fff',
+        borda: noLimite ? '#f3d2d5' : '#eceef1',
+        divisor: noLimite ? '#f3d2d5' : '#eef0f2',
+        giro: aberta ? '180deg' : '0deg',
+        alternar: () => this.setState({ aberta: aberta ? null : d.id }),
+      };
+    });
+
+    return { disciplinas };
+  }
+}
+</script>
+</body>
+</html>

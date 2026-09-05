@@ -1,0 +1,100 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 460,
+      "h": 844,
+      "title": "1 · Minhas turmas",
+      "is_interactive": true
+    },
+    {
+      "file": "Turma.dc.html",
+      "x": 560,
+      "y": 0,
+      "w": 460,
+      "h": 844,
+      "title": "2 · Turma aberta",
+      "is_interactive": true
+    },
+    {
+      "file": "Entregas.dc.html",
+      "x": 1120,
+      "y": 0,
+      "w": 460,
+      "h": 844,
+      "title": "3 · Entregas da atividade",
+      "is_interactive": true
+    },
+    {
+      "file": "Avaliar.dc.html",
+      "x": 1680,
+      "y": 0,
+      "w": 460,
+      "h": 844,
+      "title": "4 · Avaliar entrega",
+      "is_interactive": true
+    },
+    {
+      "file": "NovaAtividade.dc.html",
+      "x": 0,
+      "y": 1000,
+      "w": 460,
+      "h": 844,
+      "title": "5 · Nova atividade",
+      "is_interactive": true
+    },
+    {
+      "file": "PublicarMaterial.dc.html",
+      "x": 560,
+      "y": 1000,
+      "w": 460,
+      "h": 844,
+      "title": "6 · Publicar material",
+      "is_interactive": true
+    },
+    {
+      "file": "Chamada.dc.html",
+      "x": 1120,
+      "y": 1000,
+      "w": 460,
+      "h": 844,
+      "title": "7 · Chamada",
+      "is_interactive": true
+    }
+  ],
+  "annotations": [
+    {
+      "id": "fluxo-avaliar",
+      "x": 0,
+      "y": -190,
+      "w": 700,
+      "text": "FLUXO PRINCIPAL — avaliar\n\nDa lista de turmas até a nota lançada. O caminho que o professor percorre toda semana, e o que a auditoria apontou como a superfície que não existia."
+    },
+    {
+      "id": "fluxo-publicar",
+      "x": 0,
+      "y": 830,
+      "w": 700,
+      "text": "AÇÕES DA TURMA — criar e registrar\n\nAs três telas em que o professor gera o que o aluno consome, e registra a presença. Todas partem da tela 2. Na chamada, todos entram presentes e o professor toca só em quem faltou — 4 toques em vez de 28."
+    },
+    {
+      "id": "nota-papel",
+      "x": 1120,
+      "y": -190,
+      "w": 460,
+      "text": "O slate #2E4756 domina as telas do professor; o vermelho fica reservado para urgência e ação. O aluno continua com o vermelho dominante — a cor responde \"em que papel eu estou?\"."
+    },
+    {
+      "id": "nota-a11y",
+      "x": 1680,
+      "y": -190,
+      "w": 460,
+      "text": "Contrastes já corrigidos: os cinzas reprovados viraram #5A6873 e #6B7580. Alvos de toque ≥44px, todo campo com rótulo real, nada de clique em div."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}
