@@ -4,9 +4,10 @@ App de aluno/professor em Expo e painel web da coordenação, com uma API compar
 
 ## Estado atual
 
-O projeto contém os protótipos originais e a primeira implementação do backend.
-**Ainda não há app Expo ou painel web conectado à API.** O backend v0.1 é para
-desenvolvimento local com dados fictícios, não para operação institucional.
+O projeto contém os protótipos originais, o backend e um **painel da coordenação
+conectado à API**, disponível em `/panel/` no mesmo servidor. O app Expo ainda
+não foi implementado. Esta versão serve ao desenvolvimento local com dados
+fictícios; a liberação para operação institucional continua bloqueada.
 
 | Área | Implementação nesta versão |
 | --- | --- |
@@ -18,7 +19,10 @@ desenvolvimento local com dados fictícios, não para operação institucional.
 | Permissões | Aluno/professor só consulta turma com vínculo ativo; gestão restrita à coordenação |
 | Histórico | Auditoria transacional e arquivamento/restauração de cadastros |
 | Recuperação local | Backup SQLite e restauração em novo arquivo com verificação |
-| Interfaces | Referências visuais em `design/` e `fatec-adamantina-app/` |
+| Painel web | Visão geral, cadastros, vínculos, arquivamento e auditoria; paginação e seletores com busca |
+| Sessão web | Cookie HttpOnly/SameSite/Secure por padrão, validação de origem e CSRF |
+| Desenvolvedor/admin | Planejado: papel separado, MFA e gestão auditada; nenhuma conta especial criada |
+| Design | Referências originais preservadas em `design/` e `fatec-adamantina-app/` |
 
 Veja [como executar o backend](backend/README.md) e o
 [roteiro de implementação](docs/IMPLEMENTACAO.md).

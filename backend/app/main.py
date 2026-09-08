@@ -1,14 +1,18 @@
 import json
 import os
+import secrets
 from datetime import datetime
+from pathlib import Path
 from typing import Annotated
 from zoneinfo import ZoneInfo
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import delete, inspect, select, text
+from fastapi.staticfiles import StaticFiles
+from sqlalchemy import delete, func, inspect, select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from . import schemas, security
@@ -65,6 +69,39 @@ def create_app(url=None):
         allow_headers=["Authorization", "Content-Type"],
     )
 
+    cookie_name = "hub_session"
+    trusted_origins = {
+        origin.strip()
+        for origin in os.getenv("WEB_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000").split(
+            ","
+        )
+        if origin.strip()
+    }
+    secure_cookie = os.getenv("WEB_SECURE_COOKIE", "true").lower() != "false"
+
+    def check_origin(request):
+        if request.headers.get("origin") not in trusted_origins:
+            raise HTTPException(403, "Origem não autorizada")
+
+    def csrf(token):
+        return security.digest("hub-csrf:" + token)
+
+    def request_token(request, credentials):
+        # A browser cookie always takes precedence; a header cannot bypass CSRF.
+        token = request.cookies.get(cookie_name)
+        if token:
+            if request.method not in {"GET", "HEAD", "OPTIONS"}:
+                check_origin(request)
+                supplied = request.headers.get("x-csrf-token", "")
+                if not secrets.compare_digest(
+                    supplied.encode("utf-8"), csrf(token).encode("ascii")
+                ):
+                    raise HTTPException(403, "Proteção de sessão inválida; entre novamente")
+            return token
+        if credentials:
+            return credentials.credentials
+        raise HTTPException(401, "Autenticação necessária")
+
     def database():
         with sessions() as db:
             yield db
@@ -73,13 +110,11 @@ def create_app(url=None):
     bearer = HTTPBearer(auto_error=False)
 
     def current_user(
-        db: DB, credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]
+        request: Request,
+        db: DB,
+        credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
     ):
-        if credentials is None:
-            raise HTTPException(
-                401, "Autenticação necessária", headers={"WWW-Authenticate": "Bearer"}
-            )
-        return security.authenticate(db, credentials.credentials)
+        return security.authenticate(db, request_token(request, credentials))
 
     Actor = Annotated[User, Depends(current_user)]
 
@@ -96,12 +131,140 @@ def create_app(url=None):
             status_code=409, content={"detail": "Registro duplicado ou vínculo inválido"}
         )
 
+    @app.exception_handler(RequestValidationError)
+    async def invalid_input(_request, exception):
+        # Pydantic errors may contain the full input, including passwords.
+        return JSONResponse(
+            status_code=422,
+            content={
+                "detail": [
+                    {"loc": error["loc"], "type": error["type"], "msg": "Valor inválido"}
+                    for error in exception.errors()
+                ]
+            },
+        )
+
     @app.middleware("http")
     async def response_headers(request: Request, call_next):
         response = await call_next(request)
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        if request.url.path == "/" or request.url.path.startswith("/panel"):
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'none'; script-src 'self'; style-src 'self'; "
+                "img-src 'self'; font-src 'self'; connect-src 'self'; "
+                "object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+            )
         return response
+
+    static = Path(__file__).parent / "static"
+    app.mount("/panel/assets", StaticFiles(directory=static), name="panel-assets")
+
+    @app.get("/", include_in_schema=False)
+    def home():
+        return RedirectResponse("/panel/")
+
+    @app.get("/panel/", include_in_schema=False)
+    def panel():
+        return FileResponse(static / "index.html")
+
+    @app.post("/api/v1/web/login")
+    def web_login(body: schemas.Login, request: Request, response: Response, db: DB):
+        check_origin(request)
+        result = security.login(
+            db, body.email, body.password, request.client.host if request.client else "unknown"
+        )
+        token = result["access_token"]
+        actor = security.authenticate(db, token)
+        if actor.role != "coordinator":
+            db.execute(delete(Session).where(Session.token_hash == security.digest(token)))
+            db.commit()
+            raise HTTPException(403, "Este painel é exclusivo da coordenação")
+        previous = request.cookies.get(cookie_name)
+        if previous:
+            db.execute(delete(Session).where(Session.token_hash == security.digest(previous)))
+            db.commit()
+        response.set_cookie(
+            cookie_name,
+            token,
+            max_age=1800,
+            httponly=True,
+            secure=secure_cookie,
+            samesite="strict",
+            path="/api/v1",
+        )
+        return {"user": public(actor), "csrf_token": csrf(token)}
+
+    @app.get("/api/v1/web/session")
+    def web_session(request: Request, db: DB):
+        token = request.cookies.get(cookie_name)
+        if not token:
+            raise HTTPException(401, "Autenticação necessária")
+        actor = security.authenticate(db, token)
+        if actor.role != "coordinator":
+            raise HTTPException(403, "Este painel é exclusivo da coordenação")
+        return {"user": public(actor), "csrf_token": csrf(token)}
+
+    @app.get("/api/v1/dashboard")
+    def dashboard(db: DB, actor: Coordinator):
+        return {
+            key: db.scalar(select(func.count()).select_from(model).where(model.archived.is_(False)))
+            for key, model in {
+                "courses": Course,
+                "subjects": Subject,
+                "groups": ClassGroup,
+                "users": User,
+                "memberships": Membership,
+            }.items()
+        }
+
+    @app.get("/api/v1/lookup/{resource}")
+    def lookup(
+        resource: str,
+        db: DB,
+        actor: Coordinator,
+        q: str = Query("", max_length=120),
+        ids: list[str] = Query(default=[], max_length=100),
+        offset: int = Query(0, ge=0),
+        limit: int = Query(25, ge=1, le=100),
+    ):
+        model = {"users": User, "courses": Course, "subjects": Subject, "groups": ClassGroup}.get(
+            resource
+        )
+        if model is None:
+            raise HTTPException(404, "Cadastro não encontrado")
+        stmt = select(model)
+        if ids:
+            stmt = stmt.where(model.id.in_(ids))
+        else:
+            stmt = stmt.where(model.archived.is_(False))
+            if model is User:
+                stmt = stmt.where(User.role != "coordinator")
+            elif model is Subject:
+                stmt = stmt.join(Course).where(Course.archived.is_(False))
+            elif model is ClassGroup:
+                stmt = (
+                    stmt.join(Subject)
+                    .join(Course)
+                    .where(Subject.archived.is_(False), Course.archived.is_(False))
+                )
+            if q:
+                stmt = stmt.where(model.name.icontains(q, autoescape=True))
+        result = []
+        for row in db.scalars(stmt.order_by(model.name, model.id).offset(offset).limit(limit)):
+            label = row.name
+            if model is User:
+                label += " · " + row.email
+            elif model is ClassGroup:
+                subject = db.get(Subject, row.subject_id)
+                label = subject.name + " · " + row.name + " · " + row.semester
+            else:
+                label = row.code + " · " + row.name
+            result.append({"id": row.id, "label": label + (" (arquivado)" if row.archived else "")})
+        return result
 
     @app.get("/health/live")
     def live():
@@ -125,13 +288,19 @@ def create_app(url=None):
 
     @app.post("/api/v1/auth/logout", status_code=204)
     def logout(
-        actor: Actor, db: DB, credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer)]
+        request: Request,
+        actor: Actor,
+        db: DB,
+        credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
     ):
-        db.execute(
-            delete(Session).where(Session.token_hash == security.digest(credentials.credentials))
-        )
+        token = request_token(request, credentials)
+        db.execute(delete(Session).where(Session.token_hash == security.digest(token)))
         db.commit()
-        return Response(status_code=204)
+        response = Response(status_code=204)
+        response.delete_cookie(
+            cookie_name, path="/api/v1", secure=secure_cookie, httponly=True, samesite="strict"
+        )
+        return response
 
     @app.get("/api/v1/me")
     def me(actor: Actor):
