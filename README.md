@@ -37,3 +37,10 @@ Veja [como executar o backend](backend/README.md) e o
   e “nenhum backend” já não descrevem o estado desta branch.
 
 Os nomes e números dos protótipos são fictícios. O backend inicia vazio.
+
+## Homologação na nuvem
+
+Configuração Vercel/FastAPI e modo de teste protegido na branch `feat/cloud-staging`.
+Veja o [roteiro de homologação](docs/HOMOLOGACAO-VERCEL.md), incluindo a correção
+do erro `vite: command not found`, banco separado e variáveis obrigatórias.
+A preparação não significa que houve deploy nem libera produção.

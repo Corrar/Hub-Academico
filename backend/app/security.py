@@ -4,7 +4,7 @@ from datetime import timedelta, timezone
 
 from fastapi import HTTPException
 from pwdlib import PasswordHash
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, text
 
 from .models import LoginAttempt, Session, User, now
 
@@ -21,7 +21,12 @@ def utc(value):
 
 
 def login(db, email, password, ip):
-    # Persistent buckets for this local pilot, not a distributed rate limiter.
+    # Serialize shared account/peer buckets across PostgreSQL instances.
+    # Lock ordering prevents deadlocks; locks live only for this transaction.
+    if db.bind.dialect.name == "postgresql":
+        keys = {int(digest(value)[:15], 16) for value in ("email:" + email, "peer:" + ip)}
+        for key in sorted(keys):
+            db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": key})
     stamp = now()
     buckets = []
     for key, maximum in [(digest("email:" + email), 5), (digest("peer:" + ip), 30)]:

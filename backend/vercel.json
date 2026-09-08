@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "fastapi",
+  "buildCommand": "python -m compileall -q app index.py",
+  "functions": {
+    "index.py": {
+      "excludeFiles": "{tests/**,.venv/**,**/*.db,**/*.sqlite*,.env,.env.*,requirements-dev.lock}"
+    }
+  }
+}

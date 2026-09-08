@@ -105,3 +105,11 @@ estado compartilhado entre entregas e datas fixas. Os arquivos de design não
 foram convertidos nem corrigidos nesta etapa; são referência para reconstrução.
 As telas novas referenciam runtime do editor, sem ser um projeto de app executável.
 `docs/auditoria.html` é histórico; não deve ser usado como indicador atual de progresso.
+
+## Preparação de homologação na nuvem
+
+Entrada Vercel/FastAPI, modo staging com banco PostgreSQL/TLS obrigatório, proteção
+adicional de todo o ambiente, cookies Secure, origens/hosts exatos, documentação
+API desativada e limite de login serializado no PostgreSQL. Sem migração automática
+no build e sem bootstrap automático. Produção permanece bloqueada.
+Configuração manual e validação real pendentes em `HOMOLOGACAO-VERCEL.md`.
