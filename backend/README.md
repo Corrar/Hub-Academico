@@ -163,8 +163,10 @@ persistência e recuperação. O workflow roda também em PostgreSQL descartáve
   fluxos de teclado precisam de revisão antes do piloto.
 - Ainda faltam grade horária, importação em lote, atividades, uploads, notas, avisos,
   eventos, push e chamada. A chamada depende da definição do registro usado pela faculdade.
-- Contenção de tentativas de login é local e persistida; ainda não foi desenhada
-  para múltiplas instâncias concorrentes. Não publicar este piloto na internet.
+- No PostgreSQL, tentativas de login usam locks transacionais para serializar
+  os limites entre instâncias. SQLite continua exclusivo do desenvolvimento local.
+- Hospedagem de teste exige `APP_ENV=staging` e todas as proteções descritas em
+  [HOMOLOGACAO-VERCEL.md](../docs/HOMOLOGACAO-VERCEL.md). Produção segue bloqueada.
 - Não há recuperação de senha, renovação de sessão, edição de perfil/papéis,
   revogação administrativa por dispositivo ou rotina automática de backup.
 

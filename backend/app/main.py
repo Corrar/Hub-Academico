@@ -11,13 +11,14 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from fastapi.staticfiles import StaticFiles
 from sqlalchemy import delete, func, inspect, select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from . import schemas, security
 from .db import database_url, make_engine, make_sessions
 from .models import Audit, ClassGroup, Course, Membership, Session, Subject, User
+from .staging import access_gate, validate_staging
 
 
 def public(row):
@@ -56,11 +57,23 @@ def active_group(db, key):
 
 
 def create_app(url=None):
-    if os.getenv("APP_ENV", "development") not in {"development", "test"}:
+    environment = os.getenv("APP_ENV", "development")
+    if environment not in {"development", "test", "staging"}:
         raise RuntimeError("Esta versão é de desenvolvimento. Login institucional ainda pendente.")
-    engine = make_engine(url or database_url())
+    url = url or database_url()
+    staging_settings = validate_staging(url) if environment == "staging" else None
+    engine = make_engine(url)
     sessions = make_sessions(engine)
-    app = FastAPI(title="Hub Acadêmico — API de desenvolvimento", version="0.1.0")
+    app = FastAPI(
+        title="Hub Acadêmico — ambiente de teste",
+        version="0.1.0",
+        docs_url=None if staging_settings else "/docs",
+        redoc_url=None if staging_settings else "/redoc",
+        openapi_url=None if staging_settings else "/openapi.json",
+    )
+    if staging_settings:
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=staging_settings[1])
+        app.middleware("http")(access_gate(staging_settings[0]))
     app.state.engine, app.state.sessions = engine, sessions
     app.add_middleware(
         CORSMiddleware,
@@ -148,6 +161,9 @@ def create_app(url=None):
     async def response_headers(request: Request, call_next):
         response = await call_next(request)
         response.headers["Cache-Control"] = "no-store"
+        if staging_settings:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000"
+            response.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "no-referrer"
@@ -161,7 +177,13 @@ def create_app(url=None):
         return response
 
     static = Path(__file__).parent / "static"
-    app.mount("/panel/assets", StaticFiles(directory=static), name="panel-assets")
+
+    # Serve through application middleware, including on Vercel; no CDN promotion.
+    @app.get("/panel/assets/{filename}", include_in_schema=False)
+    def panel_asset(filename: str):
+        if filename not in {"index.html", "panel.js", "panel.css", "logo-fatec.png"}:
+            raise HTTPException(404, "Arquivo não encontrado")
+        return FileResponse(static / filename)
 
     @app.get("/", include_in_schema=False)
     def home():
@@ -268,7 +290,7 @@ def create_app(url=None):
 
     @app.get("/health/live")
     def live():
-        return {"status": "ok", "environment": "development"}
+        return {"status": "ok", "environment": environment}
 
     @app.get("/health/ready")
     def ready(db: DB):
