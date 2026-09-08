@@ -16,13 +16,13 @@ Em Settings → Build and Deployment do projeto Vercel:
 
 | Configuração | Valor |
 | --- | --- |
-| Root Directory | `backend` |
+| Root Directory | Raiz do repositório (vazio/`./`); `backend` também é suportado |
 | Framework Preset | FastAPI |
-| Build Command | Remover o override `vite build`; o arquivo `backend/vercel.json` usa `python -m compileall -q app index.py` |
+| Build Command | Remover o override `vite build`; o `vercel.json` da raiz selecionada define o comando Python correto |
 | Output Directory | Remover o override; não usar `dist` |
 | Install Command | Padrão automático de Python; remover comandos npm antigos |
 | Python | 3.12, definido em `.python-version` |
-| Entrada | `index.py`, instância `app` |
+| Entrada | `index.py`, instância `app`, disponível nas duas raízes |
 
 Não publique só o HTML: painel e API precisam da mesma origem para a sessão e o CSRF.
 Não use um preset Vite/React ou um diretório do protótipo como raiz.
@@ -126,3 +126,17 @@ revisão independente e requisitos operacionais definidos no roteiro.
 - https://vercel.com/docs/frameworks/backend/fastapi
 - https://vercel.com/docs/functions/runtimes/python
 - https://vercel.com/docs/deployment-protection/methods-to-protect-deployments/vercel-authentication
+
+## Correção adicional: deploy pela raiz do repositório
+
+Agora a raiz também contém `index.py`, `requirements.txt`, `.python-version` e
+`vercel.json`. O código funciona importado como `backend.index` pela raiz e como
+`index` quando a pasta `backend` é selecionada. As duas configurações anulam o
+Output Directory do projeto e definem build Python. O mesmo conjunto de
+dependências e os mesmos controles de homologação são usados nas duas entradas.
+
+A `main` ainda contém apenas o protótipo inicial enquanto os PRs não forem
+integrados. Fazer Redeploy de um deploy antigo reutiliza o commit antigo. Crie
+um **novo deploy da branch `feat/cloud-staging`**, com as variáveis de Preview
+preenchidas, ou integre os PRs após revisão antes de fazer deploy da `main`.
+A configuração no Git não altera automaticamente a branch do projeto na Vercel.

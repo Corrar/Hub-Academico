@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "fastapi",
+  "buildCommand": "python -m compileall -q backend/app backend/index.py index.py",
+  "outputDirectory": null,
+  "functions": {
+    "index.py": {
+      "excludeFiles": "{design/**,docs/**,fatec-adamantina-app/**,backend/tests/**,**/.venv/**,**/*.db,**/*.sqlite*,**/.env,**/.env.*,backend/requirements-dev.lock}"
+    }
+  }
+}

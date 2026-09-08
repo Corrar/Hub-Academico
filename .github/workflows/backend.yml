@@ -1,9 +1,9 @@
 name: Backend
 on:
   push:
-    paths: ['backend/**', '.github/workflows/backend.yml']
+    paths: ['backend/**', '.github/workflows/backend.yml', 'index.py', 'requirements.txt', 'vercel.json', '.python-version']
   pull_request:
-    paths: ['backend/**', '.github/workflows/backend.yml']
+    paths: ['backend/**', '.github/workflows/backend.yml', 'index.py', 'requirements.txt', 'vercel.json', '.python-version']
 permissions:
   contents: read
 jobs:

@@ -2,7 +2,10 @@
 
 import os
 
-from app.main import create_app
+if __package__:
+    from .app.main import create_app
+else:
+    from app.main import create_app
 
 if os.getenv("VERCEL") and os.getenv("APP_ENV") != "staging":
     raise RuntimeError("Deploys Vercel são exclusivos de homologação nesta versão.")
