@@ -8,7 +8,7 @@ adaptive
 
 ## Stack
 
-Expo (React Native) para o app de aluno e professor — Android e iOS do mesmo código. Painel web separado para a coordenação, consumindo a mesma API. Escolhido pelo usuário; back-end e alvo de publicação ainda não decididos.
+Expo (React Native) para o app de aluno e professor — Android e iOS do mesmo código. Painel web separado para a coordenação, consumindo a mesma API. Escolhido pelo usuário. A branch de implementação inicia o back-end em Python/FastAPI e SQLAlchemy, com SQLite local e suporte a PostgreSQL. Alvo de publicação ainda não decidido.
 
 ## Users
 
@@ -63,7 +63,7 @@ A diferença do hub tem duas frentes, e ele será julgado pelas duas:
 - **Autenticação.** Recomendado Microsoft Entra ID (OIDC com PKCE), já que os três papéis têm conta institucional e o Office 365 do CPS está em uso — elimina guardar senha e herda o MFA. Não confirmado pelo usuário.
 - **Chamada em dois lugares.** Se o Centro Paula Souza mantém diário de classe próprio, o professor passaria a lançar presença duas vezes. Ninguém sustenta trabalho dobrado por muito tempo — e o lado abandonado costuma ser o novo. Precisa ser verificado com a coordenação antes de a chamada ser construída; é o maior risco de adoção do projeto.
 - **Vínculo de professor com data de fim** (o desenho assume vigência com prazo). Se na prática o vínculo for aberto, o modelo muda.
-- Back-end, banco e alvo de publicação.
+- Alvo de publicação e operação do PostgreSQL. A base de desenvolvimento do back-end já foi iniciada; ver `backend/README.md`.
 - Se existe integração possível com algum sistema do CPS no futuro.
 
 ## Brand Commitments
@@ -83,7 +83,7 @@ A diferença do hub tem duas frentes, e ele será julgado pelas duas:
 
 **Não existe — não inventar**
 
-- Nenhuma linha de código de produção, nenhum repositório git, nenhum back-end.
+- Há repositório Git e uma API de desenvolvimento em `backend/`. Ainda não há aplicativo Expo, painel conectado ou serviço de produção publicado.
 - Nenhum dado institucional real: os nomes, turmas, notas e números nas telas são exemplo coerente, não dados da Fatec.
 - Nenhuma entrevista com aluno, professor ou coordenação foi feita. O que se sabe do uso atual veio do próprio usuário.
 - Nenhum acordo, aprovação ou compromisso formal do Centro Paula Souza foi registrado.
@@ -104,3 +104,7 @@ A diferença do hub tem duas frentes, e ele será julgado pelas duas:
 - Todo elemento clicável é controle real, todo campo tem rótulo programático, foco de teclado sempre visível.
 - Conteúdo em pt-BR com `lang` declarado — o protótipo original não declarava idioma e o leitor de tela lia português com fonética de inglês.
 - Por ser sistema de autarquia estadual, o padrão de acessibilidade exigível precisa ser confirmado com o Centro Paula Souza; até lá, WCAG 2.1 AA é o piso adotado.
+
+## Estado da implementação — 08/09/2026
+
+Primeira entrega funcional: API de desenvolvimento com cadastros acadêmicos, contas locais, permissões por papel/vínculo, migrações, arquivamento reversível, auditoria e backup/restauração SQLite. Login local é provisório para testes e não substitui a decisão de autenticação institucional. Ver `docs/IMPLEMENTACAO.md` para o escopo concluído e o roteiro.
