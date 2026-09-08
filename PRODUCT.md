@@ -108,3 +108,13 @@ A diferença do hub tem duas frentes, e ele será julgado pelas duas:
 ## Estado da implementação — 08/09/2026
 
 Primeira entrega funcional: API de desenvolvimento com cadastros acadêmicos, contas locais, permissões por papel/vínculo, migrações, arquivamento reversível, auditoria e backup/restauração SQLite. Login local é provisório para testes e não substitui a decisão de autenticação institucional. Ver `docs/IMPLEMENTACAO.md` para o escopo concluído e o roteiro.
+
+## Desenvolvedor/admin — decisão de 08/09/2026
+
+Adicionar um console para o responsável técnico Bruno Roberto Corral, com papel
+`platform_admin` separado da coordenação. Deve administrar contas, permissões,
+configurações, sessões e operação do Hub por ações explícitas e auditadas.
+Provisionamento controlado, identidade institucional verificada, MFA obrigatório
+e reautenticação nas operações críticas; sem senha padrão ou bypass.
+O papel e a conta ainda não estão implementados. Escopo e critérios de aceite
+em `docs/IMPLEMENTACAO.md`.

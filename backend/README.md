@@ -1,4 +1,4 @@
-# Backend v0.1 — base acadêmica
+# Backend e painel da coordenação
 
 API de desenvolvimento em Python 3.12. Execute todos os comandos desta página
 na pasta `backend`. Não há serviço externo nem cobrança necessários para testar.
@@ -31,14 +31,54 @@ python -m app.cli bootstrap --email coordenacao.dev@fatec.sp.gov.br --name "Coor
 uvicorn app.main:create_app --factory --reload --host 127.0.0.1
 ```
 
-Abra http://127.0.0.1:8000/docs. Em `POST /api/v1/auth/login`, use o e-mail e a
+O painel está em `/panel/` no mesmo servidor. Entre com o e-mail e a senha
+provisionados pelo bootstrap. Copie o `.env.example` atualizado: para o HTTP
+local, `WEB_SECURE_COOKIE=false` permite enviar o cookie. Fora desse caso,
+o padrão é `Secure=true`. `WEB_ORIGINS` deve conter a origem exata do painel.
+
+Para explorar a API, `/docs` continua disponível. Em `POST /api/v1/auth/login`, use o e-mail e a
 senha criados no terminal. Copie **somente o valor de `access_token`** e cole em
-**Authorize**. A sessão dura 30 minutos; o logout a revoga no servidor.
+**Authorize**. Saia do painel antes de usar o explorador Bearer: quando há cookie,
+ele tem precedência e exige CSRF nas alterações. A sessão dura 30 minutos;
+o logout a revoga no servidor.
 
 Os arquivos `.env` e `hub.db` ficam fora do Git. Variáveis de ambiente existentes
 têm prioridade sobre `.env`. O `bootstrap` recusa execução se já existir coordenação.
 Outros usuários são criados pela coordenação em `/api/v1/users`, sem auto-cadastro.
 Senha mínima: 12 caracteres. Não use sua senha real da conta institucional neste piloto.
+
+## Painel conectado
+
+O painel usa HTML, CSS e JavaScript locais, sem CDN ou armazenamento de tokens
+em `localStorage`/`sessionStorage`. Os dados pessoais são inseridos como texto,
+sem interpretação de HTML. Os logotipos originais foram preservados.
+
+- Visão geral: contagens reais de registros não arquivados, não de vínculos vigentes.
+- Cursos, disciplinas e turmas: cadastro, edição, arquivamento e restauração.
+- Usuários: criação e arquivamento/restauração de alunos e professores. Contas
+  de coordenação não podem ser arquivadas por esse fluxo. A criação local de
+  coordenação já existente na API permanece restrita à coordenação; não cria admin.
+- Matrículas: seleção de pessoa/turma por nome, datas e atualização de vigência.
+- Listagens: páginas de 25 registros. Seletores têm busca e carregamento de mais
+  opções; cadastros além da primeira página continuam acessíveis.
+- Auditoria: autor, instante em São Paulo, operação e valores antes/depois.
+
+`POST /api/v1/web/login` exige Origin explicitamente permitido e aceita somente
+coordenação. Retorna perfil e token CSRF; a credencial de sessão fica no cookie
+HttpOnly com SameSite=Strict e 30 minutos de validade. Login bem-sucedido gira a
+sessão do navegador. `GET /api/v1/web/session` recupera perfil e proteção CSRF.
+Mutações autenticadas por cookie exigem Origin permitido e `X-CSRF-Token`, mesmo
+se também houver Authorization. `POST /api/v1/auth/logout` revoga a sessão atual
+e remove o cookie. A API Bearer continua disponível para clientes não web.
+
+O painel aplica CSP sem scripts/estilos inline e sem recursos externos,
+`frame-ancestors 'none'`, `X-Frame-Options: DENY`, `no-store`, `nosniff` e política
+de referência restrita. Erros de validação não devolvem o corpo enviado.
+Essas medidas não substituem identidade institucional/MFA nem revisão externa.
+
+Novas consultas administrativas: `GET /api/v1/dashboard` e
+`GET /api/v1/lookup/{resource}`. A busca aceita `q`, `offset`, `limit` e uma lista
+limitada de `ids` para resolver rótulos de referências, inclusive arquivadas.
 
 ## Primeiro fluxo executável
 
@@ -118,7 +158,9 @@ persistência e recuperação. O workflow roda também em PostgreSQL descartáve
 
 - Contas locais servem só ao desenvolvimento. `APP_ENV=production` recusa iniciar.
   A integração Microsoft/Entra e a política de aprovação institucional não estão implementadas.
-- Não existe interface web ou Expo conectada; `/docs` permite exercitar a API.
+- O painel web está conectado; o app Expo ainda não foi implementado.
+- Não houve validação visual em navegador nesta entrega. A responsividade e os
+  fluxos de teclado precisam de revisão antes do piloto.
 - Ainda faltam grade horária, importação em lote, atividades, uploads, notas, avisos,
   eventos, push e chamada. A chamada depende da definição do registro usado pela faculdade.
 - Contenção de tentativas de login é local e persistida; ainda não foi desenhada
@@ -131,3 +173,8 @@ persistência e recuperação. O workflow roda também em PostgreSQL descartáve
 - https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/ (hashes Argon2 com pwdlib;
   esta API usa sessões opacas no servidor, não JWT).
 - https://alembic.sqlalchemy.org/en/latest/tutorial.html (migrações versionadas).
+
+- https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html
+  (atributos do cookie, expiração e rotação da sessão).
+- https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html
+  (verificação de origem e token CSRF no cabeçalho; SameSite como defesa adicional).
