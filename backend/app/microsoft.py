@@ -148,6 +148,8 @@ def install_microsoft(app, sessions, settings, check_origin):
         state, nonce, verifier = (secrets.token_urlsafe(48) for _ in range(3))
         peer = security.digest(request.client.host if request.client else "unknown")
         with sessions() as db:
+            if db.bind.dialect.name == "postgresql":
+                db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": int(peer[:15], 16)})
             db.execute(delete(OIDCFlow).where(OIDCFlow.expires_at <= now()))
             if (
                 db.scalar(

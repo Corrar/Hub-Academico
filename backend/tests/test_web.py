@@ -85,11 +85,11 @@ def test_web_login_origin_and_role(system):
         headers={"Origin": ORIGIN},
         json={"email": "aluno@fatec.sp.gov.br", "password": PASSWORD},
     )
-    assert response.status_code == 403
-    assert "set-cookie" not in response.headers
+    assert response.status_code == 200
+    assert response.json()["user"]["role"] == "student"
+    assert "HttpOnly" in response.headers["set-cookie"]
     with app.state.sessions() as db:
-        # Only the coordinator bearer session from the fixture remains.
-        assert len(db.scalars(select(Session)).all()) == 1
+        assert len(db.scalars(select(Session)).all()) == 2
 
 
 def test_web_validation_does_not_echo_passwords(system):
@@ -121,7 +121,7 @@ def test_panel_assets_headers_and_auth_boundaries(system):
     assert "script-src 'self'" in response.headers["content-security-policy"]
     assert response.headers["x-frame-options"] == "DENY"
     assert response.headers["cache-control"] == "no-store"
-    for filename in ["panel.css", "panel.js", "logo-fatec.png"]:
+    for filename in ["panel.css", "panel.js", "admin.js", "academic.js", "logo-fatec.png"]:
         assert client.get("/panel/assets/" + filename).status_code == 200
     for endpoint in ["/api/v1/dashboard", "/api/v1/lookup/users", "/api/v1/courses"]:
         assert client.get(endpoint).status_code == 401

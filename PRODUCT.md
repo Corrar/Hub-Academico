@@ -60,7 +60,7 @@ A diferença do hub tem duas frentes, e ele será julgado pelas duas:
 
 **Explicitamente em aberto**
 
-- **Autenticação.** Recomendado Microsoft Entra ID (OIDC com PKCE), já que os três papéis têm conta institucional e o Office 365 do CPS está em uso — elimina guardar senha e herda o MFA. Não confirmado pelo usuário.
+- **Autenticação.** Microsoft Entra ID (OIDC com PKCE) solicitado pelo usuário e implementado no servidor. Registro do aplicativo, política MFA e ativação no tenant continuam pendentes.
 - **Chamada em dois lugares.** Se o Centro Paula Souza mantém diário de classe próprio, o professor passaria a lançar presença duas vezes. Ninguém sustenta trabalho dobrado por muito tempo — e o lado abandonado costuma ser o novo. Precisa ser verificado com a coordenação antes de a chamada ser construída; é o maior risco de adoção do projeto.
 - **Vínculo de professor com data de fim** (o desenho assume vigência com prazo). Se na prática o vínculo for aberto, o modelo muda.
 - Alvo de publicação e operação do PostgreSQL. A base de desenvolvimento do back-end já foi iniciada; ver `backend/README.md`.
@@ -83,7 +83,7 @@ A diferença do hub tem duas frentes, e ele será julgado pelas duas:
 
 **Não existe — não inventar**
 
-- Há repositório Git e uma API de desenvolvimento em `backend/`. Ainda não há aplicativo Expo, painel conectado ou serviço de produção publicado.
+- Há repositório Git e uma API de desenvolvimento em `backend/`. Há painel web conectado. Ainda não há aplicativo Expo nem serviço de produção publicado nesta execução.
 - Nenhum dado institucional real: os nomes, turmas, notas e números nas telas são exemplo coerente, não dados da Fatec.
 - Nenhuma entrevista com aluno, professor ou coordenação foi feita. O que se sabe do uso atual veio do próprio usuário.
 - Nenhum acordo, aprovação ou compromisso formal do Centro Paula Souza foi registrado.
@@ -120,3 +120,12 @@ Atualização 09/09/2026: console e concessão administrativa implementados, com
 provisionamento inicial explícito e login Microsoft. A conta real ainda depende
 da identificação verificada e da configuração do tenant. Escopo e critérios de aceite
 em `docs/IMPLEMENTACAO.md`.
+
+## Revisão de 09/09/2026
+
+Branch `melhoria/revisao-e-fluxos-academicos`: painel web acadêmico para os três
+perfis, atividades/entregas/avaliações, materiais, avisos, eventos com inscrições,
+grade e matrícula em lote. Anexos desta homologação são somente texto UTF-8
+pequeno; PDF/Office, aplicativo Expo, push e chamada continuam pendentes.
+Estado detalhado e condições externas em `docs/RELATORIO-REVISAO.md`.
+Pentest remoto somente após confirmação explícita de que a homologação está na nuvem.
