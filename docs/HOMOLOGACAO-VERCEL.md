@@ -145,3 +145,12 @@ A configuração no Git não altera automaticamente a branch do projeto na Verce
 Para usar a entrega Microsoft/admin, faça deploy da branch `feat/admin-microsoft`
 e siga primeiro `MICROSOFT-ADMIN.md` (migração 0002 e provisionamento inicial).
 A branch anterior de staging não recebe automaticamente as funcionalidades novas.
+
+
+## Erro de parsing do requirements.txt na raiz
+
+Se o build mostrar `Error parsing included file` para `-r backend/requirements.txt`,
+use a revisão que contém a lista completa de dependências no `requirements.txt`
+da raiz. O arquivo da raiz e o do backend devem listar as mesmas versões;
+um teste automatizado verifica essa correspondência e impede novas inclusões `-r`.
+Esta correção não exige trocar o framework nem remover as proteções de staging.
