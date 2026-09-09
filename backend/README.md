@@ -157,7 +157,8 @@ persistência e recuperação. O workflow roda também em PostgreSQL descartáve
 ## Limites desta entrega
 
 - Contas locais servem só ao desenvolvimento. `APP_ENV=production` recusa iniciar.
-  A integração Microsoft/Entra e a política de aprovação institucional não estão implementadas.
+  O fluxo Microsoft/Entra está implementado; sua ativação e política MFA dependem
+  do tenant institucional. Veja [MICROSOFT-ADMIN.md](../docs/MICROSOFT-ADMIN.md).
 - O painel web está conectado; o app Expo ainda não foi implementado.
 - Não houve validação visual em navegador nesta entrega. A responsividade e os
   fluxos de teclado precisam de revisão antes do piloto.
@@ -167,8 +168,9 @@ persistência e recuperação. O workflow roda também em PostgreSQL descartáve
   os limites entre instâncias. SQLite continua exclusivo do desenvolvimento local.
 - Hospedagem de teste exige `APP_ENV=staging` e todas as proteções descritas em
   [HOMOLOGACAO-VERCEL.md](../docs/HOMOLOGACAO-VERCEL.md). Produção segue bloqueada.
-- Não há recuperação de senha, renovação de sessão, edição de perfil/papéis,
-  revogação administrativa por dispositivo ou rotina automática de backup.
+- O console admin altera papéis, bloqueia contas, vincula identidades e revoga
+  todas as sessões de uma conta. Recuperação de identidade é feita pelo Entra.
+  Não há renovação silenciosa, revogação individual por dispositivo ou backup automático.
 
 ## Referências técnicas
 

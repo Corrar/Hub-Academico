@@ -21,7 +21,8 @@ fictícios; a liberação para operação institucional continua bloqueada.
 | Recuperação local | Backup SQLite e restauração em novo arquivo com verificação |
 | Painel web | Visão geral, cadastros, vínculos, arquivamento e auditoria; paginação e seletores com busca |
 | Sessão web | Cookie HttpOnly/SameSite/Secure por padrão, validação de origem e CSRF |
-| Desenvolvedor/admin | Planejado: papel separado, MFA e gestão auditada; nenhuma conta especial criada |
+| Desenvolvedor/admin | Console de usuários, identidades, permissões, bloqueios e sessões; MFA/contexto Entra exigido |
+| Microsoft institucional | Fluxo OIDC implementado; ativação depende do registro e configuração no tenant da Fatec |
 | Design | Referências originais preservadas em `design/` e `fatec-adamantina-app/` |
 
 Veja [como executar o backend](backend/README.md) e o
@@ -44,3 +45,9 @@ Configuração Vercel/FastAPI e modo de teste protegido na branch `feat/cloud-st
 Veja o [roteiro de homologação](docs/HOMOLOGACAO-VERCEL.md), incluindo a correção
 do erro `vite: command not found`, banco separado e variáveis obrigatórias.
 A preparação não significa que houve deploy nem libera produção.
+
+## Microsoft e administrador
+
+Veja [como ativar o login e provisionar o primeiro administrador](docs/MICROSOFT-ADMIN.md).
+A entrega exige migração `0002`, que encerra sessões antigas e preserva cadastros.
+A autenticação real e a validação no navegador ainda dependem da configuração institucional.
