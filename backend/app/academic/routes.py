@@ -2,7 +2,9 @@
 
 import json
 import re
+from datetime import date, datetime, timezone
 from typing import Literal
+from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException, Query, Request, Response
 from sqlalchemy import func, or_, select
@@ -18,6 +20,7 @@ from ..models import (
     Schedule,
     Submission,
     User,
+    now,
 )
 from .scheduling import lock_schedule, validate_schedule
 from .schemas import GradeInput, PublicationInput, ScheduleInput, SubmissionInput
@@ -99,6 +102,120 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
             for key, count, average in db.execute(query)
         ]
 
+    @app.get("/api/v1/learning/overview")
+    def overview(db: DB, actor: Actor):
+        """Home counters from the same membership scope as academic reads."""
+        groups = visible_groups(actor).with_only_columns(ClassGroup.id)
+        scope = or_(Publication.audience == "institution", Publication.group_id.in_(groups))
+        published = select(Publication).where(
+            scope, Publication.archived.is_(False), Publication.draft.is_(False)
+        )
+        activities = published.where(Publication.kind == "activity")
+        sent = select(Submission.publication_id).where(
+            Submission.student_id == actor.id,
+            Submission.draft.is_(False),
+            Submission.archived.is_(False),
+        )
+        if actor.role == "student":
+            pending = activities.where(Publication.id.not_in(sent))
+            pending_count = db.scalar(select(func.count()).select_from(pending.subquery()))
+        else:
+            pending = activities
+            pending_count = db.scalar(
+                select(func.count())
+                .select_from(Submission)
+                .where(
+                    Submission.publication_id.in_(activities.with_only_columns(Publication.id)),
+                    Submission.draft.is_(False),
+                    Submission.archived.is_(False),
+                    Submission.grade.is_(None),
+                )
+            )
+        today = datetime.now(ZoneInfo("America/Sao_Paulo")).date()
+        lessons = (
+            select(Schedule)
+            .where(
+                Schedule.group_id.in_(groups),
+                Schedule.archived.is_(False),
+                Schedule.starts_on <= today,
+                Schedule.ends_on >= today,
+                Schedule.weekday == today.weekday(),
+            )
+            .order_by(Schedule.starts_minute, Schedule.id)
+        )
+        materials = published.where(Publication.kind == "material")
+        return {
+            "date": today.isoformat(),
+            "groups_count": db.scalar(select(func.count()).select_from(groups.subquery())),
+            "pending_count": pending_count,
+            "material_count": db.scalar(select(func.count()).select_from(materials.subquery())),
+            "lessons_today": [public(row) for row in db.scalars(lessons)],
+            "upcoming": [
+                public(row)
+                for row in db.scalars(
+                    pending.where(Publication.due_at >= now())
+                    .order_by(Publication.due_at, Publication.id)
+                    .limit(5)
+                )
+            ],
+            "recent": [
+                public(row)
+                for row in db.scalars(
+                    published.where(Publication.kind.in_(["notice", "event"]))
+                    .order_by(Publication.created_at.desc(), Publication.id)
+                    .limit(8)
+                )
+            ],
+        }
+
+    @app.get("/api/v1/learning/calendar")
+    def calendar(db: DB, actor: Actor, month: str = Query(pattern=r"^20\d{2}-(0[1-9]|1[0-2])$")):
+        year, number = map(int, month.split("-"))
+        zone = ZoneInfo("America/Sao_Paulo")
+        start = datetime(year, number, 1, tzinfo=zone).astimezone(timezone.utc)
+        end = datetime(year + (number == 12), number % 12 + 1, 1, tzinfo=zone).astimezone(
+            timezone.utc
+        )
+        groups = visible_groups(actor).with_only_columns(ClassGroup.id)
+        publications = list(
+            db.scalars(
+                select(Publication)
+                .where(
+                    or_(Publication.audience == "institution", Publication.group_id.in_(groups)),
+                    Publication.archived.is_(False),
+                    Publication.draft.is_(False),
+                    or_(
+                        (Publication.kind == "activity")
+                        & (Publication.due_at >= start)
+                        & (Publication.due_at < end),
+                        (Publication.kind == "event")
+                        & (Publication.starts_at < end)
+                        & (Publication.ends_at >= start),
+                    ),
+                )
+                .order_by(Publication.id)
+                .limit(501)
+            )
+        )
+        lessons = list(
+            db.scalars(
+                select(Schedule)
+                .where(
+                    Schedule.group_id.in_(groups),
+                    Schedule.archived.is_(False),
+                    Schedule.starts_on < end.astimezone(zone).date(),
+                    Schedule.ends_on >= date(year, number, 1),
+                )
+                .order_by(Schedule.weekday, Schedule.starts_minute, Schedule.id)
+                .limit(501)
+            )
+        )
+        return {
+            "publications": [public(row) for row in publications[:500]],
+            "lessons": [public(row) for row in lessons[:500]],
+            "truncated": len(publications) > 500 or len(lessons) > 500,
+        }
+
     @app.get("/api/v1/learning/publications")
     def listing(
         db: DB,
@@ -106,6 +223,7 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
         kind: Literal["activity", "material", "notice", "event"],
         archived: bool = False,
         q: str = Query("", max_length=120),
+        group_id: str | None = Query(None, max_length=36),
         offset: int = Query(0, ge=0),
         limit: int = Query(25, ge=1, le=100),
     ):
@@ -114,6 +232,8 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
         query = select(Publication).where(
             Publication.kind == kind, Publication.archived == archived, scope
         )
+        if group_id:
+            query = query.where(Publication.group_id == group_id)
         if q:
             query = query.where(
                 or_(
@@ -307,6 +427,7 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
         db: DB,
         actor: Actor,
         archived: bool = False,
+        group_id: str | None = Query(None, max_length=36),
         offset: int = Query(0, ge=0),
         limit: int = Query(25, ge=1, le=100),
     ):
@@ -316,6 +437,8 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
             Schedule.group_id.in_(visible_groups(actor).with_only_columns(ClassGroup.id)),
             Schedule.archived == archived,
         )
+        if group_id:
+            query = query.where(Schedule.group_id == group_id)
         return [
             public(row)
             for row in db.scalars(

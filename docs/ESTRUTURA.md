@@ -21,11 +21,14 @@ acentos para facilitar o uso no Git e na hospedagem).
 | `backend/app/static/panel.js` | Sessão, navegação e cadastros comuns |
 | `backend/app/static/admin.js` | Interface administrativa, extraída do painel comum |
 | `backend/app/static/academic.js` | Publicações, entregas, notas, eventos, grade e lote |
+| `backend/app/static/experience.js` | Inícios por perfil, calendário, busca, perfil e componentes visuais |
 | `backend/app/static/index.html`, `panel.css` | Estrutura e estilo compartilhados |
 | `backend/migrations/versions/` | Migrações históricas congeladas; versão atual `0003` |
 | `backend/tests/` | Regressões de API, sessão, identidade, dados e fluxos acadêmicos |
 | `.github/workflows/backend.yml` | Verificação em SQLite e PostgreSQL |
 | `frontend/` | Painel estático para Vercel e proxy server-side para o Render |
+| `scripts/sync-frontend.mjs` | Sincronização determinística dos assets da interface |
+| `frontend-tests/` | Testes de componentes e navegação em DOM simulado |
 | `docs/` | Operação, revisão e roteiro |
 | `design/`, `fatec-adamantina-app/` | Referências visuais; não são o aplicativo executável |
 

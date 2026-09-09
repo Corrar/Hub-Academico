@@ -1,0 +1,11 @@
+{
+  "name": "hub-academico-interface-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test experience.test.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "30.0.1"
+  }
+}
