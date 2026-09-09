@@ -37,6 +37,7 @@ A nova branch contém as entregas anteriores e usa o build Python/FastAPI.
 | Anexos | Upload/download privado, limites, arquivamento e restauração por API | Somente `.txt` UTF-8, 512 KiB, dez por registro incluindo arquivados |
 | Dados | Migração `0003`, auditoria transacional e recuperação SQLite | Restauração do PostgreSQL hospedado ainda precisa ser ensaiada |
 | Nuvem | Entradas Vercel para raiz ou `backend/`, staging protegido, PostgreSQL/TLS | Preparação de código não equivale a deploy |
+| Front-end separado | Pasta `frontend/` para Vercel, proxy server-side para Render e cookies preservados | Requer novo projeto Vercel, domínio estável e duas variáveis server-side |
 
 ## Achados da revisão e correções
 
@@ -95,6 +96,7 @@ de carga, leitor de tela ou exploração remota. São verificações diferentes.
 | Proteções operacionais | Limites globais de requisição/corpo, monitoramento, alertas, orçamento, gestão/rotação de segredos e revisão de dependências |
 | Governança de dados | Retenção, finalidade, acesso excepcional, atendimento ao titular e responsabilidades da instituição |
 | Homologação real | Entra, banco, migração, deploy, teste de restauração e roteiro de aceite por perfil |
+| Front-end Vercel separado | Criar projeto com Root Directory `frontend`, configurar proxy e domínio em `WEB_ORIGINS` |
 | Pentest | Aguardando a confirmação solicitada pelo usuário; não executado |
 
 A revisão de código não cobre a configuração efetiva de proxy/WAF, política Entra,

@@ -83,12 +83,6 @@ def create_app(url=None):
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=staging_settings[1])
         app.middleware("http")(access_gate(staging_settings[0]))
     app.state.engine, app.state.sessions = engine, sessions
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["http://localhost:8081"],
-        allow_methods=["GET", "POST", "PUT", "PATCH"],
-        allow_headers=["Authorization", "Content-Type"],
-    )
 
     cookie_name = "hub_session"
     trusted_origins = {
@@ -99,6 +93,19 @@ def create_app(url=None):
         if origin.strip()
     }
     secure_cookie = os.getenv("WEB_SECURE_COOKIE", "true").lower() != "false"
+    cookie_samesite = os.getenv("WEB_COOKIE_SAMESITE", "strict").lower()
+    if cookie_samesite not in {"strict", "lax", "none"}:
+        raise RuntimeError("WEB_COOKIE_SAMESITE deve ser strict, lax ou none.")
+    if cookie_samesite == "none" and not secure_cookie:
+        raise RuntimeError("WEB_COOKIE_SAMESITE=none exige WEB_SECURE_COOKIE=true.")
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=sorted(trusted_origins),
+        allow_methods=["GET", "POST", "PUT", "PATCH"],
+        allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
+        allow_credentials=True,
+    )
 
     def check_origin(request):
         if request.headers.get("origin") not in trusted_origins:
@@ -172,7 +179,9 @@ def create_app(url=None):
 
     Administrator = Annotated[User, Depends(administrator)]
     install_admin(app, DB, Administrator, microsoft_settings, public)
-    install_microsoft(app, sessions, microsoft_settings, check_origin)
+    install_microsoft(
+        app, sessions, microsoft_settings, check_origin, cookie_samesite=cookie_samesite
+    )
 
     def profile(db, actor):
         return {**public(actor), "administrator": bool(db.get(AdminGrant, actor.id))}
@@ -264,7 +273,7 @@ def create_app(url=None):
             max_age=1800,
             httponly=True,
             secure=secure_cookie,
-            samesite="strict",
+            samesite=cookie_samesite,
             path="/api/v1",
         )
         return {"user": profile(db, actor), "csrf_token": csrf(token)}
@@ -374,7 +383,11 @@ def create_app(url=None):
         db.commit()
         response = Response(status_code=204)
         response.delete_cookie(
-            cookie_name, path="/api/v1", secure=secure_cookie, httponly=True, samesite="strict"
+            cookie_name,
+            path="/api/v1",
+            secure=secure_cookie,
+            httponly=True,
+            samesite=cookie_samesite,
         )
         return response
 

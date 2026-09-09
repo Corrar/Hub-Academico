@@ -46,6 +46,11 @@ Veja o [roteiro de homologação](docs/HOMOLOGACAO-VERCEL.md), incluindo a corre
 do erro `vite: command not found`, banco separado e variáveis obrigatórias.
 A preparação não significa que houve deploy nem libera produção.
 
+Na arquitetura separada recomendada, o backend FastAPI roda no Render e o painel
+em `frontend/` roda na Vercel. O projeto Vercel deve usar Root Directory `frontend`;
+o proxy server-side mantém a senha da proteção fora do navegador e encaminha a API
+para `https://app-fatec.onrender.com`.
+
 ## Microsoft e administrador
 
 Veja [como ativar o login e provisionar o primeiro administrador](docs/MICROSOFT-ADMIN.md).

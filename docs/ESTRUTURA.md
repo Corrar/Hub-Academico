@@ -25,6 +25,7 @@ acentos para facilitar o uso no Git e na hospedagem).
 | `backend/migrations/versions/` | Migrações históricas congeladas; versão atual `0003` |
 | `backend/tests/` | Regressões de API, sessão, identidade, dados e fluxos acadêmicos |
 | `.github/workflows/backend.yml` | Verificação em SQLite e PostgreSQL |
+| `frontend/` | Painel estático para Vercel e proxy server-side para o Render |
 | `docs/` | Operação, revisão e roteiro |
 | `design/`, `fatec-adamantina-app/` | Referências visuais; não são o aplicativo executável |
 
@@ -32,6 +33,12 @@ As duas entradas Vercel existem para as duas escolhas de Root Directory e têm
 regressões específicas. Não remova uma como suposta duplicata. Os arquivos de
 design e o relatório HTML histórico não são servidos pelo painel nem entram no
 bundle de homologação. Os logotipos foram preservados.
+
+Para a arquitetura separada, use um projeto Vercel com Root Directory `frontend`.
+O projeto raiz antigo continua sendo a entrada FastAPI alternativa e não deve ser
+usado como front-end estático. O proxy em `frontend/api/` injeta a proteção do
+Render apenas no servidor e repassa cookies/CSRF; `STAGING_ACCESS_PASSWORD` nunca
+vai para os arquivos estáticos.
 
 Novas regras acadêmicas ficam em `academic/`; interfaces por domínio ficam em
 arquivos próprios. Migrações publicadas não devem importar modelos atuais nem
