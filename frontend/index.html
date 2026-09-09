@@ -4,22 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Hub Acadêmico · Fatec Adamantina</title>
-  <link rel="stylesheet" href="/panel/assets/panel.css">
-  <script src="/panel/assets/panel.js" defer></script>
-  <script src="/panel/assets/admin.js" defer></script>
-  <script src="/panel/assets/academic.js" defer></script>
+  <link rel="stylesheet" href="/assets/panel.css">
+  <script src="/assets/panel.js" defer></script>
+  <script src="/assets/admin.js" defer></script>
+  <script src="/assets/academic.js" defer></script>
 </head>
 <body>
   <a class="skip" href="#content">Ir para o conteúdo</a>
   <section id="login-view" class="login-layout">
-    <div class="login-intro"><img src="/panel/assets/logo-fatec.png" alt="Fatec" width="170"><p class="eyebrow">HUB ACADÊMICO · ADAMANTINA</p><h1>Uma base comum.<br>Uma gestão conectada.</h1><p>Organize a estrutura acadêmica e os vínculos de alunos e professores em um só lugar.</p><span class="badge">Acesso institucional</span></div>
+    <div class="login-intro"><img src="/assets/logo-fatec.png" alt="Fatec" width="170"><p class="eyebrow">HUB ACADÊMICO · ADAMANTINA</p><h1>Uma base comum.<br>Uma gestão conectada.</h1><p>Organize a estrutura acadêmica e os vínculos de alunos e professores em um só lugar.</p><span class="badge">Acesso institucional</span></div>
     <div class="login-card"><p class="eyebrow">ACESSO RESTRITO</p><h2>Bem-vindo ao Hub</h2><p class="muted">Entre com a conta autorizada pela instituição.</p>
       <button id="microsoft-login" class="primary" type="button" hidden>Entrar com Microsoft institucional</button><form id="login-form"><label for="email">E-mail institucional</label><input id="email" name="email" type="email" autocomplete="username" maxlength="254" required><label for="password">Senha</label><input id="password" name="password" type="password" autocomplete="current-password" maxlength="128" required><button class="primary" type="submit">Entrar no painel</button></form><p id="login-error" role="alert"></p>
       <p class="notice">Ambiente de teste. O acesso institucional definitivo ainda está em preparação. Use somente dados de teste.</p>
     </div>
   </section>
   <div id="app-view" class="app-layout" hidden>
-    <aside class="sidebar"><div class="brand"><img src="/panel/assets/logo-fatec.png" alt="Fatec" width="132"></div><p class="eyebrow">HUB ACADÊMICO</p><p class="sidebar-title">Coordenação</p><nav aria-label="Navegação principal" id="navigation"></nav><div class="sidebar-footer"><span id="account-name"></span><button id="logout" class="secondary">Sair da conta</button></div></aside>
+    <aside class="sidebar"><div class="brand"><img src="/assets/logo-fatec.png" alt="Fatec" width="132"></div><p class="eyebrow">HUB ACADÊMICO</p><p class="sidebar-title">Coordenação</p><nav aria-label="Navegação principal" id="navigation"></nav><div class="sidebar-footer"><span id="account-name"></span><button id="logout" class="secondary">Sair da conta</button></div></aside>
     <main id="content" tabindex="-1"><header class="topbar"><span>Fatec Adamantina <span class="muted">/ Coordenação</span></span><span class="environment">Ambiente de teste</span></header><div class="workspace"><p class="eyebrow">GESTÃO ACADÊMICA</p><div class="page-heading"><div><h1 id="page-title">Visão geral</h1><p id="page-description" class="muted"></p></div><button id="new-record" class="primary" hidden>Novo cadastro</button></div><p id="status" role="status" aria-live="polite"></p><section id="view" aria-label="Conteúdo da página"></section></div></main>
   </div>
   <dialog id="editor" aria-labelledby="editor-title"><form id="record-form"><div class="dialog-heading"><h2 id="editor-title">Novo cadastro</h2><button type="button" id="close-editor" class="icon-button" aria-label="Fechar">×</button></div><div id="fields"></div><p id="form-error" role="alert"></p><div class="dialog-actions"><button type="button" id="cancel-editor" class="secondary">Cancelar</button><button id="save-record" type="submit" class="primary">Salvar cadastro</button></div></form></dialog>

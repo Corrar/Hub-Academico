@@ -63,8 +63,7 @@ sem interpretação de HTML. Os logotipos originais foram preservados.
   opções; cadastros além da primeira página continuam acessíveis.
 - Auditoria: autor, instante em São Paulo, operação e valores antes/depois.
 
-`POST /api/v1/web/login` exige Origin explicitamente permitido e aceita somente
-coordenação. Retorna perfil e token CSRF; a credencial de sessão fica no cookie
+`POST /api/v1/web/login` exige Origin explicitamente permitido e aceita contas locais provisionadas dos três perfis enquanto Microsoft não está configurado. Retorna perfil e token CSRF; a credencial de sessão fica no cookie
 HttpOnly com SameSite=Strict e 30 minutos de validade. Login bem-sucedido gira a
 sessão do navegador. `GET /api/v1/web/session` recupera perfil e proteção CSRF.
 Mutações autenticadas por cookie exigem Origin permitido e `X-CSRF-Token`, mesmo
@@ -182,3 +181,22 @@ persistência e recuperação. O workflow roda também em PostgreSQL descartáve
   (atributos do cookie, expiração e rotação da sessão).
 - https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html
   (verificação de origem e token CSRF no cabeçalho; SameSite como defesa adicional).
+
+## Módulos acadêmicos
+
+Atividades, materiais, avisos, eventos, grade e matrículas em lote estão no painel.
+Alunos e professores podem testar com contas locais provisionadas enquanto o
+Microsoft não está configurado. Configurar o Entra desativa o login local.
+O console administrativo continua exigindo identidade Microsoft com MFA.
+
+Execute `alembic upgrade head` para instalar a revisão `0003`. A migração preserva
+cadastros e auditoria; downgrade é bloqueado para impedir perda silenciosa de
+entregas e avaliações. Use backup verificado para recuperação.
+
+Anexos nesta versão são texto UTF-8 `.txt` de até 512 KiB, com máximo de dez por
+registro (incluindo arquivados). São privados e ficam no banco, sem URL pública.
+PDF, Office e imagens ainda não são aceitos. O upload deve ocorrer no rascunho da
+entrega; o envio e a avaliação bloqueiam alterações nos anexos do aluno.
+
+Ver [relatório completo](../docs/RELATORIO-REVISAO.md) e
+[organização de arquivos](../docs/ESTRUTURA.md).

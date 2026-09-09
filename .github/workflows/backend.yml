@@ -22,7 +22,7 @@ jobs:
       - run: python -m pip install -r requirements-dev.lock
       - run: python -m pytest -q
       - run: ruff check . && ruff format --check .
-      - run: node --check app/static/panel.js
+      - run: for file in app/static/*.js; do node --check "$file"; done
       - run: alembic upgrade head && alembic check
   postgres:
     runs-on: ubuntu-latest

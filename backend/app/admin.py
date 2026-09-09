@@ -9,7 +9,8 @@ from pydantic import Field, field_validator
 from sqlalchemy import delete, select, text
 
 from . import schemas, security
-from .models import AdminGrant, Audit, MicrosoftIdentity, Session, User
+from .academic.scheduling import lock_schedule, validate_group_schedules
+from .models import AdminGrant, Audit, Membership, MicrosoftIdentity, Session, User
 
 
 class Provision(schemas.Input):
@@ -131,7 +132,15 @@ def install_admin(app, DB, Administrator, microsoft, public):
                 422, "Admin exige identidade Microsoft vinculada e perfil de gestão"
             )
         before = serialize(db, row)
+        lock_schedule(db)
         row.role, row.archived = body.role, body.archived
+        if body.role == "teacher" and not body.archived:
+            for group_id in db.scalars(
+                select(Membership.group_id).where(
+                    Membership.user_id == key, Membership.archived.is_(False)
+                )
+            ):
+                validate_group_schedules(db, group_id)
         grant = db.get(AdminGrant, key)
         if body.administrator and not grant:
             db.add(AdminGrant(user_id=key))

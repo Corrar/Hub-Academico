@@ -205,7 +205,7 @@ $('record-form').addEventListener('submit',async event=>{
 });
 const optionsReady=api('/auth/options').then(data=>{microsoftEnabled=data.microsoft;$('microsoft-login').hidden=!data.microsoft;$('login-form').hidden=!data.local;});
 $('microsoft-login').addEventListener('click',microsoftLogin);
-if(new URLSearchParams(location.search).has('auth_error')){$('login-error').textContent='Não foi possível autorizar o acesso Microsoft. Confira o vínculo institucional e a política MFA com o administrador.';history.replaceState(null,'','/panel/');}
+if(new URLSearchParams(location.search).has('auth_error')){$('login-error').textContent='Não foi possível autorizar o acesso Microsoft. Confira o vínculo institucional e a política MFA com o administrador.';history.replaceState(null,'','/');}
 document.addEventListener('DOMContentLoaded',()=>{optionsReady.then(()=>api('/web/session')).then(enter).catch(error=>{if($('app-view').hidden&&error.message!=='Autenticação necessária')$('login-error').textContent=error.message;});});
 
 async function microsoftLogin() {

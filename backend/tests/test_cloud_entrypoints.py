@@ -60,3 +60,24 @@ def test_vercel_entrypoint_rejects_other_modes(mode):
     )
     assert result.returncode != 0
     assert "exclusivos de homologação" in result.stderr
+
+
+def test_vercel_requirements_are_standalone_and_match_backend():
+    from packaging.requirements import Requirement
+
+    def dependencies(path):
+        lines = [
+            line.strip()
+            for line in path.read_text().splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+        assert all(not line.startswith("-") for line in lines)
+        for line in lines:
+            requirement = Requirement(line)
+            assert requirement.url is None
+            assert all(spec.operator == "==" for spec in requirement.specifier)
+        return sorted(lines)
+
+    assert dependencies(ROOT / "requirements.txt") == dependencies(
+        ROOT / "backend/requirements.txt"
+    )

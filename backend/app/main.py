@@ -16,6 +16,9 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from . import schemas, security
+from .academic.enrollment import install_enrollment
+from .academic.routes import install_learning
+from .academic.scheduling import lock_schedule, validate_group_schedules
 from .admin import install_admin
 from .db import database_url, make_engine, make_sessions
 from .microsoft import MicrosoftSettings, install_microsoft
@@ -80,12 +83,6 @@ def create_app(url=None):
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=staging_settings[1])
         app.middleware("http")(access_gate(staging_settings[0]))
     app.state.engine, app.state.sessions = engine, sessions
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["http://localhost:8081"],
-        allow_methods=["GET", "POST", "PUT", "PATCH"],
-        allow_headers=["Authorization", "Content-Type"],
-    )
 
     cookie_name = "hub_session"
     trusted_origins = {
@@ -96,6 +93,19 @@ def create_app(url=None):
         if origin.strip()
     }
     secure_cookie = os.getenv("WEB_SECURE_COOKIE", "true").lower() != "false"
+    cookie_samesite = os.getenv("WEB_COOKIE_SAMESITE", "strict").lower()
+    if cookie_samesite not in {"strict", "lax", "none"}:
+        raise RuntimeError("WEB_COOKIE_SAMESITE deve ser strict, lax ou none.")
+    if cookie_samesite == "none" and not secure_cookie:
+        raise RuntimeError("WEB_COOKIE_SAMESITE=none exige WEB_SECURE_COOKIE=true.")
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=sorted(trusted_origins),
+        allow_methods=["GET", "POST", "PUT", "PATCH"],
+        allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
+        allow_credentials=True,
+    )
 
     def check_origin(request):
         if request.headers.get("origin") not in trusted_origins:
@@ -169,7 +179,9 @@ def create_app(url=None):
 
     Administrator = Annotated[User, Depends(administrator)]
     install_admin(app, DB, Administrator, microsoft_settings, public)
-    install_microsoft(app, sessions, microsoft_settings, check_origin)
+    install_microsoft(
+        app, sessions, microsoft_settings, check_origin, cookie_samesite=cookie_samesite
+    )
 
     def profile(db, actor):
         return {**public(actor), "administrator": bool(db.get(AdminGrant, actor.id))}
@@ -217,7 +229,14 @@ def create_app(url=None):
     # Serve through application middleware, including on Vercel; no CDN promotion.
     @app.get("/panel/assets/{filename}", include_in_schema=False)
     def panel_asset(filename: str):
-        if filename not in {"index.html", "panel.js", "panel.css", "logo-fatec.png"}:
+        if filename not in {
+            "index.html",
+            "panel.js",
+            "academic.js",
+            "admin.js",
+            "panel.css",
+            "logo-fatec.png",
+        }:
             raise HTTPException(404, "Arquivo não encontrado")
         return FileResponse(static / filename)
 
@@ -244,10 +263,6 @@ def create_app(url=None):
             bool(microsoft_settings),
             microsoft_settings.context if microsoft_settings else None,
         )
-        if actor.role != "coordinator":
-            db.execute(delete(Session).where(Session.token_hash == security.digest(token)))
-            db.commit()
-            raise HTTPException(403, "Este painel é exclusivo da coordenação")
         previous = request.cookies.get(cookie_name)
         if previous:
             db.execute(delete(Session).where(Session.token_hash == security.digest(previous)))
@@ -258,7 +273,7 @@ def create_app(url=None):
             max_age=1800,
             httponly=True,
             secure=secure_cookie,
-            samesite="strict",
+            samesite=cookie_samesite,
             path="/api/v1",
         )
         return {"user": profile(db, actor), "csrf_token": csrf(token)}
@@ -342,7 +357,7 @@ def create_app(url=None):
     def ready(db: DB):
         try:
             revision = db.execute(text("SELECT version_num FROM alembic_version")).scalar()
-            if revision != "0002":
+            if revision != "0003":
                 return JSONResponse(status_code=503, content={"status": "migration_required"})
         except SQLAlchemyError:
             return JSONResponse(status_code=503, content={"status": "database_unavailable"})
@@ -368,7 +383,11 @@ def create_app(url=None):
         db.commit()
         response = Response(status_code=204)
         response.delete_cookie(
-            cookie_name, path="/api/v1", secure=secure_cookie, httponly=True, samesite="strict"
+            cookie_name,
+            path="/api/v1",
+            secure=secure_cookie,
+            httponly=True,
+            samesite=cookie_samesite,
         )
         return response
 
@@ -469,6 +488,7 @@ def create_app(url=None):
 
     @app.put("/api/v1/memberships")
     def set_membership(body: schemas.MembershipInput, db: DB, actor: Coordinator):
+        lock_schedule(db)
         user = active(db, User, body.user_id)
         if user.role == "coordinator":
             raise HTTPException(422, "Vínculos são destinados a alunos e professores")
@@ -484,6 +504,8 @@ def create_app(url=None):
             db.add(row)
         else:
             row.starts_on, row.ends_on, row.archived = body.starts_on, body.ends_on, False
+        if user.role == "teacher":
+            validate_group_schedules(db, body.group_id)
         audit(db, actor, "upsert", row, before)
         db.commit()
         return public(row)
@@ -554,6 +576,7 @@ def create_app(url=None):
 
     @app.patch("/api/v1/{resource}/{key}/archive")
     def archive(resource: str, key: str, body: schemas.ArchiveInput, db: DB, actor: Coordinator):
+        lock_schedule(db)
         model = models.get(resource)
         if model is None or (row := db.get(model, key)) is None:
             raise HTTPException(404, "Registro não encontrado")
@@ -571,6 +594,15 @@ def create_app(url=None):
             return public(row)
         before = public(row)
         row.archived = body.archived
+        if not body.archived and model is Membership:
+            validate_group_schedules(db, row.group_id)
+        if not body.archived and model is User and row.role == "teacher":
+            for group_id in db.scalars(
+                select(Membership.group_id).where(
+                    Membership.user_id == row.id, Membership.archived.is_(False)
+                )
+            ):
+                validate_group_schedules(db, group_id)
         if model is User and body.archived:
             db.execute(delete(Session).where(Session.user_id == row.id))
         audit(db, actor, "archive" if body.archived else "restore", row, before)
@@ -594,4 +626,6 @@ def create_app(url=None):
             )
         ]
 
+    install_enrollment(app, DB, Coordinator, active_group, active, public, audit)
+    install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
     return app

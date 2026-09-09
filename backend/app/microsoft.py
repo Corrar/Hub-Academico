@@ -133,8 +133,12 @@ class MicrosoftClient:
             raise HTTPException(401, "Identidade Microsoft inválida ou expirada") from None
 
 
-def install_microsoft(app, sessions, settings, check_origin):
+def install_microsoft(app, sessions, settings, check_origin, *, cookie_samesite="strict"):
     app.state.microsoft = MicrosoftClient(settings) if settings else None
+
+    def app_url(path="/panel/", fallback=None):
+        configured = os.getenv("WEB_APP_URL", "").strip()
+        return configured.rstrip("/") + path if configured else (fallback or path)
 
     @app.get("/api/v1/auth/options")
     def options():
@@ -148,6 +152,8 @@ def install_microsoft(app, sessions, settings, check_origin):
         state, nonce, verifier = (secrets.token_urlsafe(48) for _ in range(3))
         peer = security.digest(request.client.host if request.client else "unknown")
         with sessions() as db:
+            if db.bind.dialect.name == "postgresql":
+                db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": int(peer[:15], 16)})
             db.execute(delete(OIDCFlow).where(OIDCFlow.expires_at <= now()))
             if (
                 db.scalar(
@@ -207,7 +213,10 @@ def install_microsoft(app, sessions, settings, check_origin):
 
     @app.get("/api/v1/microsoft/callback")
     def callback(request: Request):
-        response = RedirectResponse("/panel/?auth_error=microsoft", status_code=303)
+        response = RedirectResponse(
+            app_url("/?auth_error=microsoft", "/panel/?auth_error=microsoft"),
+            status_code=303,
+        )
         response.delete_cookie(
             "hub_oidc", path="/api/v1/microsoft", secure=True, httponly=True, samesite="lax"
         )
@@ -276,14 +285,14 @@ def install_microsoft(app, sessions, settings, check_origin):
                     )
                 )
                 db.commit()
-                response.headers["location"] = "/panel/"
+                response.headers["location"] = app_url("/", "/panel/")
                 response.set_cookie(
                     "hub_session",
                     token,
                     max_age=max(1, int((expires - now()).total_seconds())),
                     secure=True,
                     httponly=True,
-                    samesite="strict",
+                    samesite=cookie_samesite,
                     path="/api/v1",
                 )
             except HTTPException:
