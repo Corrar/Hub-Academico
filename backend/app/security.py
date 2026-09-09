@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from pwdlib import PasswordHash
 from sqlalchemy import delete, select, text
 
-from .models import LoginAttempt, Session, User, now
+from .models import AdminGrant, LoginAttempt, MicrosoftIdentity, Session, User, now
 
 passwords = PasswordHash.recommended()
 DUMMY_HASH = passwords.hash(secrets.token_urlsafe(32))
@@ -46,7 +46,13 @@ def login(db, email, password, ip):
         buckets.append(bucket)
     user = db.scalar(select(User).where(User.email == email))
     valid = passwords.verify(password, user.password_hash if user else DUMMY_HASH)
-    if not user or not valid or user.archived:
+    if (
+        not user
+        or not valid
+        or user.archived
+        or db.get(MicrosoftIdentity, user.id)
+        or db.get(AdminGrant, user.id)
+    ):
         for bucket in buckets:
             bucket.attempts += 1
         db.commit()
@@ -61,7 +67,7 @@ def login(db, email, password, ip):
     return {"access_token": token, "token_type": "bearer", "expires_in": 1800}
 
 
-def authenticate(db, token):
+def authenticate(db, token, require_microsoft=False, admin_context=None):
     session = db.get(Session, digest(token))
     if not session or utc(session.expires_at) <= now():
         raise HTTPException(
@@ -70,4 +76,12 @@ def authenticate(db, token):
     user = db.get(User, session.user_id)
     if not user or user.archived:
         raise HTTPException(401, "Sessão inválida ou expirada")
+    if (require_microsoft or db.get(MicrosoftIdentity, user.id)) and session.method != "microsoft":
+        raise HTTPException(401, "Entre pela Microsoft institucional")
+    if db.get(AdminGrant, user.id) and (
+        session.method != "microsoft"
+        or not session.strong_auth
+        or (admin_context and session.auth_context != admin_context)
+    ):
+        raise HTTPException(403, "Administrador exige login Microsoft com MFA institucional")
     return user

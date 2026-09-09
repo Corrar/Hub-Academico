@@ -76,7 +76,7 @@ def restore_check(source, destination):
     with closing(
         sqlite3.connect(Path(destination).resolve().as_uri() + "?mode=ro", uri=True)
     ) as db:
-        if db.execute("SELECT version_num FROM alembic_version").fetchone() != ("0001",):
+        if db.execute("SELECT version_num FROM alembic_version").fetchone() != ("0002",):
             raise ValueError("Versão do banco incompatível")
         if db.execute("PRAGMA foreign_key_check").fetchall():
             raise ValueError("Existem vínculos inválidos")

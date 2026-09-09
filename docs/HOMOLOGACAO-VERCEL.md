@@ -1,7 +1,8 @@
 # Homologação protegida na Vercel
 
 Esta configuração prepara um ambiente exclusivamente de testes com dados fictícios.
-Não habilita produção, SSO institucional ou o futuro papel platform_admin.
+Não habilita produção. O login Microsoft e o console admin são configurados
+separadamente conforme `MICROSOFT-ADMIN.md`.
 
 ## Corrigir o erro do log enviado
 
@@ -140,3 +141,7 @@ integrados. Fazer Redeploy de um deploy antigo reutiliza o commit antigo. Crie
 um **novo deploy da branch `feat/cloud-staging`**, com as variáveis de Preview
 preenchidas, ou integre os PRs após revisão antes de fazer deploy da `main`.
 A configuração no Git não altera automaticamente a branch do projeto na Vercel.
+
+Para usar a entrega Microsoft/admin, faça deploy da branch `feat/admin-microsoft`
+e siga primeiro `MICROSOFT-ADMIN.md` (migração 0002 e provisionamento inicial).
+A branch anterior de staging não recebe automaticamente as funcionalidades novas.

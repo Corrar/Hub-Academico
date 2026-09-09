@@ -56,8 +56,8 @@ precisam de revisão. Sem alteração do esquema do banco nesta entrega.
 ## Acesso do desenvolvedor/admin — incluído a pedido do responsável
 
 Planejar e implementar um quarto papel, `platform_admin`, separado da coordenação,
-para Bruno Roberto Corral administrar o Hub. **Não existe conta especial, senha
-padrão, endpoint de bypass ou privilégio oculto nesta entrega.** A identidade
+para Bruno Roberto Corral administrar o Hub. **Atualização 09/09/2026:** console administrativo e OIDC implementados; ativação
+depende da configuração Entra. Não existe senha padrão ou endpoint de bypass. A identidade
 institucional exata será confirmada na etapa de provisionamento, sem inferi-la do
 nome ou do usuário GitHub.
 
@@ -113,3 +113,12 @@ adicional de todo o ambiente, cookies Secure, origens/hosts exatos, documentaç�
 API desativada e limite de login serializado no PostgreSQL. Sem migração automática
 no build e sem bootstrap automático. Produção permanece bloqueada.
 Configuração manual e validação real pendentes em `HOMOLOGACAO-VERCEL.md`.
+
+## Entrega 3: identidade e console administrativo — 09/09/2026
+
+Implementados OIDC Microsoft single tenant com PKCE e validação criptográfica,
+concessão administrativa explícita, console de usuários/permissões/identidades/
+sessões, reautenticação para operações privilegiadas, auditoria e migração `0002`.
+Alunos/professores Microsoft têm consulta web de suas turmas, sem outros módulos
+fictícios. Configuração e limitações atualizadas em `MICROSOFT-ADMIN.md`.
+Ativação no tenant, deploy com banco preparado e QA em navegador ainda pendentes.

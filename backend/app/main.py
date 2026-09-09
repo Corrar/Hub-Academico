@@ -16,8 +16,10 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from . import schemas, security
+from .admin import install_admin
 from .db import database_url, make_engine, make_sessions
-from .models import Audit, ClassGroup, Course, Membership, Session, Subject, User
+from .microsoft import MicrosoftSettings, install_microsoft
+from .models import AdminGrant, Audit, ClassGroup, Course, Membership, Session, Subject, User
 from .staging import access_gate, validate_staging
 
 
@@ -59,9 +61,12 @@ def active_group(db, key):
 def create_app(url=None):
     environment = os.getenv("APP_ENV", "development")
     if environment not in {"development", "test", "staging"}:
-        raise RuntimeError("Esta versão é de desenvolvimento. Login institucional ainda pendente.")
+        raise RuntimeError(
+            "Produção exige aceite institucional e operacional. Use homologação protegida."
+        )
     url = url or database_url()
     staging_settings = validate_staging(url) if environment == "staging" else None
+    microsoft_settings = MicrosoftSettings.from_env()
     engine = make_engine(url)
     sessions = make_sessions(engine)
     app = FastAPI(
@@ -127,7 +132,12 @@ def create_app(url=None):
         db: DB,
         credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
     ):
-        return security.authenticate(db, request_token(request, credentials))
+        return security.authenticate(
+            db,
+            request_token(request, credentials),
+            bool(microsoft_settings),
+            microsoft_settings.context if microsoft_settings else None,
+        )
 
     Actor = Annotated[User, Depends(current_user)]
 
@@ -137,6 +147,32 @@ def create_app(url=None):
         return actor
 
     Coordinator = Annotated[User, Depends(coordinator)]
+
+    def administrator(
+        request: Request,
+        actor: Actor,
+        db: DB,
+        credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
+    ):
+        if not db.get(AdminGrant, actor.id):
+            raise HTTPException(403, "Acesso exclusivo do administrador")
+        session = db.get(Session, security.digest(request_token(request, credentials)))
+        if request.method not in {"GET", "HEAD", "OPTIONS"}:
+            if (
+                not session.authenticated_at
+                or (security.now() - security.utc(session.authenticated_at)).total_seconds() > 300
+            ):
+                raise HTTPException(
+                    403, "Entre novamente pela Microsoft para confirmar esta operação"
+                )
+        return actor
+
+    Administrator = Annotated[User, Depends(administrator)]
+    install_admin(app, DB, Administrator, microsoft_settings, public)
+    install_microsoft(app, sessions, microsoft_settings, check_origin)
+
+    def profile(db, actor):
+        return {**public(actor), "administrator": bool(db.get(AdminGrant, actor.id))}
 
     @app.exception_handler(IntegrityError)
     async def conflict(_request, _exception):
@@ -196,11 +232,18 @@ def create_app(url=None):
     @app.post("/api/v1/web/login")
     def web_login(body: schemas.Login, request: Request, response: Response, db: DB):
         check_origin(request)
+        if microsoft_settings:
+            raise HTTPException(403, "Use o login Microsoft institucional")
         result = security.login(
             db, body.email, body.password, request.client.host if request.client else "unknown"
         )
         token = result["access_token"]
-        actor = security.authenticate(db, token)
+        actor = security.authenticate(
+            db,
+            token,
+            bool(microsoft_settings),
+            microsoft_settings.context if microsoft_settings else None,
+        )
         if actor.role != "coordinator":
             db.execute(delete(Session).where(Session.token_hash == security.digest(token)))
             db.commit()
@@ -218,17 +261,20 @@ def create_app(url=None):
             samesite="strict",
             path="/api/v1",
         )
-        return {"user": public(actor), "csrf_token": csrf(token)}
+        return {"user": profile(db, actor), "csrf_token": csrf(token)}
 
     @app.get("/api/v1/web/session")
     def web_session(request: Request, db: DB):
         token = request.cookies.get(cookie_name)
         if not token:
             raise HTTPException(401, "Autenticação necessária")
-        actor = security.authenticate(db, token)
-        if actor.role != "coordinator":
-            raise HTTPException(403, "Este painel é exclusivo da coordenação")
-        return {"user": public(actor), "csrf_token": csrf(token)}
+        actor = security.authenticate(
+            db,
+            token,
+            bool(microsoft_settings),
+            microsoft_settings.context if microsoft_settings else None,
+        )
+        return {"user": profile(db, actor), "csrf_token": csrf(token)}
 
     @app.get("/api/v1/dashboard")
     def dashboard(db: DB, actor: Coordinator):
@@ -296,7 +342,7 @@ def create_app(url=None):
     def ready(db: DB):
         try:
             revision = db.execute(text("SELECT version_num FROM alembic_version")).scalar()
-            if revision != "0001":
+            if revision != "0002":
                 return JSONResponse(status_code=503, content={"status": "migration_required"})
         except SQLAlchemyError:
             return JSONResponse(status_code=503, content={"status": "database_unavailable"})
@@ -304,6 +350,8 @@ def create_app(url=None):
 
     @app.post("/api/v1/auth/login")
     def sign_in(body: schemas.Login, request: Request, db: DB):
+        if microsoft_settings:
+            raise HTTPException(403, "Use o login Microsoft institucional")
         return security.login(
             db, body.email, body.password, request.client.host if request.client else "unknown"
         )
@@ -325,11 +373,13 @@ def create_app(url=None):
         return response
 
     @app.get("/api/v1/me")
-    def me(actor: Actor):
-        return public(actor)
+    def me(actor: Actor, db: DB):
+        return profile(db, actor)
 
     @app.post("/api/v1/users", status_code=201)
     def create_user(body: schemas.UserCreate, db: DB, actor: Coordinator):
+        if microsoft_settings:
+            raise HTTPException(403, "Solicite o provisionamento institucional ao administrador")
         row = User(
             **body.model_dump(exclude={"password"}),
             password_hash=security.passwords.hash(body.password),

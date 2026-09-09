@@ -116,5 +116,7 @@ Adicionar um console para o responsável técnico Bruno Roberto Corral, com pape
 configurações, sessões e operação do Hub por ações explícitas e auditadas.
 Provisionamento controlado, identidade institucional verificada, MFA obrigatório
 e reautenticação nas operações críticas; sem senha padrão ou bypass.
-O papel e a conta ainda não estão implementados. Escopo e critérios de aceite
+Atualização 09/09/2026: console e concessão administrativa implementados, com
+provisionamento inicial explícito e login Microsoft. A conta real ainda depende
+da identificação verificada e da configuração do tenant. Escopo e critérios de aceite
 em `docs/IMPLEMENTACAO.md`.

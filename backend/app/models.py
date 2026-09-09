@@ -10,6 +10,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    false,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -41,6 +42,11 @@ class User(Record, Base):
 class Session(Base):
     __tablename__ = "sessions"
     token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    id: Mapped[str | None] = mapped_column(String(36), default=uuid, unique=True, index=True)
+    auth_context: Mapped[str | None] = mapped_column(String(10))
+    method: Mapped[str] = mapped_column(String(20), default="local", server_default="local")
+    strong_auth: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    authenticated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=now)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
@@ -96,3 +102,26 @@ class LoginAttempt(Base):
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     attempts: Mapped[int]
     window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class MicrosoftIdentity(Base):
+    __tablename__ = "microsoft_identities"
+    __table_args__ = (UniqueConstraint("tenant_id", "object_id", name="uq_microsoft_identity"),)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(36))
+    object_id: Mapped[str] = mapped_column(String(36))
+
+
+class AdminGrant(Base):
+    __tablename__ = "admin_grants"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+
+
+class OIDCFlow(Base):
+    __tablename__ = "oidc_flows"
+    state_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    nonce_hash: Mapped[str] = mapped_column(String(64))
+    verifier: Mapped[str] = mapped_column(String(128))
+    peer_hash: Mapped[str] = mapped_column(String(64))
+    previous_session: Mapped[str | None] = mapped_column(String(64))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
