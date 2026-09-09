@@ -73,8 +73,9 @@ auditoria protegida contra UPDATE/DELETE; produção bloqueada.
 - JavaScript: verificação de sintaxe dos três arquivos.
 - Migração: teste de atualização a partir da base antiga, preservação dos dados e
   comparação entre esquema e metadados.
-- CI PostgreSQL da nova branch: conferir o resultado no PR; não inferir o resultado
-  a partir da suíte SQLite.
+- CI da nova branch: **SQLite e PostgreSQL aprovados**, incluindo migrações e
+  concorrência de vagas. [Execução 34341380810](https://github.com/Corrar/Hub-Academico/actions/runs/34341380810),
+  código verificado no commit `604cd5f1bc7f6ee9cc24aba6daec34ac79bd923d`.
 
 Os avisos de depreciação do adaptador TestClient/httpx foram observados; a suíte
 passa. Não foi feita auditoria online de CVEs nesta revisão. Não houve teste visual,
