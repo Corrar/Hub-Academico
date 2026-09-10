@@ -155,3 +155,17 @@ fora da API. A execução real da função deve ser confirmada após o novo depl
 O procedimento do primeiro acesso está documentado no `frontend/README.md`.
 
 Referência técnica: https://vercel.com/docs/routing/rewrites
+
+## Campos editáveis durante a conexão
+
+Os campos de e-mail/senha e a opção de mostrar senha agora funcionam mesmo
+durante falhas da API. Somente os botões de autenticação dependem da confirmação
+dos métodos aceitos. Submissões por senha continuam bloqueadas quando o serviço
+está indisponível ou aceita somente Microsoft. Treze testes passaram, incluindo
+tentativa de envio durante falha e manutenção da autenticação Microsoft exclusiva.
+
+Na conferência pública seguinte, `/api/v1/auth/options` ainda retornava 404;
+`/api/proxy?__hub_path=auth/options` retornou 503 `Proxy da homologação não
+configurado`. É necessário publicar a revisão e configurar ambas as variáveis
+do servidor Vercel: `RENDER_BACKEND_URL` e `STAGING_ACCESS_PASSWORD`. A segunda
+usa o mesmo segredo do Render e não representa uma senha de conta do aplicativo.

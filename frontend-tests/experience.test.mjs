@@ -34,7 +34,20 @@ test("login preserves the original controls during failure and enables only auth
     const doc = app.w.document;
     assert.equal(doc.querySelector("#login-form").hidden, false);
     assert.equal(doc.querySelector("#microsoft-login").hidden, false);
-    assert.equal(doc.querySelector("#login-fields").disabled, true);
+    assert.equal(doc.querySelector("#login-fields").disabled, false);
+    doc.querySelector("#email").value = "pessoa@example.test";
+    doc.querySelector("#password").value = "synthetic-test-password";
+    await app.click("#toggle-password");
+    assert.equal(doc.querySelector("#password").type, "text");
+    doc
+      .querySelector("#login-form")
+      .dispatchEvent(new app.w.Event("submit", { cancelable: true }));
+    await settle();
+    assert.equal(
+      app.requests.filter((item) => item.url.pathname.endsWith("/web/login"))
+        .length,
+      0,
+    );
     assert.equal(doc.querySelector("#microsoft-login").disabled, true);
     assert.equal(doc.querySelector("#login-submit").disabled, true);
     await app.click("#login-help");
@@ -65,7 +78,7 @@ test("Microsoft-only mode preserves the login layout without enabling password a
     authPayload: { local: false, microsoft: true },
   });
   try {
-    assert.equal(app.w.document.querySelector("#login-fields").disabled, true);
+    assert.equal(app.w.document.querySelector("#login-fields").disabled, false);
     assert.equal(app.w.document.querySelector("#login-form").hidden, false);
     assert.equal(
       app.w.document.querySelector("#microsoft-login").disabled,
@@ -157,7 +170,7 @@ test("skip works without storage or an available authentication service", async 
     await app.click("#startup-view .onboarding-skip");
     assert.equal(app.w.document.querySelector("#startup-view").hidden, true);
     assert.equal(app.w.document.querySelector("#login-view").hidden, false);
-    assert.equal(app.w.document.querySelector("#login-fields").disabled, true);
+    assert.equal(app.w.document.querySelector("#login-fields").disabled, false);
     assert.equal(
       app.w.document.querySelector("#microsoft-login").disabled,
       true,

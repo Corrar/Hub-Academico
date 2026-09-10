@@ -724,7 +724,7 @@ async function connectLogin() {
   if (checkingAccess) return;
   checkingAccess = true;
   localLoginEnabled = microsoftEnabled = false;
-  $("login-fields").disabled = $("microsoft-login").disabled = true;
+  $("microsoft-login").disabled = true;
   $("login-submit").disabled = true;
   $("retry-login").hidden = true;
   $("login-form").setAttribute("aria-busy", "true");
@@ -741,7 +741,6 @@ async function connectLogin() {
       throw new Error("Resposta de acesso inválida");
     localLoginEnabled = data.local;
     microsoftEnabled = data.microsoft;
-    $("login-fields").disabled = !data.local;
     $("login-submit").disabled = !data.local;
     $("microsoft-login").disabled = !data.microsoft;
     $("login-state").textContent =
@@ -764,7 +763,8 @@ async function connectLogin() {
       "O serviço de acesso está indisponível" +
       (error.status ? " (HTTP " + error.status + ")" : "") +
       ". Tente conectar novamente.";
-    $("login-state").textContent = "Os campos serão liberados após a conexão.";
+    $("login-state").textContent =
+      "Você pode preencher os campos. O botão Entrar será liberado quando o serviço confirmar o acesso por senha.";
     $("retry-login").hidden = false;
   } finally {
     checkingAccess = false;
