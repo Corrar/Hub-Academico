@@ -136,3 +136,22 @@ confirmada igualdade pixel a pixel nem realizado pentest remoto nesta etapa.
   sincronização Vercel/Render e verificação de diferenças também passaram.
 
 A comparação visual em navegador publicado permanece pendente.
+
+## Correção da rota de autenticação na Vercel — 10/09/2026
+
+A consulta pública de `/api/v1/auth/options` em `hub-academico.vercel.app`
+retornou 404 `NOT_FOUND` da plataforma; a origem Render respondeu 401
+`Homologação restrita`, como esperado sem a credencial entre serviços. Esses
+resultados não comprovam quais contas existem no banco nem o modo de login ativo.
+
+O proxy passou de `api/[...path].js` para `api/proxy.js`, com encaminhamento
+explícito de `/api/v1/:path*` no `frontend/vercel.json`. A origem configurada
+deve usar HTTPS; caminhos são limitados à API versionada. Cookies, CSRF e senha
+de homologação no servidor são preservados. Não houve alteração visual.
+
+Treze testes locais passaram: dez de interface e três de proxy, cobrindo a rota
+de autenticação, a preservação de corpo/query/cookies/CSRF e a rejeição de caminhos
+fora da API. A execução real da função deve ser confirmada após o novo deploy.
+O procedimento do primeiro acesso está documentado no `frontend/README.md`.
+
+Referência técnica: https://vercel.com/docs/routing/rewrites

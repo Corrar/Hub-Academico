@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test experience.test.mjs"
+    "test": "node --test *.test.mjs"
   },
   "devDependencies": {
     "jsdom": "30.0.1"
