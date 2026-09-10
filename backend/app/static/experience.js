@@ -144,9 +144,9 @@ function setupExperience() {
   $("bottom-navigation").replaceChildren(
     ...[
       ["home", "Início"],
-      ["myGroups", "Turmas"],
-      ["schedule", "Horários"],
-      ["calendar", "Calendário"],
+      ["schedule", "Agenda"],
+      ["activity", user.role === "teacher" ? "Avaliar" : "Atividades"],
+      ["material", "Materiais"],
       ["profile", "Perfil"],
     ].map(([key, label]) => navButton(key, label)),
   );
@@ -378,7 +378,7 @@ function renderHome(data, groups = []) {
     "hero-link",
   );
   link.append(icon("arrow"));
-  hero.append(link);
+  if (teacher) hero.append(link);
   $("view").append(
     hero,
     searchBar("", (value) => {
@@ -641,6 +641,7 @@ function renderProfile() {
     "material",
     "notice",
     "event",
+    "calendar",
     "reminders",
     "onboarding",
     ...(user.administrator ? ["adminUsers", "adminStatus"] : []),
@@ -658,15 +659,9 @@ function renderProfile() {
 }
 function renderOnboarding(step = 0) {
   const slides = [
-    [
-      "Sua Fatec, mais perto",
-      "Consulte suas turmas, materiais e avisos em um só lugar.",
-    ],
-    ["Organize sua rotina", "Acompanhe aulas, eventos e prazos no calendário."],
-    [
-      "Aprenda e participe",
-      "Prepare entregas, consulte feedbacks e inscreva-se nos eventos.",
-    ],
+    "Centralize suas atividades",
+    "Tenha controle total sobre seu ambiente",
+    "Fique por dentro das novidades da comunidade",
   ];
   const box = el("div", undefined, "onboarding"),
     img = el("img");
@@ -674,24 +669,35 @@ function renderOnboarding(step = 0) {
     .querySelector("link[rel=stylesheet]")
     .href.replace("panel.css", "onb" + (step + 1) + ".png");
   img.alt = "";
-  const actions = el("div", undefined, "dialog-actions");
-  actions.append(
-    button(step ? "Anterior" : "Voltar ao perfil", () =>
-      step ? renderOnboarding(step - 1) : navigate("profile"),
-    ),
-    button(
-      step === 2 ? "Começar" : "Próximo",
-      () => (step === 2 ? navigate("home") : renderOnboarding(step + 1)),
-      "primary",
-    ),
+  box.dataset.step = String(step + 1);
+  const sheet = el("div", undefined, "onboarding-sheet"),
+    header = el("div", undefined, "onboarding-header"),
+    brand = el("div", undefined, "onboarding-brand");
+  brand.append(
+    el("div", "Fatec", "wordmark-name"),
+    el("div", "Adamantina", "wordmark-city"),
   );
-  box.append(
-    img,
-    el("p", `${step + 1} de 3`, "eyebrow"),
-    el("h2", slides[step][0]),
-    el("p", slides[step][1]),
-    actions,
+  const skip = button("Pular", () => navigate("home"), "onboarding-skip");
+  header.append(brand, skip);
+  const title = el("div", undefined, "onboarding-title");
+  title.append(el("h2", slides[step]));
+  sheet.append(header, title, img);
+  const actions = el("div", undefined, "onboarding-actions"),
+    dots = el("div", undefined, "onboarding-dots");
+  dots.setAttribute("aria-label", `Passo ${step + 1} de 3`);
+  for (let i = 0; i < 3; i++) {
+    const dot = el("span");
+    dot.className = i === step ? "current" : "";
+    dots.append(dot);
+  }
+  const next = button(
+    step === 2 ? "Começar" : "Avançar",
+    () => (step === 2 ? navigate("home") : renderOnboarding(step + 1)),
+    "onboarding-next",
   );
+  next.append(icon("arrow"));
+  actions.append(dots, next);
+  box.append(sheet, actions);
   $("view").replaceChildren(box);
 }
 async function renderSearch(ticket) {

@@ -68,6 +68,7 @@ const resources = {
   },
 };
 let microsoftEnabled = false;
+let localLoginEnabled = false;
 let csrf = "",
   user = null,
   page = "dashboard",
@@ -159,7 +160,9 @@ async function api(path, options = {}) {
           ", ",
         ) +
         ".";
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
   }
   return data;
 }
@@ -186,6 +189,7 @@ function enter(data) {
 }
 $("login-form").addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (!localLoginEnabled) return;
   const submit = event.submitter;
   submit.disabled = true;
   $("login-error").textContent = "";
@@ -715,28 +719,72 @@ $("record-form").addEventListener("submit", async (event) => {
     $("save-record").disabled = false;
   }
 });
-const optionsReady = api("/auth/options").then((data) => {
-  microsoftEnabled = data.microsoft;
-  $("microsoft-login").hidden = !data.microsoft;
-  $("login-form").hidden = !data.local;
-});
+let checkingAccess = false;
+async function connectLogin() {
+  if (checkingAccess) return;
+  checkingAccess = true;
+  localLoginEnabled = microsoftEnabled = false;
+  $("login-fields").disabled = $("microsoft-login").disabled = true;
+  $("login-submit").disabled = true;
+  $("retry-login").hidden = true;
+  $("login-form").setAttribute("aria-busy", "true");
+  $("login-state").textContent = "Conectando ao serviço de acesso…";
+  try {
+    const data = await api("/auth/options", {
+      signal: AbortSignal.timeout(15000),
+    });
+    if (
+      typeof data.local !== "boolean" ||
+      typeof data.microsoft !== "boolean" ||
+      (!data.local && !data.microsoft)
+    )
+      throw new Error("Resposta de acesso inválida");
+    localLoginEnabled = data.local;
+    microsoftEnabled = data.microsoft;
+    $("login-fields").disabled = !data.local;
+    $("login-submit").disabled = !data.local;
+    $("microsoft-login").disabled = !data.microsoft;
+    $("login-state").textContent =
+      data.local && !data.microsoft
+        ? "Acesso Microsoft ainda não habilitado."
+        : !data.local
+          ? "Use o botão Microsoft para entrar com sua conta institucional."
+          : "";
+    if (!microsoftCallbackFailed) $("login-error").textContent = "";
+    try {
+      enter(await api("/web/session"));
+    } catch (error) {
+      if (error.status !== 401) {
+        $("login-error").textContent = error.message;
+        $("retry-login").hidden = false;
+      }
+    }
+  } catch (error) {
+    $("login-error").textContent =
+      "O serviço de acesso está indisponível" +
+      (error.status ? " (HTTP " + error.status + ")" : "") +
+      ". Tente conectar novamente.";
+    $("login-state").textContent = "Os campos serão liberados após a conexão.";
+    $("retry-login").hidden = false;
+  } finally {
+    checkingAccess = false;
+    $("login-form").setAttribute("aria-busy", "false");
+  }
+}
 $("microsoft-login").addEventListener("click", microsoftLogin);
-if (new URLSearchParams(location.search).has("auth_error")) {
+const microsoftCallbackFailed = new URLSearchParams(location.search).has(
+  "auth_error",
+);
+if (microsoftCallbackFailed) {
   $("login-error").textContent =
     "Não foi possível autorizar o acesso Microsoft. Confira o vínculo institucional e a política MFA com o administrador.";
   history.replaceState(null, "", location.pathname);
 }
-document.addEventListener("DOMContentLoaded", () => {
-  optionsReady
-    .then(() => api("/web/session"))
-    .then(enter)
-    .catch((error) => {
-      if ($("app-view").hidden && error.message !== "Autenticação necessária")
-        $("login-error").textContent = error.message;
-    });
-});
+document.addEventListener("DOMContentLoaded", connectLogin);
+$("retry-login").addEventListener("click", connectLogin);
 
 async function microsoftLogin() {
+  if (!microsoftEnabled) return;
   try {
     const result = await api("/microsoft/start", { method: "POST" });
     location.assign(result.url);

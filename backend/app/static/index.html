@@ -23,62 +23,71 @@
       aria-label="Acesso institucional"
     >
       <div class="login-brand">
-        <img
-          src="/panel/assets/logo-fatec.png"
-          alt="Fatec Adamantina"
-          width="180"
-        />
+        <div class="wordmark-name">Fatec</div>
+        <div class="wordmark-city">Adamantina</div>
       </div>
       <div class="login-card">
         <h1>Bem-vindo de volta</h1>
         <p class="muted">Entre com seu e-mail institucional</p>
-        <form id="login-form" hidden>
-          <label for="email">E-mail institucional</label>
-          <div class="input-wrap">
-            <span data-icon="mail"></span
-            ><input
-              id="email"
-              name="email"
-              type="email"
-              autocomplete="username"
-              maxlength="254"
-              placeholder="aluno@fatec.sp.gov.br"
-              required
-            />
-          </div>
-          <label for="password">Senha</label>
-          <div class="input-wrap">
-            <span data-icon="lock"></span
-            ><input
-              id="password"
-              name="password"
-              type="password"
-              autocomplete="current-password"
-              maxlength="128"
-              placeholder="Sua senha de acesso"
-              required
-            /><button
-              id="toggle-password"
-              type="button"
-              class="icon-button"
-              aria-label="Mostrar senha"
-              aria-pressed="false"
-            >
-              <span data-icon="eye"></span>
-            </button>
-          </div>
+        <form id="login-form" aria-busy="true">
+          <fieldset id="login-fields" disabled>
+            <label for="email">E-mail institucional</label>
+            <div class="input-wrap">
+              <span data-icon="mail"></span
+              ><input
+                id="email"
+                name="email"
+                type="email"
+                autocomplete="username"
+                maxlength="254"
+                placeholder="aluno@fatec.sp.gov.br"
+                required
+              />
+            </div>
+            <label for="password">Senha</label>
+            <div class="input-wrap">
+              <span data-icon="lock"></span
+              ><input
+                id="password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                maxlength="128"
+                placeholder="••••••••"
+                required
+              /><button
+                id="toggle-password"
+                type="button"
+                class="icon-button"
+                aria-label="Mostrar senha"
+                aria-pressed="false"
+              >
+                <span data-icon="eye"></span>
+              </button>
+            </div>
+          </fieldset>
           <button id="login-help" class="text-button login-help" type="button">
-            Preciso de ajuda para entrar
+            Esqueci minha senha
           </button>
-          <button class="primary login-submit" type="submit">
+          <button
+            id="login-submit"
+            class="primary login-submit"
+            type="submit"
+            disabled
+          >
             Entrar <span data-icon="arrow"></span>
           </button>
         </form>
+        <div class="login-divider">
+          <span></span>
+          <p>ou continue com</p>
+          <span></span>
+        </div>
         <button
           id="microsoft-login"
           class="microsoft-button"
           type="button"
-          hidden
+          disabled
         >
           <svg aria-hidden="true" width="21" height="21" viewBox="0 0 21 21">
             <path fill="#F25022" d="M1 1h9v9H1z" />
@@ -88,23 +97,25 @@
           >Entrar com a Microsoft
         </button>
         <p id="login-error" role="alert"></p>
-        <p class="notice">Homologação · Use somente dados de teste.</p>
+        <button id="retry-login" class="text-button" type="button" hidden>
+          Tentar conectar novamente
+        </button>
+        <p id="login-state" role="status">Conectando ao serviço de acesso…</p>
+        <div class="login-spacer"></div>
         <footer class="institutional-logos">
           <img
             src="/panel/assets/logo-sp-t.png"
             alt="São Paulo · Governo do Estado"
-          /><img src="/panel/assets/logo-cps-t.png" alt="Centro Paula Souza" />
+          /><span class="institutional-divider" aria-hidden="true"></span
+          ><img src="/panel/assets/logo-cps-t.png" alt="Centro Paula Souza" />
         </footer>
       </div>
     </section>
     <div id="app-view" class="app-layout" hidden>
       <aside class="sidebar" id="sidebar">
         <div class="brand">
-          <img
-            src="/panel/assets/logo-fatec.png"
-            alt="Fatec Adamantina"
-            width="122"
-          />
+          <div class="wordmark-name">Fatec</div>
+          <div class="wordmark-city">Adamantina</div>
         </div>
         <p class="sidebar-title">Coordenação</p>
         <nav aria-label="Navegação principal" id="navigation"></nav>

@@ -28,6 +28,87 @@ const activity = {
   created_at: "2026-09-01T12:00:00Z",
 };
 const group = { id: "group-1", label: "Ciência de Dados · Turma A · 2026/2" };
+test("login preserves the original controls during failure and enables only authorized methods after retry", async () => {
+  const app = await boot("student", { anonymous: true, authFailure: 502 });
+  try {
+    const doc = app.w.document;
+    assert.equal(doc.querySelector("#login-form").hidden, false);
+    assert.equal(doc.querySelector("#microsoft-login").hidden, false);
+    assert.equal(doc.querySelector("#login-fields").disabled, true);
+    assert.equal(doc.querySelector("#microsoft-login").disabled, true);
+    assert.equal(doc.querySelector("#login-submit").disabled, true);
+    await app.click("#login-help");
+    assert.equal(doc.querySelector("#help-dialog").open, true);
+    doc.querySelector("#help-dialog").close();
+    assert.match(doc.querySelector("#login-error").textContent, /HTTP 502/);
+    assert.equal(doc.querySelector("#retry-login").hidden, false);
+    app.recover();
+    await app.click("#retry-login");
+    assert.equal(doc.querySelector("#login-fields").disabled, false);
+    assert.equal(doc.querySelector("#login-submit").disabled, false);
+    assert.equal(doc.querySelector("#microsoft-login").disabled, true);
+    assert.equal(doc.querySelector("#login-error").textContent, "");
+    assert.equal(doc.querySelector("#login-view").hidden, false);
+    assert.equal(
+      app.requests.filter((item) => item.url.pathname.endsWith("/web/login"))
+        .length,
+      0,
+    );
+    assert.deepEqual(app.errors, []);
+  } finally {
+    app.dom.window.close();
+  }
+});
+test("Microsoft-only mode preserves the login layout without enabling password authentication", async () => {
+  const app = await boot("student", {
+    anonymous: true,
+    authPayload: { local: false, microsoft: true },
+  });
+  try {
+    assert.equal(app.w.document.querySelector("#login-fields").disabled, true);
+    assert.equal(app.w.document.querySelector("#login-form").hidden, false);
+    assert.equal(
+      app.w.document.querySelector("#microsoft-login").disabled,
+      false,
+    );
+    app.w.document
+      .querySelector("#login-form")
+      .dispatchEvent(new app.w.Event("submit", { cancelable: true }));
+    await settle();
+    assert.equal(
+      app.requests.filter((item) => item.url.pathname.endsWith("/web/login"))
+        .length,
+      0,
+    );
+  } finally {
+    app.dom.window.close();
+  }
+});
+test("onboarding completes all three steps and preserves calendar access from profile", async () => {
+  const app = await boot();
+  try {
+    await app.navigate("profile");
+    assert.ok(
+      app.w.document.querySelector('.profile-menu [data-page="calendar"]'),
+    );
+    await app.navigate("onboarding");
+    for (let step = 1; step <= 3; step++) {
+      assert.equal(
+        app.w.document.querySelector(".onboarding").dataset.step,
+        String(step),
+      );
+      assert.match(
+        app.w.document.querySelector(".onboarding img").src,
+        new RegExp("onb" + step + "\\.png$"),
+      );
+      await app.click(".onboarding-next");
+    }
+    assert.equal(app.w.document.body.dataset.page, "home");
+    assert.deepEqual(app.errors, []);
+  } finally {
+    app.dom.window.close();
+  }
+});
 async function boot(role = "student", options = {}) {
   const requests = [],
     errors = [];
@@ -45,17 +126,24 @@ async function boot(role = "student", options = {}) {
     this.dispatchEvent(new w.Event("close"));
   };
   let expire = false;
+  let authFailure = options.authFailure;
   w.fetch = async (input, init = {}) => {
     const url = new URL(input, w.location.href),
       path = url.pathname.replace("/api/v1", "");
     requests.push({ url, init });
     let data = [];
     let code = 200;
-    if (expire && path !== "/auth/options") {
+    if (path === "/auth/options" && authFailure) {
+      data = {};
+      code = authFailure;
+    } else if (path === "/web/session" && options.anonymous) {
+      data = { detail: "Autenticação necessária" };
+      code = 401;
+    } else if (expire && path !== "/auth/options") {
       data = { detail: "Autenticação necessária" };
       code = 401;
     } else if (path === "/auth/options")
-      data = { local: true, microsoft: false };
+      data = options.authPayload || { local: true, microsoft: false };
     else if (path === "/web/session")
       data = {
         user: {
@@ -109,6 +197,9 @@ async function boot(role = "student", options = {}) {
     dom,
     requests,
     errors,
+    recover: () => {
+      authFailure = 0;
+    },
     expire: () => {
       expire = true;
     },
@@ -140,7 +231,7 @@ test("student navigation, scoped group and safe publication content", async () =
     );
     await app.navigate("adminUsers");
     assert.equal(app.w.document.body.dataset.page, "home");
-    await app.click("#bottom-navigation [data-page=myGroups]");
+    await app.navigate("myGroups");
     await app.click(".group-card");
     const action = [...app.w.document.querySelectorAll("dialog button")].find(
       (node) => node.textContent === "Atividades",

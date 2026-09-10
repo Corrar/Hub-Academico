@@ -97,3 +97,23 @@ ambiente ou migração de banco nesta revisão.
 
 O produto está preparado para continuar a homologação; as pendências acima
 impedem classificá-lo como sistema institucional completo ou pronto para produção.
+
+## Ajuste de fidelidade — 10/09/2026
+
+O login recupera a marca tipográfica sem caixa branca, as medidas do cabeçalho,
+campos, botões, separador Microsoft e rodapé das fontes do ZIP. A navegação
+inferior recupera os cinco atalhos originais, sem arredondamento ou fundo no
+item ativo. O perfil recupera alinhamento, avatar e cartões da referência;
+as três telas de apresentação recuperam composição, títulos e ilustrações.
+O calendário permanece acessível pelo perfil.
+
+Uma falha de `/auth/options` mantém os controles visíveis, desabilita os métodos
+de acesso e oferece nova tentativa. Apenas os métodos autorizados pelo backend
+são habilitados após a conexão; o modo Microsoft não libera senha local.
+A ajuda de acesso permanece disponível durante falhas. Isso corrige a tela
+vazia, mas não comprova a resolução do erro de conexão do ambiente em nuvem.
+
+Validação desta atualização: sete testes de interface, sintaxe JavaScript e
+sincronização do frontend. A conferência visual em navegador continua pendente,
+pois a política do navegador disponível bloqueou a prévia local. Não foi
+confirmada igualdade pixel a pixel nem realizado pentest remoto nesta etapa.

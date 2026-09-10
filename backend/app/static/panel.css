@@ -233,12 +233,12 @@ small {
 .login-layout {
   width: 100%;
   max-width: 460px;
-  min-height: 100dvh;
+  min-height: max(844px, 100dvh);
   background: linear-gradient(
     180deg,
     var(--slate) 0%,
-    var(--slate) 32%,
-    #eef1f4 32%
+    var(--slate) 34%,
+    #eef1f4 34%
   );
   margin: auto;
   box-shadow: 0 0 60px -20px #14181b40;
@@ -246,21 +246,25 @@ small {
   flex-direction: column;
 }
 .login-brand {
-  padding: 50px 32px 38px;
-  display: flex;
-  justify-content: center;
+  padding: 72px 32px 40px;
+  text-align: center;
 }
-.login-brand img {
-  object-fit: contain;
-  width: 180px;
-  height: auto;
-  background: white;
-  border-radius: 16px;
-  padding: 14px;
+.login-brand .wordmark-name {
+  font-size: 52px;
+  font-weight: 800;
+  letter-spacing: -2px;
+  color: white;
+  line-height: 0.9;
+}
+.login-brand .wordmark-city {
+  font-size: 20px;
+  font-weight: 800;
+  color: #e11d2a;
+  letter-spacing: -0.5px;
 }
 .login-card {
   background: white;
-  padding: 34px 32px 30px;
+  padding: 34px 32px 40px;
   border-radius: 32px 32px 0 0;
   flex: 1;
   display: flex;
@@ -269,20 +273,95 @@ small {
 }
 .login-card h1 {
   font-size: 26px;
+  margin: 0 0 6px;
+  letter-spacing: -0.6px;
 }
 .login-card > p.muted {
   font-size: 14px;
-  margin-bottom: 8px;
+  color: #6b7580;
+  margin: 0 0 24px;
+}
+#login-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+#login-form label {
+  margin: 0;
+}
+#login-form .input-wrap {
+  margin: 8px 0 18px;
+}
+#login-form .input-wrap:has(#password) {
+  margin-bottom: 10px;
+}
+.login-card button:disabled {
+  opacity: 1;
+  cursor: not-allowed;
+}
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 22px 0;
+}
+.login-divider span {
+  flex: 1;
+  height: 1px;
+  background: #eceef1;
+}
+.login-divider p {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7580;
+}
+.login-spacer {
+  flex: 1;
+}
+#login-error:empty,
+#login-state:empty {
+  display: none;
+}
+#login-error,
+#login-state {
+  font-size: 12px;
+  margin: 14px 0 0;
+}
+#login-state {
+  color: var(--muted);
+}
+#retry-login {
+  align-self: center;
+}
+.brand .wordmark-name {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.9px;
+  color: white;
+  line-height: 0.95;
+}
+.brand .wordmark-city {
+  font-size: 10px;
+  font-weight: 800;
+  color: #ff8a94;
+  letter-spacing: -0.1px;
+}
+.institutional-divider {
+  width: 1px;
+  height: 20px;
+  background: #e2e5e9;
 }
 .input-wrap {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   border: 1.5px solid #cdd3da;
   background: var(--surface);
   border-radius: 16px;
-  padding: 0 14px;
-  color: var(--muted);
+  padding: 0 16px;
+  color: var(--slate);
   min-height: 56px;
 }
 .input-wrap input {
@@ -290,6 +369,7 @@ small {
   background: transparent;
   padding: 12px 0;
   min-width: 0;
+  font-size: 15px;
 }
 .input-wrap .icon-button {
   border: 0;
@@ -303,8 +383,11 @@ small {
 }
 .login-help {
   display: block;
-  margin: 5px 0 15px auto;
-  font-size: 12px;
+  margin: 0 0 24px auto;
+  min-height: 0;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
 }
 .login-submit {
   width: 100%;
@@ -320,7 +403,7 @@ small {
 }
 .microsoft-button {
   width: 100%;
-  margin: 26px 0 12px;
+  margin: 0;
   min-height: 58px;
   background: white;
   border: 1.5px solid var(--line);
@@ -336,8 +419,7 @@ small {
   align-items: center;
   justify-content: center;
   gap: 22px;
-  margin-top: auto;
-  padding-top: 32px;
+  margin-top: 40px;
 }
 .institutional-logos img {
   height: 26px;
@@ -345,9 +427,7 @@ small {
   object-fit: contain;
 }
 .institutional-logos img:first-child {
-  height: 20px;
-  padding-right: 20px;
-  border-right: 1px solid var(--line);
+  height: 18px;
 }
 .app-layout {
   display: grid;
@@ -1028,31 +1108,42 @@ td small {
   margin-bottom: 0;
 }
 .profile-card {
-  text-align: center;
-  padding: 30px 20px;
+  text-align: left;
+  padding: 18px 20px;
+  border: 0;
+  border-radius: 26px;
+  box-shadow: 0 18px 40px -24px rgba(20, 24, 27, 0.4);
 }
 .profile-card .avatar {
-  width: 72px;
-  height: 72px;
-  font-size: 25px;
-  margin-bottom: 16px;
+  width: 66px;
+  height: 66px;
+  font-size: 22px;
+  margin-bottom: 12px;
+}
+.profile-card h2 {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
 }
 .profile-card p {
   overflow-wrap: anywhere;
+  font-size: 13px;
 }
 .profile-menu {
   display: grid;
-  gap: 10px;
-  margin-top: 20px;
+  gap: 12px;
+  margin-top: 24px;
 }
 .profile-menu button {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   text-align: left;
   background: white;
-  border-color: var(--line);
-  padding: 16px;
+  border: 0;
+  border-radius: 18px;
+  padding: 16px 18px;
+  box-shadow: 0 8px 20px -16px rgba(20, 24, 27, 0.45);
 }
 .profile-menu button span {
   flex: 1;
@@ -1118,22 +1209,6 @@ td small {
 .calendar-day.outside {
   color: #667582;
   background: #f8f9fb;
-}
-.onboarding {
-  background: white;
-  border-radius: 24px;
-  padding: 24px;
-}
-.onboarding img {
-  width: 100%;
-  height: 210px;
-  object-fit: contain;
-}
-.onboarding h2 {
-  font-size: 23px;
-}
-.onboarding .dialog-actions {
-  justify-content: space-between;
 }
 dialog {
   width: min(640px, calc(100% - 28px));
@@ -1263,12 +1338,15 @@ body[data-role="teacher"] .bottom-navigation {
   width: min(100%, 460px);
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  padding: 10px 8px calc(12px + env(safe-area-inset-bottom));
-  background: white;
-  border-top: 1px solid #e7eaee;
-  border-radius: 24px 24px 0 0;
-  box-shadow: 0 -8px 28px -15px #2e475640;
-  z-index: 20;
+  height: max(88px, calc(68px + env(safe-area-inset-bottom)));
+  padding: 12px 14px 0;
+  align-items: start;
+  background: #fffffff0;
+  backdrop-filter: blur(14px);
+  border-top: 1px solid #edeff1;
+  border-radius: 0;
+  box-shadow: none;
+  z-index: 30;
 }
 .bottom-navigation button {
   background: transparent;
@@ -1278,17 +1356,22 @@ body[data-role="teacher"] .bottom-navigation {
   align-items: center;
   flex-direction: column;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   color: var(--muted);
-  padding: 8px 2px;
+  padding: 0;
   font-size: 10px;
   font-weight: 700;
   min-width: 0;
   min-height: 52px;
 }
 .bottom-navigation button[aria-current="page"] {
-  background: var(--pink);
+  background: transparent;
   color: var(--red-dark);
+}
+.bottom-navigation svg.icon {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2;
 }
 body[data-role="student"] .toolbar,
 body[data-role="teacher"] .toolbar {
@@ -1436,12 +1519,156 @@ body[data-role="teacher"] .workspace-footer span {
   }
 }
 /* Role accents and desktop spacing follow the corresponding source canvases. */
+body[data-page="onboarding"] .sidebar,
+body[data-page="onboarding"] .topbar,
+body[data-page="onboarding"] .mobile-header,
+body[data-page="onboarding"] .page-heading,
+body[data-page="onboarding"] .bottom-navigation,
+body[data-page="onboarding"] .workspace-footer,
+body[data-page="onboarding"] #status {
+  display: none !important;
+}
+body[data-page="onboarding"] .app-layout {
+  display: block;
+  max-width: 460px;
+  margin: auto;
+}
+body[data-role][data-page="onboarding"] .workspace {
+  padding: 0;
+}
+.onboarding {
+  min-height: max(844px, 100dvh);
+  background: #e11d2a;
+  border-radius: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.onboarding[data-step="2"] {
+  background: #2e4756;
+}
+.onboarding-sheet {
+  position: relative;
+  flex: 1;
+  background: white;
+  border-radius: 0 0 40px 40px;
+  padding: 60px 28px 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.onboarding-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.onboarding-brand {
+  line-height: 0.9;
+}
+.onboarding-brand .wordmark-name {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: #2e4756;
+}
+.onboarding-brand .wordmark-city {
+  font-size: 11px;
+  font-weight: 800;
+  color: #c8102e;
+}
+.onboarding-skip {
+  border: 0;
+  background: none;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 0;
+  min-height: 44px;
+}
+.onboarding-title {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  top: 110px;
+  bottom: 47%;
+  display: flex;
+  align-items: center;
+}
+.onboarding-title h2 {
+  font-size: 38px;
+  font-weight: 800;
+  color: #14181b;
+  text-align: center;
+  letter-spacing: -1.2px;
+  line-height: 1.08;
+  margin: 0;
+  width: 100%;
+}
+.onboarding img {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 47%;
+  object-fit: contain;
+}
+.onboarding[data-step="2"] .onboarding-title {
+  bottom: 50%;
+}
+.onboarding[data-step="2"] h2 {
+  font-size: 36px;
+}
+.onboarding[data-step="2"] img {
+  height: 50%;
+}
+.onboarding[data-step="3"] .onboarding-title {
+  bottom: 56%;
+}
+.onboarding[data-step="3"] h2 {
+  font-size: 35px;
+}
+.onboarding[data-step="3"] img {
+  height: 56%;
+}
+.onboarding-actions {
+  padding: 20px 28px 34px;
+}
+.onboarding-dots {
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  margin-bottom: 22px;
+}
+.onboarding-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 8px;
+  background: #ffffff80;
+}
+.onboarding-dots span.current {
+  width: 22px;
+  background: white;
+}
+.onboarding-next {
+  width: 100%;
+  height: 62px;
+  border: 0;
+  border-radius: 20px;
+  background: #14181b;
+  color: white;
+  font-size: 17px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
 body[data-role="teacher"] .primary {
   background: var(--slate);
 }
 body[data-role="teacher"] .bottom-navigation button[aria-current="page"] {
   color: var(--slate);
-  background: #e7edf1;
+  background: transparent;
 }
 body[data-role="teacher"] .group-card h2,
 body[data-role="teacher"] .publication-card.activity {
