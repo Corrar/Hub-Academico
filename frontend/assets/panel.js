@@ -780,7 +780,6 @@ if (microsoftCallbackFailed) {
     "Não foi possível autorizar o acesso Microsoft. Confira o vínculo institucional e a política MFA com o administrador.";
   history.replaceState(null, "", location.pathname);
 }
-document.addEventListener("DOMContentLoaded", connectLogin);
 $("retry-login").addEventListener("click", connectLogin);
 
 async function microsoftLogin() {

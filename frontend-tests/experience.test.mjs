@@ -109,6 +109,79 @@ test("onboarding completes all three steps and preserves calendar access from pr
     app.dom.window.close();
   }
 });
+test("first visit shows splash, three introduction screens, then the unchanged login", async () => {
+  const app = await boot("student", {
+    anonymous: true,
+    firstVisit: true,
+    holdSplash: true,
+  });
+  try {
+    const doc = app.w.document;
+    assert.ok(doc.querySelector("#startup-view .splash"));
+    assert.equal(doc.querySelector("#login-view").inert, true);
+    assert.equal(
+      app.w.localStorage.getItem("fatec:onboarding-completed:v1"),
+      null,
+    );
+    await app.finishSplash();
+    for (let step = 1; step <= 3; step++) {
+      assert.equal(
+        doc.querySelector("#startup-view .onboarding").dataset.step,
+        String(step),
+      );
+      assert.equal(doc.activeElement.tagName, "H2");
+      await app.click("#startup-view .onboarding-next");
+    }
+    assert.equal(doc.querySelector("#startup-view").hidden, true);
+    assert.equal(doc.body.classList.contains("starting-app"), false);
+    assert.equal(doc.querySelector("#login-view").inert, false);
+    assert.equal(doc.querySelector("#login-view").hidden, false);
+    assert.equal(
+      app.w.localStorage.getItem("fatec:onboarding-completed:v1"),
+      "true",
+    );
+    assert.equal(doc.activeElement, doc.querySelector("#login-view h1"));
+    assert.deepEqual(app.errors, []);
+  } finally {
+    app.dom.window.close();
+  }
+});
+test("skip works without storage or an available authentication service", async () => {
+  const app = await boot("student", {
+    anonymous: true,
+    firstVisit: true,
+    storageBlocked: true,
+    authPending: true,
+  });
+  try {
+    await app.click("#startup-view .onboarding-skip");
+    assert.equal(app.w.document.querySelector("#startup-view").hidden, true);
+    assert.equal(app.w.document.querySelector("#login-view").hidden, false);
+    assert.equal(app.w.document.querySelector("#login-fields").disabled, true);
+    assert.equal(
+      app.w.document.querySelector("#microsoft-login").disabled,
+      true,
+    );
+    assert.deepEqual(app.errors, []);
+  } finally {
+    app.dom.window.close();
+  }
+});
+test("return visits keep the opening splash but skip the completed introduction", async () => {
+  const app = await boot("student", { anonymous: true, holdSplash: true });
+  try {
+    assert.ok(app.w.document.querySelector("#startup-view .splash"));
+    await app.finishSplash();
+    assert.equal(app.w.document.querySelector("#startup-view").hidden, true);
+    assert.equal(app.w.document.querySelector("#login-view").hidden, false);
+    assert.equal(
+      app.w.document.querySelector("#startup-view .onboarding"),
+      null,
+    );
+  } finally {
+    app.dom.window.close();
+  }
+});
 async function boot(role = "student", options = {}) {
   const requests = [],
     errors = [];
@@ -117,6 +190,22 @@ async function boot(role = "student", options = {}) {
       runScripts: "outside-only",
     }),
     w = dom.window;
+  if (!options.firstVisit)
+    w.localStorage.setItem("fatec:onboarding-completed:v1", "true");
+  if (options.storageBlocked) {
+    w.Storage.prototype.getItem = w.Storage.prototype.setItem = () => {
+      throw new Error("Storage unavailable");
+    };
+  }
+  let splashTimer;
+  const originalTimeout = w.setTimeout.bind(w);
+  w.setTimeout = (callback, delay, ...args) => {
+    if (delay === 700) {
+      splashTimer = callback;
+      return 1;
+    }
+    return originalTimeout(callback, delay, ...args);
+  };
   w.addEventListener("error", (event) => errors.push(event.error));
   w.HTMLDialogElement.prototype.showModal = function () {
     this.open = true;
@@ -133,6 +222,8 @@ async function boot(role = "student", options = {}) {
     requests.push({ url, init });
     let data = [];
     let code = 200;
+    if (path === "/auth/options" && options.authPending)
+      return new Promise(() => {});
     if (path === "/auth/options" && authFailure) {
       data = {};
       code = authFailure;
@@ -192,7 +283,14 @@ async function boot(role = "student", options = {}) {
     new Script(code).runInContext(dom.getInternalVMContext()),
   );
   await settle();
+  const finishSplash = async () => {
+    assert.ok(splashTimer);
+    splashTimer();
+    await settle();
+  };
+  if (!options.holdSplash) await finishSplash();
   return {
+    finishSplash,
     w,
     dom,
     requests,

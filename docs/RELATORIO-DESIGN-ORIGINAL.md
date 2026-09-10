@@ -117,3 +117,22 @@ Validação desta atualização: sete testes de interface, sintaxe JavaScript e
 sincronização do frontend. A conferência visual em navegador continua pendente,
 pois a política do navegador disponível bloqueou a prévia local. Não foi
 confirmada igualdade pixel a pixel nem realizado pentest remoto nesta etapa.
+
+## Abertura e apresentação antes do login — 10/09/2026
+
+- A abertura apresenta a marca Fatec centralizada sobre fundo branco durante
+  700 ms. A consulta de autenticação ocorre em paralelo e não bloqueia a apresentação.
+- No primeiro acesso anônimo, as três ilustrações aparecem antes do login,
+  com avanço e opção de pular. Concluir ou pular registra somente a preferência
+  `fatec:onboarding-completed:v1` no navegador, sem credenciais ou dados da sessão.
+- Nas próximas aberturas, a apresentação é dispensada; continua acessível pelo
+  perfil. Sessões já reconhecidas também seguem diretamente para o aplicativo.
+- Bloqueio do armazenamento e indisponibilidade da API não impedem sair da
+  apresentação. Nenhum método de autenticação é liberado por essa preferência.
+- O HTML do formulário de login foi comparado com a versão aprovada e permaneceu
+  integralmente igual. As regras de estilo do login não foram alteradas.
+- Dez testes de interface passaram, incluindo primeiro acesso, retorno, avanço,
+  opção de pular, armazenamento indisponível e API sem resposta. Sintaxe JavaScript,
+  sincronização Vercel/Render e verificação de diferenças também passaram.
+
+A comparação visual em navegador publicado permanece pendente.

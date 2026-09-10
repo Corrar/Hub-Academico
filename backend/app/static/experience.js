@@ -657,11 +657,56 @@ function renderProfile() {
   );
   $("view").append(card, menu);
 }
-function renderOnboarding(step = 0) {
+const onboardingStorageKey = "fatec:onboarding-completed:v1";
+document.addEventListener("DOMContentLoaded", startApp);
+function startApp() {
+  const startup = $("startup-view");
+  $("login-view").inert = $("app-view").inert = true;
+  // Authentication loads independently; an unavailable API must not trap the splash.
+  void connectLogin();
+  const finish = () => {
+    startup.hidden = true;
+    startup.replaceChildren();
+    document.body.classList.remove("starting-app");
+    $("login-view").inert = $("app-view").inert = false;
+    const heading = document.querySelector(
+      user ? "#app-view h1" : "#login-view h1",
+    );
+    if (heading) {
+      heading.tabIndex = -1;
+      heading.focus();
+    }
+  };
+  setTimeout(() => {
+    let completed = false;
+    try {
+      completed = localStorage.getItem(onboardingStorageKey) === "true";
+    } catch {
+      /* Storage is optional, never an authentication mechanism. */
+    }
+    if (completed || user || microsoftCallbackFailed) {
+      finish();
+      return;
+    }
+    renderOnboarding(0, startup, () => {
+      try {
+        localStorage.setItem(onboardingStorageKey, "true");
+      } catch {
+        /* Private browsing can disallow persistence. */
+      }
+      finish();
+    });
+  }, 700);
+}
+function renderOnboarding(
+  step = 0,
+  target = $("view"),
+  onComplete = () => navigate("home"),
+) {
   const slides = [
     "Centralize suas atividades",
     "Tenha controle total sobre seu ambiente",
-    "Fique por dentro das novidades da comunidade",
+    "Fique por dentro das novidades dentro da comunidade",
   ];
   const box = el("div", undefined, "onboarding"),
     img = el("img");
@@ -677,28 +722,27 @@ function renderOnboarding(step = 0) {
     el("div", "Fatec", "wordmark-name"),
     el("div", "Adamantina", "wordmark-city"),
   );
-  const skip = button("Pular", () => navigate("home"), "onboarding-skip");
+  const skip = button("Pular", onComplete, "onboarding-skip");
   header.append(brand, skip);
   const title = el("div", undefined, "onboarding-title");
   title.append(el("h2", slides[step]));
+  title.firstChild.tabIndex = -1;
   sheet.append(header, title, img);
-  const actions = el("div", undefined, "onboarding-actions"),
-    dots = el("div", undefined, "onboarding-dots");
-  dots.setAttribute("aria-label", `Passo ${step + 1} de 3`);
-  for (let i = 0; i < 3; i++) {
-    const dot = el("span");
-    dot.className = i === step ? "current" : "";
-    dots.append(dot);
-  }
+  const actions = el("div", undefined, "onboarding-actions");
+  box.setAttribute("aria-label", `Apresentação: passo ${step + 1} de 3`);
   const next = button(
-    step === 2 ? "Começar" : "Avançar",
-    () => (step === 2 ? navigate("home") : renderOnboarding(step + 1)),
+    "Avançar",
+    () =>
+      step === 2
+        ? onComplete()
+        : renderOnboarding(step + 1, target, onComplete),
     "onboarding-next",
   );
   next.append(icon("arrow"));
-  actions.append(dots, next);
+  actions.append(next);
   box.append(sheet, actions);
-  $("view").replaceChildren(box);
+  target.replaceChildren(box);
+  title.firstChild.focus();
 }
 async function renderSearch(ticket) {
   $("view").append(
