@@ -59,6 +59,20 @@ Variáveis opcionais desta versão:
 | `ATTACHMENT_MAX_MB` | `4` | Tamanho máximo por anexo (1 a 25). Mantenha até 4 com o proxy da Vercel, que limita o corpo das funções a 4,5 MB |
 | `ATTENDANCE_ABSENCE_LIMIT_PERCENT` | `25` | Percentual de faltas permitido por disciplina, calculado sobre as aulas previstas na grade |
 
+Push, antivírus, privacidade e retenção têm variáveis próprias, descritas em
+[OPERACAO.md](../docs/OPERACAO.md).
+
+## Comandos de operação
+
+| Comando | Uso |
+| --- | --- |
+| `python -m app.cli vapid-keys` | Gera as chaves VAPID das notificações push |
+| `python -m app.cli dispatch-notifications [--loop 60]` | Envia notificações pendentes |
+| `python -m app.cli purge-expired` | Remove sessões, tentativas e notificações vencidas |
+| `python -m app.cli pg-backup ARQUIVO.dump` | Backup PostgreSQL verificado |
+| `python -m app.cli pg-restore-check ARQUIVO.dump --target-env VAR` | Ensaio de restauração em banco vazio |
+| `python -m app.cli backup` / `restore-check` | Equivalentes para SQLite local |
+
 Para explorar a API, `/docs` continua disponível. Em `POST /api/v1/auth/login`, use o e-mail e a
 senha criados no terminal. Copie **somente o valor de `access_token`** e cole em
 **Authorize**. Saia do painel antes de usar o explorador Bearer: quando há cookie,
@@ -138,6 +152,9 @@ coorte com matrícula em lote e uma entidade própria de período letivo são pr
 | `GET /api/v1/learning/notifications`, `POST .../read` | Lembretes com não lidos e marcação de leitura |
 | `GET /api/v1/learning/reach` | Alcance de uma publicação antes de confirmar |
 | `GET /api/v1/learning/activities/{id}/summary` | Quem entregou, quem falta e quantas aguardam avaliação |
+| `GET/PUT /api/v1/notifications/preferences`, `POST .../subscriptions` | Preferências e dispositivos de notificação (Web Push ou Expo) |
+| `GET /api/v1/learning/groups/{id}/export/attendance`, `.../export/grades` | CSV para o diário oficial (equipe da turma) |
+| `GET /api/v1/me/export` | Cópia dos dados da própria pessoa (LGPD) |
 | `GET /health/live`, `/health/ready` | Processo ativo e revisão do banco pronta |
 
 Listagens usam `offset` e `limit` (1–100). Listagens administrativas aceitam
@@ -194,8 +211,9 @@ persistência e recuperação. O workflow roda também em PostgreSQL descartáve
 - O painel web está conectado; o app Expo ainda não foi implementado.
 - Fluxos verificados em Chromium a 420 px e 1280 px; leitor de tela e testes com
   usuários continuam pendentes antes do piloto.
-- Notificações push dependem da escolha do canal e de credenciais. A chamada do hub
-  não substitui o diário oficial; a regra institucional ainda precisa ser confirmada.
+- Notificações push funcionam com as chaves VAPID da instituição; o app nativo
+  Expo depende de contas de loja. A chamada do hub não substitui o diário oficial;
+  a regra institucional ainda precisa ser confirmada.
 - No PostgreSQL, tentativas de login usam locks transacionais para serializar
   os limites entre instâncias. SQLite continua exclusivo do desenvolvimento local.
 - Hospedagem de teste exige `APP_ENV=staging` e todas as proteções descritas em
@@ -222,8 +240,8 @@ Alunos e professores podem testar com contas locais provisionadas enquanto o
 Microsoft não está configurado. Configurar o Entra desativa o login local.
 O console administrativo continua exigindo identidade Microsoft com MFA.
 
-Execute `alembic upgrade head` para instalar a revisão `0004` (chamada, agenda de
-publicações, anexos tipados e lembretes). As migrações preservam cadastros e
+Execute `alembic upgrade head` para instalar a revisão `0005` (chamada, agenda de
+publicações, anexos tipados, lembretes e notificações push). As migrações preservam cadastros e
 auditoria; downgrade é bloqueado para impedir perda silenciosa de entregas,
 avaliações e presenças. Use backup verificado para recuperação.
 
@@ -231,9 +249,10 @@ Anexos aceitos: PDF, PNG, JPG, DOCX, XLSX, PPTX, CSV, IPYNB e TXT, até
 `ATTACHMENT_MAX_MB` (4 MiB por padrão; textos até 512 KiB), no máximo dez por
 registro (incluindo arquivados). Extensão, tipo declarado e assinatura do arquivo
 precisam coincidir; documentos com macro são recusados. São privados, ficam no
-banco e são sempre baixados como anexo. **Não há varredura antivírus**: contrate
-uma antes de receber arquivos reais. O upload do aluno ocorre no rascunho da
-entrega; o envio e a avaliação bloqueiam alterações nos anexos.
+banco e são sempre baixados como anexo. Com `CLAMAV_HOST` configurado, cada arquivo
+passa pelo antivírus antes de ser gravado (ver [OPERACAO.md](../docs/OPERACAO.md)); sem
+ele, não há varredura. O upload do aluno ocorre no rascunho da entrega; o envio e a
+avaliação bloqueiam alterações nos anexos.
 
 Avisos, materiais, atividades e eventos podem ter `publish_at` (só aparecem a partir
 dessa data); avisos podem ter `expires_at` (saem do ar). As datas são conferidas

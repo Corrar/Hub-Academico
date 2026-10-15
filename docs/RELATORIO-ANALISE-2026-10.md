@@ -126,17 +126,41 @@ auditoria; a aluna entra com a senha redefinida.
 Não foram feitos: teste com leitor de tela, teste de carga, login Microsoft real,
 pentest. Testes em DOM simulado e roteiros automatizados não substituem esses.
 
+## Segunda etapa — 16/10/2026
+
+A segunda etapa transformou em código o que ainda era listado como pendência
+externa, deixando para a instituição apenas credenciais e decisões.
+
+| Entrega | Como funciona |
+| --- | --- |
+| Aplicativo instalável (PWA) | Manifesto, ícones do logotipo oficial e service worker; instala no Android, iOS e computador e abre sem conexão. Respostas da API nunca são guardadas em cache |
+| Notificações push | Web Push (RFC 8291/8292) implementado sobre `cryptography` e `PyJWT`, sem conta em Google/Apple/Mozilla; chaves por `vapid-keys`. Fila deduplicada, preferências por categoria, retentativas com recuo, remoção de dispositivos inválidos e lembrete de prazo 24 h antes. Endpoints restritos aos serviços de push dos navegadores (sem SSRF). Canal Expo pronto para o app nativo |
+| Disparo | Laço interno (`PUSH_DISPATCH_INTERVAL_SECONDS`), comando `dispatch-notifications` ou endpoint com token, com workflow opcional do GitHub para hospedagens que dormem |
+| Antivírus | Cliente ClamAV (`clamd` INSTREAM); arquivo infectado é recusado e auditado; scanner indisponível recusa o envio |
+| LGPD | Cópia dos dados do titular em JSON, aviso de privacidade no login e no perfil, contato configurável e limpeza automática de dados operacionais vencidos |
+| Backups | `pg-backup` e `pg-restore-check` com `pg_dump`/`pg_restore`, ensaio em banco vazio e verificação da revisão, contagens e proteção da auditoria |
+| Diário oficial | CSV de frequência (P/F por aula) e de notas por turma, com proteção contra fórmulas e auditoria |
+| Acessibilidade | Auditoria axe-core (WCAG 2.1 A/AA) em 27 telas e diálogos dos três perfis e no login; dois contrastes corrigidos; zero violações |
+
+Verificação da segunda etapa: 115 testes de API em SQLite (3 ignorados) e 117 em
+PostgreSQL 16 (1 ignorado), incluindo criptografia conferida por um decifrador
+independente, fila, preferências, SSRF, Expo, antivírus com `clamd` simulado,
+exportações e backup/restauração reais; 18 testes de interface. No Chromium:
+service worker, manifesto, ícones, notificação entregue pelo protocolo DevTools,
+abertura offline, download dos dados e o roteiro ponta a ponta anterior. A
+inscrição real em um serviço de push não pôde ser exercida no navegador sem
+interface gráfica deste ambiente; a cifra e o envio estão cobertos pelos testes.
+
 ## O que depende de terceiros
 
 | Pendência | O que é necessário |
 | --- | --- |
 | Login Microsoft e primeiro administrador | Tenant, registro do app, callback, política MFA e Object ID verificado (`MICROSOFT-ADMIN.md`) |
-| Homologação publicada | Deploy desta branch no Render e na Vercel, `alembic upgrade head` (revisão `0004`) e teste de restauração do PostgreSQL hospedado |
-| Notificação push | Decisão entre Web Push e app Expo; credenciais FCM/APNs ou chaves VAPID; consentimento e retenção dos tokens |
-| Aplicativo Android/iOS | Conta Expo, identificadores de loja e dispositivos de teste |
-| Antivírus e armazenamento de arquivos | Serviço de varredura e, para volumes maiores, armazenamento de objetos privado com política de retenção |
+| Homologação publicada | Deploy desta branch no Render e na Vercel, `alembic upgrade head` (revisão `0005`), chaves VAPID e ensaio de restauração do PostgreSQL hospedado |
+| Antivírus em operação | Servidor ClamAV com cerca de 2 GB de memória (fora do plano gratuito do Render) |
+| App nas lojas (opcional) | Conta Expo e contas de desenvolvedor Google/Apple; o PWA já cobre Android e iOS |
 | Regra oficial de frequência | Confirmação com a coordenação: limite, fonte oficial (diário do CPS) e responsável por retificações |
-| Governança de dados (LGPD) | Retenção, finalidade, atendimento ao titular e responsáveis institucionais |
+| Governança de dados (LGPD) | Revisão do aviso de privacidade, canal do encarregado e tabela de temporalidade |
 | Pentest | Confirmação do ambiente publicado e escopo autorizado |
 | Dados reais | Cursos, turmas, horários e vínculos aprovados pela instituição |
 
@@ -161,5 +185,6 @@ alunos como Lucas Silveira e Ana Ribeiro). A coordenação usa a senha do bootst
    roteiro de navegador com as contas do `seed-demo`.
 2. Validar com a coordenação a regra de frequência e o risco de chamada em dois
    lugares (diário oficial), antes de usar a chamada com dados reais.
-3. Decidir o canal de push e contratar a varredura de arquivos.
+3. Gerar e cadastrar as chaves VAPID e o contato de privacidade; providenciar o
+   ClamAV antes de receber arquivos reais (`OPERACAO.md`).
 4. Concluir a configuração Microsoft e executar o pentest acordado.

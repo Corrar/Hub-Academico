@@ -140,3 +140,10 @@ e fila de avaliação, inscritos em eventos, lembretes com não lidos, alertas d
 coordenação e `seed-demo`. Migração `0004`. Push, Expo, antivírus, Entra e a regra
 oficial de frequência continuam dependendo da instituição. Detalhes em
 `docs/RELATORIO-ANALISE-2026-10.md`.
+
+Atualização de 16/10/2026: o painel virou aplicativo instalável (PWA) com
+notificações push próprias (Web Push/VAPID, sem conta em terceiros), mantendo a
+mesma identidade no Android e no iOS; o backend também aceita tokens Expo para o
+app nativo. Entraram antivírus ClamAV opcional, cópia dos dados do titular,
+aviso de privacidade, retenção automática, backup/restauração do PostgreSQL e
+exportação CSV para o diário oficial. Migração `0005`. Operação em `docs/OPERACAO.md`.

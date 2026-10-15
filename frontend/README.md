@@ -69,6 +69,11 @@ outubro/2026 exige `alembic upgrade head` (migração `0004`) no backend antes d
 deploy. Anexos acima de 4,5 MB não atravessam as funções da Vercel; por isso o
 limite padrão do backend é 4 MiB (`ATTACHMENT_MAX_MB`).
 
+O frontend é instalável: `sw.js` fica na raiz deste projeto e o manifesto em
+`assets/`. A CSP do `vercel.json` (`default-src 'self'`) já cobre service worker e
+manifesto. Notificações push exigem as variáveis VAPID no backend
+(`docs/OPERACAO.md`) e a migração `0005`.
+
 ## Erro 404 no login e primeiro acesso
 
 Se `/api/v1/auth/options` responder `NOT_FOUND` da Vercel, confira se o deploy

@@ -1,8 +1,8 @@
 # Hub Acadêmico — Fatec Adamantina
 
-Hub acadêmico em Python/FastAPI com painel web responsivo para alunos,
-professores, coordenação e administrador. O aplicativo Expo faz parte do roteiro
-e ainda não foi implementado; o painel funciona no celular e no computador.
+Hub acadêmico em Python/FastAPI com aplicativo web instalável (PWA) para alunos,
+professores, coordenação e administrador. Funciona no navegador e instalado no
+Android, iOS e computador, com notificações push. O backend já aceita o futuro app Expo.
 
 ## Estado atual
 
@@ -15,7 +15,7 @@ descritos em [o que depende de terceiros](docs/RELATORIO-ANALISE-2026-10.md#o-qu
 | Área | Implementação |
 | --- | --- |
 | API | FastAPI, rotas `/api/v1`, contrato OpenAPI em `/docs` (fora da homologação) |
-| Banco | SQLAlchemy e Alembic (revisão `0004`); SQLite local e PostgreSQL |
+| Banco | SQLAlchemy e Alembic (revisão `0005`); SQLite local e PostgreSQL com backup e restauração verificada |
 | Acesso | Contas provisionadas, Argon2, sessões opacas com 30 min de inatividade e 8 h no máximo, troca e redefinição de senha |
 | Estrutura | Cursos, disciplinas, turmas, usuários, vínculos com vigência, matrícula em lote, busca e filtros |
 | Grade | Horários com vigência, sala e verificação de conflito de turma, sala e professor |
@@ -23,7 +23,12 @@ descritos em [o que depende de terceiros](docs/RELATORIO-ANALISE-2026-10.md#o-qu
 | Atividades | Rascunho, envio, desfazer no prazo, situação nos cartões, resumo de entregas, fila de avaliação e devolutiva |
 | Materiais e anexos | PDF, Office, imagens, CSV, notebooks e texto, com verificação de assinatura e download seguro |
 | Avisos e eventos | Público obrigatório, alcance antes de publicar, agendamento, saída do ar, inscrições e lista de inscritos |
-| Lembretes | Novidades e notas recebidas com contador de não lidos |
+| Lembretes e push | Novidades e notas com não lidos; Web Push com preferências, fila, retentativas e lembrete de prazo |
+| App instalável | Manifesto, ícones e service worker; abre sem conexão |
+| Antivírus | Verificação ClamAV dos anexos, ativada por configuração |
+| Privacidade (LGPD) | Cópia dos dados do titular, aviso de privacidade e retenção automática |
+| Diário oficial | Exportação CSV de frequência e notas por turma |
+| Acessibilidade | Auditoria WCAG 2.1 AA sem violações nas telas dos três perfis |
 | Coordenação | Visão geral com alertas (turma sem professor ou grade, vínculos a vencer) e auditoria |
 | Permissões | Toda leitura e escrita valida papel e vínculo no servidor |
 | Histórico | Auditoria imutável, arquivamento e restauração em vez de exclusão |
@@ -32,7 +37,8 @@ descritos em [o que depende de terceiros](docs/RELATORIO-ANALISE-2026-10.md#o-qu
 | Homologação | Entradas Vercel/Render, proteção do ambiente, `seed-demo` com dados fictícios |
 
 Veja o [relatório de análise de outubro/2026](docs/RELATORIO-ANALISE-2026-10.md)
-para o diagnóstico, o que foi implementado, as decisões tomadas e a verificação.
+para o diagnóstico, o que foi implementado, as decisões tomadas e a verificação, e o
+[guia de operação](docs/OPERACAO.md) para push, antivírus, backups e privacidade.
 
 ## Executar localmente
 
@@ -66,7 +72,7 @@ em `frontend/` roda na Vercel com Root Directory `frontend`; o proxy server-side
 mantém a senha da proteção fora do navegador. Veja o
 [roteiro de homologação](docs/HOMOLOGACAO-VERCEL.md) e o
 [guia do frontend](frontend/README.md). Execute `alembic upgrade head` antes de
-iniciar esta versão (revisão `0004`).
+iniciar esta versão (revisão `0005`).
 
 ## Microsoft e administrador
 

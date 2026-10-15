@@ -16,7 +16,7 @@
   --surface: #f4f5f7;
   --pink: #fdeaec;
   --green: #0a7a3f;
-  --gold: #8a6d00;
+  --gold: #7a6100;
   font-family:
     "Plus Jakarta Sans",
     system-ui,
@@ -345,7 +345,7 @@ small {
 .brand .wordmark-city {
   font-size: 10px;
   font-weight: 800;
-  color: #ff8a94;
+  color: #ff9ea5;
   letter-spacing: -0.1px;
 }
 .institutional-divider {

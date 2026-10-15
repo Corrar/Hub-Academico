@@ -1,0 +1,24 @@
+name: Notificações
+# Optional trigger for hosts that sleep when idle (Render free plan). It does nothing
+# until the repository variable NOTIFICATION_DISPATCH_URL is defined.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+permissions: {}
+jobs:
+  dispatch:
+    if: vars.NOTIFICATION_DISPATCH_URL != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Despachar notificações pendentes
+        env:
+          URL: ${{ vars.NOTIFICATION_DISPATCH_URL }}
+          TOKEN: ${{ secrets.NOTIFICATION_DISPATCH_TOKEN }}
+          GATE: ${{ secrets.STAGING_ACCESS_PASSWORD }}
+        run: |
+          curl --fail --silent --show-error --max-time 60 \
+            --user "tester:${GATE}" \
+            -H "X-Dispatch-Token: ${TOKEN}" \
+            -X POST "${URL%/}/api/v1/internal/notifications/dispatch"
