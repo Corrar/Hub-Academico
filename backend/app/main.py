@@ -1,19 +1,29 @@
 import json
 import os
+import secrets
 from datetime import datetime
+from pathlib import Path
 from typing import Annotated
 from zoneinfo import ZoneInfo
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import delete, inspect, select, text
+from sqlalchemy import delete, func, inspect, select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from . import schemas, security
+from .academic.enrollment import install_enrollment
+from .academic.routes import install_learning
+from .academic.scheduling import lock_schedule, validate_group_schedules
+from .admin import install_admin
 from .db import database_url, make_engine, make_sessions
-from .models import Audit, ClassGroup, Course, Membership, Session, Subject, User
+from .microsoft import MicrosoftSettings, install_microsoft
+from .models import AdminGrant, Audit, ClassGroup, Course, Membership, Session, Subject, User
+from .staging import access_gate, validate_staging
 
 
 def public(row):
@@ -52,18 +62,73 @@ def active_group(db, key):
 
 
 def create_app(url=None):
-    if os.getenv("APP_ENV", "development") not in {"development", "test"}:
-        raise RuntimeError("Esta versão é de desenvolvimento. Login institucional ainda pendente.")
-    engine = make_engine(url or database_url())
+    environment = os.getenv("APP_ENV", "development")
+    if environment not in {"development", "test", "staging"}:
+        raise RuntimeError(
+            "Produção exige aceite institucional e operacional. Use homologação protegida."
+        )
+    url = url or database_url()
+    staging_settings = validate_staging(url) if environment == "staging" else None
+    microsoft_settings = MicrosoftSettings.from_env()
+    engine = make_engine(url)
     sessions = make_sessions(engine)
-    app = FastAPI(title="Hub Acadêmico — API de desenvolvimento", version="0.1.0")
+    app = FastAPI(
+        title="Hub Acadêmico — ambiente de teste",
+        version="0.1.0",
+        docs_url=None if staging_settings else "/docs",
+        redoc_url=None if staging_settings else "/redoc",
+        openapi_url=None if staging_settings else "/openapi.json",
+    )
+    if staging_settings:
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=staging_settings[1])
+        app.middleware("http")(access_gate(staging_settings[0]))
     app.state.engine, app.state.sessions = engine, sessions
+
+    cookie_name = "hub_session"
+    trusted_origins = {
+        origin.strip()
+        for origin in os.getenv("WEB_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000").split(
+            ","
+        )
+        if origin.strip()
+    }
+    secure_cookie = os.getenv("WEB_SECURE_COOKIE", "true").lower() != "false"
+    cookie_samesite = os.getenv("WEB_COOKIE_SAMESITE", "strict").lower()
+    if cookie_samesite not in {"strict", "lax", "none"}:
+        raise RuntimeError("WEB_COOKIE_SAMESITE deve ser strict, lax ou none.")
+    if cookie_samesite == "none" and not secure_cookie:
+        raise RuntimeError("WEB_COOKIE_SAMESITE=none exige WEB_SECURE_COOKIE=true.")
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:8081"],
+        allow_origins=sorted(trusted_origins),
         allow_methods=["GET", "POST", "PUT", "PATCH"],
-        allow_headers=["Authorization", "Content-Type"],
+        allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
+        allow_credentials=True,
     )
+
+    def check_origin(request):
+        if request.headers.get("origin") not in trusted_origins:
+            raise HTTPException(403, "Origem não autorizada")
+
+    def csrf(token):
+        return security.digest("hub-csrf:" + token)
+
+    def request_token(request, credentials):
+        # A browser cookie always takes precedence; a header cannot bypass CSRF.
+        token = request.cookies.get(cookie_name)
+        if token:
+            if request.method not in {"GET", "HEAD", "OPTIONS"}:
+                check_origin(request)
+                supplied = request.headers.get("x-csrf-token", "")
+                if not secrets.compare_digest(
+                    supplied.encode("utf-8"), csrf(token).encode("ascii")
+                ):
+                    raise HTTPException(403, "Proteção de sessão inválida; entre novamente")
+            return token
+        if credentials:
+            return credentials.credentials
+        raise HTTPException(401, "Autenticação necessária")
 
     def database():
         with sessions() as db:
@@ -73,13 +138,16 @@ def create_app(url=None):
     bearer = HTTPBearer(auto_error=False)
 
     def current_user(
-        db: DB, credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]
+        request: Request,
+        db: DB,
+        credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
     ):
-        if credentials is None:
-            raise HTTPException(
-                401, "Autenticação necessária", headers={"WWW-Authenticate": "Bearer"}
-            )
-        return security.authenticate(db, credentials.credentials)
+        return security.authenticate(
+            db,
+            request_token(request, credentials),
+            bool(microsoft_settings),
+            microsoft_settings.context if microsoft_settings else None,
+        )
 
     Actor = Annotated[User, Depends(current_user)]
 
@@ -90,28 +158,206 @@ def create_app(url=None):
 
     Coordinator = Annotated[User, Depends(coordinator)]
 
+    def administrator(
+        request: Request,
+        actor: Actor,
+        db: DB,
+        credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
+    ):
+        if not db.get(AdminGrant, actor.id):
+            raise HTTPException(403, "Acesso exclusivo do administrador")
+        session = db.get(Session, security.digest(request_token(request, credentials)))
+        if request.method not in {"GET", "HEAD", "OPTIONS"}:
+            if (
+                not session.authenticated_at
+                or (security.now() - security.utc(session.authenticated_at)).total_seconds() > 300
+            ):
+                raise HTTPException(
+                    403, "Entre novamente pela Microsoft para confirmar esta operação"
+                )
+        return actor
+
+    Administrator = Annotated[User, Depends(administrator)]
+    install_admin(app, DB, Administrator, microsoft_settings, public)
+    install_microsoft(
+        app, sessions, microsoft_settings, check_origin, cookie_samesite=cookie_samesite
+    )
+
+    def profile(db, actor):
+        return {**public(actor), "administrator": bool(db.get(AdminGrant, actor.id))}
+
     @app.exception_handler(IntegrityError)
     async def conflict(_request, _exception):
         return JSONResponse(
             status_code=409, content={"detail": "Registro duplicado ou vínculo inválido"}
         )
 
+    @app.exception_handler(RequestValidationError)
+    async def invalid_input(_request, exception):
+        # Pydantic errors may contain the full input, including passwords.
+        return JSONResponse(
+            status_code=422,
+            content={
+                "detail": [
+                    {"loc": error["loc"], "type": error["type"], "msg": "Valor inválido"}
+                    for error in exception.errors()
+                ]
+            },
+        )
+
     @app.middleware("http")
     async def response_headers(request: Request, call_next):
         response = await call_next(request)
         response.headers["Cache-Control"] = "no-store"
+        if staging_settings:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000"
+            response.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive"
         response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        if request.url.path == "/" or request.url.path.startswith("/panel"):
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'none'; script-src 'self'; style-src 'self'; "
+                "img-src 'self'; font-src 'self'; connect-src 'self'; "
+                "object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+            )
         return response
+
+    static = Path(__file__).parent / "static"
+
+    # Serve through application middleware, including on Vercel; no CDN promotion.
+    @app.get("/panel/assets/{filename}", include_in_schema=False)
+    def panel_asset(filename: str):
+        if filename not in {
+            "index.html",
+            "panel.js",
+            "academic.js",
+            "admin.js",
+            "panel.css",
+            "logo-fatec.png",
+        }:
+            raise HTTPException(404, "Arquivo não encontrado")
+        return FileResponse(static / filename)
+
+    @app.get("/", include_in_schema=False)
+    def home():
+        return RedirectResponse("/panel/")
+
+    @app.get("/panel/", include_in_schema=False)
+    def panel():
+        return FileResponse(static / "index.html")
+
+    @app.post("/api/v1/web/login")
+    def web_login(body: schemas.Login, request: Request, response: Response, db: DB):
+        check_origin(request)
+        if microsoft_settings:
+            raise HTTPException(403, "Use o login Microsoft institucional")
+        result = security.login(
+            db, body.email, body.password, request.client.host if request.client else "unknown"
+        )
+        token = result["access_token"]
+        actor = security.authenticate(
+            db,
+            token,
+            bool(microsoft_settings),
+            microsoft_settings.context if microsoft_settings else None,
+        )
+        previous = request.cookies.get(cookie_name)
+        if previous:
+            db.execute(delete(Session).where(Session.token_hash == security.digest(previous)))
+            db.commit()
+        response.set_cookie(
+            cookie_name,
+            token,
+            max_age=1800,
+            httponly=True,
+            secure=secure_cookie,
+            samesite=cookie_samesite,
+            path="/api/v1",
+        )
+        return {"user": profile(db, actor), "csrf_token": csrf(token)}
+
+    @app.get("/api/v1/web/session")
+    def web_session(request: Request, db: DB):
+        token = request.cookies.get(cookie_name)
+        if not token:
+            raise HTTPException(401, "Autenticação necessária")
+        actor = security.authenticate(
+            db,
+            token,
+            bool(microsoft_settings),
+            microsoft_settings.context if microsoft_settings else None,
+        )
+        return {"user": profile(db, actor), "csrf_token": csrf(token)}
+
+    @app.get("/api/v1/dashboard")
+    def dashboard(db: DB, actor: Coordinator):
+        return {
+            key: db.scalar(select(func.count()).select_from(model).where(model.archived.is_(False)))
+            for key, model in {
+                "courses": Course,
+                "subjects": Subject,
+                "groups": ClassGroup,
+                "users": User,
+                "memberships": Membership,
+            }.items()
+        }
+
+    @app.get("/api/v1/lookup/{resource}")
+    def lookup(
+        resource: str,
+        db: DB,
+        actor: Coordinator,
+        q: str = Query("", max_length=120),
+        ids: list[str] = Query(default=[], max_length=100),
+        offset: int = Query(0, ge=0),
+        limit: int = Query(25, ge=1, le=100),
+    ):
+        model = {"users": User, "courses": Course, "subjects": Subject, "groups": ClassGroup}.get(
+            resource
+        )
+        if model is None:
+            raise HTTPException(404, "Cadastro não encontrado")
+        stmt = select(model)
+        if ids:
+            stmt = stmt.where(model.id.in_(ids))
+        else:
+            stmt = stmt.where(model.archived.is_(False))
+            if model is User:
+                stmt = stmt.where(User.role != "coordinator")
+            elif model is Subject:
+                stmt = stmt.join(Course).where(Course.archived.is_(False))
+            elif model is ClassGroup:
+                stmt = (
+                    stmt.join(Subject)
+                    .join(Course)
+                    .where(Subject.archived.is_(False), Course.archived.is_(False))
+                )
+            if q:
+                stmt = stmt.where(model.name.icontains(q, autoescape=True))
+        result = []
+        for row in db.scalars(stmt.order_by(model.name, model.id).offset(offset).limit(limit)):
+            label = row.name
+            if model is User:
+                label += " · " + row.email
+            elif model is ClassGroup:
+                subject = db.get(Subject, row.subject_id)
+                label = subject.name + " · " + row.name + " · " + row.semester
+            else:
+                label = row.code + " · " + row.name
+            result.append({"id": row.id, "label": label + (" (arquivado)" if row.archived else "")})
+        return result
 
     @app.get("/health/live")
     def live():
-        return {"status": "ok", "environment": "development"}
+        return {"status": "ok", "environment": environment}
 
     @app.get("/health/ready")
     def ready(db: DB):
         try:
             revision = db.execute(text("SELECT version_num FROM alembic_version")).scalar()
-            if revision != "0001":
+            if revision != "0003":
                 return JSONResponse(status_code=503, content={"status": "migration_required"})
         except SQLAlchemyError:
             return JSONResponse(status_code=503, content={"status": "database_unavailable"})
@@ -119,26 +365,40 @@ def create_app(url=None):
 
     @app.post("/api/v1/auth/login")
     def sign_in(body: schemas.Login, request: Request, db: DB):
+        if microsoft_settings:
+            raise HTTPException(403, "Use o login Microsoft institucional")
         return security.login(
             db, body.email, body.password, request.client.host if request.client else "unknown"
         )
 
     @app.post("/api/v1/auth/logout", status_code=204)
     def logout(
-        actor: Actor, db: DB, credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer)]
+        request: Request,
+        actor: Actor,
+        db: DB,
+        credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
     ):
-        db.execute(
-            delete(Session).where(Session.token_hash == security.digest(credentials.credentials))
-        )
+        token = request_token(request, credentials)
+        db.execute(delete(Session).where(Session.token_hash == security.digest(token)))
         db.commit()
-        return Response(status_code=204)
+        response = Response(status_code=204)
+        response.delete_cookie(
+            cookie_name,
+            path="/api/v1",
+            secure=secure_cookie,
+            httponly=True,
+            samesite=cookie_samesite,
+        )
+        return response
 
     @app.get("/api/v1/me")
-    def me(actor: Actor):
-        return public(actor)
+    def me(actor: Actor, db: DB):
+        return profile(db, actor)
 
     @app.post("/api/v1/users", status_code=201)
     def create_user(body: schemas.UserCreate, db: DB, actor: Coordinator):
+        if microsoft_settings:
+            raise HTTPException(403, "Solicite o provisionamento institucional ao administrador")
         row = User(
             **body.model_dump(exclude={"password"}),
             password_hash=security.passwords.hash(body.password),
@@ -228,6 +488,7 @@ def create_app(url=None):
 
     @app.put("/api/v1/memberships")
     def set_membership(body: schemas.MembershipInput, db: DB, actor: Coordinator):
+        lock_schedule(db)
         user = active(db, User, body.user_id)
         if user.role == "coordinator":
             raise HTTPException(422, "Vínculos são destinados a alunos e professores")
@@ -243,6 +504,8 @@ def create_app(url=None):
             db.add(row)
         else:
             row.starts_on, row.ends_on, row.archived = body.starts_on, body.ends_on, False
+        if user.role == "teacher":
+            validate_group_schedules(db, body.group_id)
         audit(db, actor, "upsert", row, before)
         db.commit()
         return public(row)
@@ -313,6 +576,7 @@ def create_app(url=None):
 
     @app.patch("/api/v1/{resource}/{key}/archive")
     def archive(resource: str, key: str, body: schemas.ArchiveInput, db: DB, actor: Coordinator):
+        lock_schedule(db)
         model = models.get(resource)
         if model is None or (row := db.get(model, key)) is None:
             raise HTTPException(404, "Registro não encontrado")
@@ -330,6 +594,15 @@ def create_app(url=None):
             return public(row)
         before = public(row)
         row.archived = body.archived
+        if not body.archived and model is Membership:
+            validate_group_schedules(db, row.group_id)
+        if not body.archived and model is User and row.role == "teacher":
+            for group_id in db.scalars(
+                select(Membership.group_id).where(
+                    Membership.user_id == row.id, Membership.archived.is_(False)
+                )
+            ):
+                validate_group_schedules(db, group_id)
         if model is User and body.archived:
             db.execute(delete(Session).where(Session.user_id == row.id))
         audit(db, actor, "archive" if body.archived else "restore", row, before)
@@ -353,4 +626,6 @@ def create_app(url=None):
             )
         ]
 
+    install_enrollment(app, DB, Coordinator, active_group, active, public, audit)
+    install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
     return app

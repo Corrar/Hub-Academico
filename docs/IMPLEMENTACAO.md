@@ -1,49 +1,40 @@
-# Roteiro de implementação — 08/09/2026
+# Estado da implementação — 09/09/2026
 
-## Entrega 1: base acadêmica (esta branch)
+Consulte [o relatório de revisão](RELATORIO-REVISAO.md) para achados, validação,
+limitações e informações que o responsável precisa fornecer.
 
-API Python/FastAPI, modelos SQLAlchemy, primeira migração Alembic, contas locais
-provisionadas, sessões revogáveis, permissões, cursos, disciplinas e ofertas,
-vínculos temporais, arquivamento/restauração, auditoria, backup/restauração SQLite
-e testes. O OpenAPI é a superfície executável para validar a API antes do painel.
+| Entrega | Estado do código |
+| --- | --- |
+| Fundação | API FastAPI, cadastros, vínculos, sessões, auditoria e backup SQLite |
+| Painel | Interface web conectada, navegação e permissões por perfil |
+| Homologação | Entradas Vercel/FastAPI, bloqueio de produção, proteção do ambiente |
+| Microsoft/admin | OIDC single tenant com PKCE, MFA administrativo, identidades e sessões |
+| Fluxos acadêmicos | Publicações, entregas, avaliações, eventos, grade, anexos `.txt` e lote |
+| Migração atual | `0003`; executar `alembic upgrade head` antes de iniciar a nova versão |
 
-Escolhas de implementação desta entrega: Python, SQLAlchemy e PostgreSQL como
-alvo; SQLite para desenvolvimento. Expo e o painel web continuam conforme o
-produto. Login local é uma ferramenta provisória de teste, não uma decisão
-sobre autenticação institucional. Nenhum serviço foi contratado ou publicado.
+As entregas anteriores estão em PRs encadeados. A branch de revisão contém esse
+histórico e as novas alterações; a existência de código em uma branch não atualiza
+a `main` nem o serviço da nuvem automaticamente.
 
-## Próximas entregas
+## Pendências de desenvolvimento
 
-1. **Painel da coordenação conectado:** reconstruir as telas existentes, consumir
-   estes cadastros; adicionar períodos/coortes, grade horária e matrícula em lote
-   com prévia, erros por linha e prevenção de duplicidade.
-2. **Identidade institucional:** registrar aplicação Microsoft/Entra com a
-   instituição, validar emissor/audiência/tenant e identidade verificada, vincular
-   conta a usuário aprovado e definir atribuição/revogação de papéis. Só verificar
-   o domínio do e-mail não equivale a autenticar pela Microsoft.
-3. **Professor → aluno:** atividade por ID, prazo do servidor, rascunho/publicação,
-   upload privado, envio/reenvio de entrega, avaliação e devolutiva. Testar acesso
-   cruzado a arquivo e entrega antes de incluir documentos reais.
-4. **App Expo:** reproduzir o design, conectar os perfis, implementar calendário
-   real, busca, materiais, estados vazios/erro/offline e média das atividades do hub.
-5. **Avisos e eventos:** público-alvo, rascunho, publicação/agendamento, inscrição
-   e limites de vagas; push com preferências, tentativas e deduplicação.
-6. **Chamada e frequência:** confirmar a origem institucional e a regra por
-   aula/hora-aula; implementar retificação auditada e visualização por disciplina.
-7. **Piloto institucional:** configurar operação PostgreSQL, login institucional,
-   observabilidade, limites de upload, armazenamento, retenção, rotina de backup
-   com restauração testada e revisão de acessibilidade nas telas implementadas.
+- Aplicativo Expo Android/iOS, navegação móvel, estados offline e validação em dispositivos.
+- Calendário consolidado, agendamento automático de publicações e notificações push
+  com preferências, retentativas e deduplicação.
+- Anexos PDF/Office com armazenamento privado, verificação de malware e política de retenção.
+- Chamada/frequência, após confirmar o diário oficial e a regra de cálculo com a coordenação.
+- Administração operacional adicional: recuperação supervisionada, alertas,
+  revogação individual de sessão e configurações editáveis autorizadas.
+- Acessibilidade e QA visual completos; a sintaxe JavaScript não substitui essas verificações.
 
-## Critério para concluir a próxima entrega
+## Pendências de ativação
 
-A coordenação consegue criar a estrutura e matricular um aluno pelo painel; o
-professor associado e o aluno matriculado veem a mesma oferta; outra conta não
-consegue consultá-la. A operação sobrevive ao reinício e aparece na auditoria.
+Registro no Entra, Object ID do administrador, política MFA, PostgreSQL isolado,
+segredos na hospedagem, migrações, URL de homologação e teste de restauração do
+banco hospedado. Não há conta real provisionada nem deploy realizado nesta execução.
 
-## Observações verificadas no protótipo
+## Aceite de segurança
 
-O aluno ainda tem login simulado, upload fictício, detalhe de atividade único,
-estado compartilhado entre entregas e datas fixas. Os arquivos de design não
-foram convertidos nem corrigidos nesta etapa; são referência para reconstrução.
-As telas novas referenciam runtime do editor, sem ser um projeto de app executável.
-`docs/auditoria.html` é histórico; não deve ser usado como indicador atual de progresso.
+Testes locais de regressão e revisão estática são parte da entrega. Pentest da
+nuvem está expressamente adiado até a confirmação do usuário e a definição do
+alvo autorizado. Produção permanece bloqueada até o aceite institucional e operacional.

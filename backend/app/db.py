@@ -4,6 +4,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.pool import NullPool
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
 
@@ -18,6 +19,8 @@ def database_url():
 
 def make_engine(url):
     kwargs = {"connect_args": {"check_same_thread": False}} if url.startswith("sqlite") else {}
+    if os.getenv("APP_ENV") == "staging":
+        kwargs.update(poolclass=NullPool, connect_args={"connect_timeout": 10})
     engine = create_engine(url, pool_pre_ping=True, **kwargs)
     if engine.dialect.name == "sqlite":
 

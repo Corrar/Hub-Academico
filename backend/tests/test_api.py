@@ -306,7 +306,7 @@ def test_cannot_archive_coordinator(system):
 
 def test_production_is_not_silently_enabled(monkeypatch):
     monkeypatch.setenv("APP_ENV", "production")
-    with pytest.raises(RuntimeError, match="desenvolvimento"):
+    with pytest.raises(RuntimeError, match="aceite institucional"):
         create_app()
 
 
