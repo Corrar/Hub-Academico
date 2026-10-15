@@ -174,7 +174,7 @@ def test_roll_call_scope_and_calendar_rules(system):
     by_teacher = client.get(ROOT + f"/attendance/summary?student_id={ana}", headers=teacher)
     assert by_teacher.status_code == 200 and by_teacher.json()["student"]["id"] == ana
     by_other = client.get(ROOT + f"/attendance/summary?student_id={ana}", headers=other_headers)
-    assert by_other.json()["groups"] == []
+    assert by_other.status_code == 404
     assert (
         client.get(ROOT + f"/groups/{groups[0]['id']}/students", headers=other_headers).status_code
         == 404

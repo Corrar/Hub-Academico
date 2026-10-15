@@ -63,9 +63,11 @@ npm ci --prefix frontend-tests
 npm test --prefix frontend-tests
 ```
 
-Para a homologação desta revisão, publique o backend e o frontend da mesma
-branch: a página inicial e o calendário utilizam duas novas consultas da API.
-Não há novas variáveis nem migração de banco nesta alteração visual.
+Para a homologação, publique o backend e o frontend da mesma branch: as telas de
+chamada, frequência, lembretes e senha usam consultas novas da API. A revisão de
+outubro/2026 exige `alembic upgrade head` (migração `0004`) no backend antes do
+deploy. Anexos acima de 4,5 MB não atravessam as funções da Vercel; por isso o
+limite padrão do backend é 4 MiB (`ATTACHMENT_MAX_MB`).
 
 ## Erro 404 no login e primeiro acesso
 

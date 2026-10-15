@@ -1,73 +1,86 @@
 # Hub Acadêmico — Fatec Adamantina
 
-Hub acadêmico em Python/FastAPI com painel web para alunos, professores, coordenação e administrador. O aplicativo Expo faz parte do roteiro e ainda não foi implementado.
+Hub acadêmico em Python/FastAPI com painel web responsivo para alunos,
+professores, coordenação e administrador. O aplicativo Expo faz parte do roteiro
+e ainda não foi implementado; o painel funciona no celular e no computador.
 
 ## Estado atual
 
-O projeto contém os protótipos originais, o backend e um **painel acadêmico
-conectado à API**, disponível em `/panel/` no mesmo servidor. O app Expo ainda
-não foi implementado. Esta versão serve ao desenvolvimento local com dados
-fictícios; a liberação para operação institucional continua bloqueada.
+O backend e o **painel acadêmico conectado à API** (em `/panel/` no mesmo
+servidor ou em `frontend/` na Vercel) cobrem os fluxos do produto para os três
+perfis. Esta versão serve à homologação com dados fictícios; a liberação para
+operação institucional continua bloqueada até as configurações e aceites
+descritos em [o que depende de terceiros](docs/RELATORIO-ANALISE-2026-10.md#o-que-depende-de-terceiros).
 
-| Área | Implementação nesta versão |
+| Área | Implementação |
 | --- | --- |
-| API | FastAPI, rotas `/api/v1`, contrato OpenAPI em `/docs` |
-| Banco | SQLAlchemy, migração Alembic; SQLite local e driver PostgreSQL |
-| Acesso local | Contas provisionadas, senhas Argon2, sessões opacas com expiração e logout |
-| Coordenação | Criar usuários; criar/editar cursos, disciplinas e ofertas de turma |
-| Vínculos | Matrícula de aluno e atribuição de professor com vigência explícita |
-| Permissões | Aluno/professor só consulta turma com vínculo ativo; gestão restrita à coordenação |
-| Histórico | Auditoria transacional e arquivamento/restauração de cadastros |
-| Recuperação local | Backup SQLite e restauração em novo arquivo com verificação |
-| Painel web | Visão geral, cadastros, vínculos, arquivamento e auditoria; paginação e seletores com busca |
-| Sessão web | Cookie HttpOnly/SameSite/Secure por padrão, validação de origem e CSRF |
-| Desenvolvedor/admin | Console de usuários, identidades, permissões, bloqueios e sessões; MFA/contexto Entra exigido |
-| Microsoft institucional | Fluxo OIDC implementado; ativação depende do registro e configuração no tenant da Fatec |
-| Design | Referências originais preservadas em `design/` e `fatec-adamantina-app/` |
+| API | FastAPI, rotas `/api/v1`, contrato OpenAPI em `/docs` (fora da homologação) |
+| Banco | SQLAlchemy e Alembic (revisão `0004`); SQLite local e PostgreSQL |
+| Acesso | Contas provisionadas, Argon2, sessões opacas com 30 min de inatividade e 8 h no máximo, troca e redefinição de senha |
+| Estrutura | Cursos, disciplinas, turmas, usuários, vínculos com vigência, matrícula em lote, busca e filtros |
+| Grade | Horários com vigência, sala e verificação de conflito de turma, sala e professor |
+| Chamada e frequência | Chamada pelo professor, correção auditada, frequência por disciplina com saldo de faltas |
+| Atividades | Rascunho, envio, desfazer no prazo, situação nos cartões, resumo de entregas, fila de avaliação e devolutiva |
+| Materiais e anexos | PDF, Office, imagens, CSV, notebooks e texto, com verificação de assinatura e download seguro |
+| Avisos e eventos | Público obrigatório, alcance antes de publicar, agendamento, saída do ar, inscrições e lista de inscritos |
+| Lembretes | Novidades e notas recebidas com contador de não lidos |
+| Coordenação | Visão geral com alertas (turma sem professor ou grade, vínculos a vencer) e auditoria |
+| Permissões | Toda leitura e escrita valida papel e vínculo no servidor |
+| Histórico | Auditoria imutável, arquivamento e restauração em vez de exclusão |
+| Desenvolvedor/admin | Usuários, identidades, permissões, bloqueios e sessões (individual ou todas); MFA Entra exigido |
+| Microsoft institucional | OIDC implementado; ativação depende do tenant da Fatec |
+| Homologação | Entradas Vercel/Render, proteção do ambiente, `seed-demo` com dados fictícios |
 
-Veja [como executar o backend](backend/README.md) e o
-[roteiro de implementação](docs/IMPLEMENTACAO.md).
+Veja o [relatório de análise de outubro/2026](docs/RELATORIO-ANALISE-2026-10.md)
+para o diagnóstico, o que foi implementado, as decisões tomadas e a verificação.
+
+## Executar localmente
+
+Instruções completas em [backend/README.md](backend/README.md). Resumo, na pasta
+`backend` com Python 3.12:
+
+```bash
+python -m pip install -r requirements-dev.lock
+cp .env.example .env
+alembic upgrade head
+python -m app.cli bootstrap --email coordenacao.dev@fatec.sp.gov.br --name "Coordenação de teste"
+python -m app.cli seed-demo        # opcional: base fictícia para explorar todos os fluxos
+uvicorn app.main:create_app --factory --reload --host 127.0.0.1
+```
+
+Acesse `http://127.0.0.1:8000/panel/`.
 
 ## Fontes do produto
 
 - `PRODUCT.md`: requisitos e decisões do produto.
 - `design/README.md`: identidade visual e referências de aluno, professor e coordenação.
 - `fatec-adamantina-app/README.md`: instruções do bundle original de design.
-- `docs/auditoria.html`: diagnóstico histórico do protótipo em 05/09/2026.
-  Suas referências a “nenhum repositório”, “nenhuma tela de professor/coordenação”
-  e “nenhum backend” já não descrevem o estado desta branch.
+- `docs/README.md`: índice de relatórios, roteiros e estrutura do repositório.
 
-Os nomes e números dos protótipos são fictícios. O backend inicia vazio.
+Os nomes e números dos protótipos e do `seed-demo` são fictícios. O backend inicia vazio.
 
 ## Homologação na nuvem
 
-Configuração Vercel/FastAPI e modo de teste protegido na branch `feat/cloud-staging`.
-Veja o [roteiro de homologação](docs/HOMOLOGACAO-VERCEL.md), incluindo a correção
-do erro `vite: command not found`, banco separado e variáveis obrigatórias.
-A preparação não significa que houve deploy nem libera produção.
-
 Na arquitetura separada recomendada, o backend FastAPI roda no Render e o painel
-em `frontend/` roda na Vercel. O projeto Vercel deve usar Root Directory `frontend`;
-o proxy server-side mantém a senha da proteção fora do navegador e encaminha a API
-para `https://app-fatec.onrender.com`.
+em `frontend/` roda na Vercel com Root Directory `frontend`; o proxy server-side
+mantém a senha da proteção fora do navegador. Veja o
+[roteiro de homologação](docs/HOMOLOGACAO-VERCEL.md) e o
+[guia do frontend](frontend/README.md). Execute `alembic upgrade head` antes de
+iniciar esta versão (revisão `0004`).
 
 ## Microsoft e administrador
 
 Veja [como ativar o login e provisionar o primeiro administrador](docs/MICROSOFT-ADMIN.md).
-Execute `alembic upgrade head`: a migração atual é `0003` (fluxos acadêmicos). A `0002` encerra sessões antigas e preserva cadastros.
-A autenticação real e a validação no navegador ainda dependem da configuração institucional.
+Com Microsoft configurado, o login local, a troca de senha local e o `seed-demo`
+ficam desativados.
 
-## Fluxos acadêmicos desta branch
+## Testes
 
-- Atividades, materiais, avisos e eventos: público explícito, rascunho, publicação,
-  edição com controle de versão, busca e arquivamento/restauração.
-- Entregas privadas, prazo pelo servidor, avaliação e feedback. A média do hub não
-  representa boletim oficial.
-- Eventos: inscrição, cancelamento e vagas verificadas no PostgreSQL.
-- Grade: vigência, sala, turma e conflito de professor considerando os vínculos.
-- Matrículas em lote: até 100 e-mails, prévia e aplicação transacional.
-- Anexos privados limitados a texto UTF-8 `.txt`, 512 KiB e 10 arquivos por registro.
+```bash
+cd backend && python -m pytest -q && ruff check . && ruff format --check . && alembic check
+npm ci --prefix frontend-tests && npm test --prefix frontend-tests
+node scripts/sync-frontend.mjs --check
+```
 
-Consulte o [relatório de revisão e pendências](docs/RELATORIO-REVISAO.md) e o
-[mapa das pastas](docs/ESTRUTURA.md). O pentest remoto aguarda a confirmação do
-responsável de que a homologação está publicada.
+O workflow `.github/workflows/backend.yml` executa as mesmas verificações em
+SQLite e PostgreSQL.

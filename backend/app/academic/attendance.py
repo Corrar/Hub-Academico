@@ -334,11 +334,15 @@ def install_attendance(app, DB, Actor, visible_groups, public):
         elif actor.role != "student":
             raise HTTPException(422, "Informe o aluno")
         groups = visible_groups(student).with_only_columns(ClassGroup.id)
-        shared = visible_groups(actor).where(ClassGroup.id.in_(groups))
-        items = [
-            group_frequency(db, student.id, row.id)
-            for row in db.scalars(shared.order_by(ClassGroup.id).limit(100))
-        ]
+        shared = list(
+            db.scalars(
+                visible_groups(actor).where(ClassGroup.id.in_(groups)).order_by(ClassGroup.id)
+            )
+        )
+        # Staff only reach students of their own classes; never confirm other ids.
+        if student is not actor and not shared and actor.role != "coordinator":
+            raise HTTPException(404, "Aluno não encontrado")
+        items = [group_frequency(db, student.id, row.id) for row in shared[:100]]
         recorded = sum(item["recorded_lessons"] for item in items)
         absences = sum(item["absences"] for item in items)
         return {
