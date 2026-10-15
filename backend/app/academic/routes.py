@@ -1,32 +1,81 @@
 """Scoped academic workflows; drafts, deadlines and capacity enforced by the server."""
 
 import json
-import re
 from datetime import date, datetime, timezone
 from typing import Literal
-from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException, Query, Request, Response
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 from starlette.concurrency import run_in_threadpool
 
 from .. import schemas, security
 from ..models import (
     Attachment,
+    AttendanceLesson,
     Audit,
     ClassGroup,
     Enrollment,
+    Membership,
+    NotificationState,
     Publication,
     Schedule,
     Submission,
     User,
     now,
 )
+from . import files
+from .clock import ZONE, local_today
 from .scheduling import lock_schedule, validate_schedule
 from .schemas import GradeInput, PublicationInput, ScheduleInput, SubmissionInput
 
 
+def live(stamp):
+    """Published, already visible and not yet taken down, by the server clock."""
+    return and_(
+        Publication.draft.is_(False),
+        or_(Publication.publish_at.is_(None), Publication.publish_at <= stamp),
+        or_(Publication.expires_at.is_(None), Publication.expires_at > stamp),
+    )
+
+
+def state(row, stamp=None):
+    stamp = stamp or now()
+    if row.archived:
+        return "archived"
+    if row.draft:
+        return "draft"
+    if row.publish_at and security.utc(row.publish_at) > stamp:
+        return "scheduled"
+    if row.expires_at and security.utc(row.expires_at) <= stamp:
+        return "expired"
+    return "published"
+
+
+# Publications appear in feeds from the moment they become visible.
+visible_since = func.coalesce(Publication.publish_at, Publication.created_at)
+
+
 def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit):
+    upload_limit = files.max_bytes()
+
+    def present(row):
+        return {**public(row), "state": state(row)}
+
+    def active_students(group_id, on=None):
+        on = on or local_today()
+        return (
+            select(User.id)
+            .join(Membership, Membership.user_id == User.id)
+            .where(
+                Membership.group_id == group_id,
+                Membership.archived.is_(False),
+                Membership.starts_on <= on,
+                Membership.ends_on >= on,
+                User.role == "student",
+                User.archived.is_(False),
+            )
+        )
+
     def group_allowed(db, actor, key):
         if not db.scalar(visible_groups(actor).where(ClassGroup.id == key)):
             raise HTTPException(404, "Turma não encontrada")
@@ -46,7 +95,7 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
             raise HTTPException(404, "Publicação não encontrada")
         if row.group_id:
             group_allowed(db, actor, row.group_id)
-        if write or row.draft or row.archived:
+        if write or row.archived or state(row) != "published":
             manager(db, actor, row)
         return row
 
@@ -107,9 +156,7 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
         """Home counters from the same membership scope as academic reads."""
         groups = visible_groups(actor).with_only_columns(ClassGroup.id)
         scope = or_(Publication.audience == "institution", Publication.group_id.in_(groups))
-        published = select(Publication).where(
-            scope, Publication.archived.is_(False), Publication.draft.is_(False)
-        )
+        published = select(Publication).where(scope, Publication.archived.is_(False), live(now()))
         activities = published.where(Publication.kind == "activity")
         sent = select(Submission.publication_id).where(
             Submission.student_id == actor.id,
@@ -131,7 +178,7 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
                     Submission.grade.is_(None),
                 )
             )
-        today = datetime.now(ZoneInfo("America/Sao_Paulo")).date()
+        today = local_today()
         lessons = (
             select(Schedule)
             .where(
@@ -144,14 +191,26 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
             .order_by(Schedule.starts_minute, Schedule.id)
         )
         materials = published.where(Publication.kind == "material")
+        recorded = []
+        if actor.role != "student":
+            recorded = list(
+                db.scalars(
+                    select(AttendanceLesson.schedule_id).where(
+                        AttendanceLesson.lesson_date == today,
+                        AttendanceLesson.archived.is_(False),
+                        AttendanceLesson.group_id.in_(groups),
+                    )
+                )
+            )
         return {
             "date": today.isoformat(),
+            "recorded_today": recorded,
             "groups_count": db.scalar(select(func.count()).select_from(groups.subquery())),
             "pending_count": pending_count,
             "material_count": db.scalar(select(func.count()).select_from(materials.subquery())),
             "lessons_today": [public(row) for row in db.scalars(lessons)],
             "upcoming": [
-                public(row)
+                present(row)
                 for row in db.scalars(
                     pending.where(Publication.due_at >= now())
                     .order_by(Publication.due_at, Publication.id)
@@ -159,10 +218,10 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
                 )
             ],
             "recent": [
-                public(row)
+                present(row)
                 for row in db.scalars(
                     published.where(Publication.kind.in_(["notice", "event"]))
-                    .order_by(Publication.created_at.desc(), Publication.id)
+                    .order_by(visible_since.desc(), Publication.id)
                     .limit(8)
                 )
             ],
@@ -171,7 +230,7 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
     @app.get("/api/v1/learning/calendar")
     def calendar(db: DB, actor: Actor, month: str = Query(pattern=r"^20\d{2}-(0[1-9]|1[0-2])$")):
         year, number = map(int, month.split("-"))
-        zone = ZoneInfo("America/Sao_Paulo")
+        zone = ZONE
         start = datetime(year, number, 1, tzinfo=zone).astimezone(timezone.utc)
         end = datetime(year + (number == 12), number % 12 + 1, 1, tzinfo=zone).astimezone(
             timezone.utc
@@ -183,7 +242,7 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
                 .where(
                     or_(Publication.audience == "institution", Publication.group_id.in_(groups)),
                     Publication.archived.is_(False),
-                    Publication.draft.is_(False),
+                    live(now()),
                     or_(
                         (Publication.kind == "activity")
                         & (Publication.due_at >= start)
@@ -211,7 +270,7 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
             )
         )
         return {
-            "publications": [public(row) for row in publications[:500]],
+            "publications": [present(row) for row in publications[:500]],
             "lessons": [public(row) for row in lessons[:500]],
             "truncated": len(publications) > 500 or len(lessons) > 500,
         }
@@ -244,19 +303,55 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
         if actor.role == "student":
             if archived:
                 raise HTTPException(403, "Histórico restrito à equipe acadêmica")
-            query = query.where(Publication.draft.is_(False))
+            query = query.where(live(now()))
         elif actor.role == "teacher":
-            query = query.where(or_(Publication.draft.is_(False), Publication.audience == "group"))
+            query = query.where(or_(live(now()), Publication.audience == "group"))
             if archived:
                 query = query.where(Publication.audience == "group")
-        return [
-            public(row)
-            for row in db.scalars(
-                query.order_by(Publication.created_at.desc(), Publication.id)
-                .offset(offset)
-                .limit(limit)
+        rows = list(
+            db.scalars(
+                query.order_by(visible_since.desc(), Publication.id).offset(offset).limit(limit)
             )
-        ]
+        )
+        result = [present(row) for row in rows]
+        if kind == "activity" and rows:
+            if actor.role == "student":
+                mine = {
+                    item.publication_id: item
+                    for item in db.scalars(
+                        select(Submission).where(
+                            Submission.student_id == actor.id,
+                            Submission.publication_id.in_([row.id for row in rows]),
+                            Submission.archived.is_(False),
+                        )
+                    )
+                }
+                for item in result:
+                    item["my_submission"] = submission_state(mine.get(item["id"]))
+            else:
+                for item in result:
+                    item.update(delivery_counts(db, item["id"], item["group_id"]))
+        return result
+
+    def submission_state(row):
+        if row is None:
+            return None
+        return {
+            "state": "graded" if row.grade is not None else "draft" if row.draft else "submitted",
+            "grade": row.grade,
+            "submitted_at": row.submitted_at,
+        }
+
+    def delivery_counts(db, key, group_id):
+        submitted, graded = db.execute(
+            select(func.count(Submission.id), func.count(Submission.grade)).where(
+                Submission.publication_id == key,
+                Submission.draft.is_(False),
+                Submission.archived.is_(False),
+            )
+        ).one()
+        students = db.scalar(select(func.count()).select_from(active_students(group_id).subquery()))
+        return {"students_count": students, "submitted_count": submitted, "graded_count": graded}
 
     @app.post("/api/v1/learning/publications", status_code=201)
     def create(body: PublicationInput, db: DB, actor: Actor):
@@ -265,7 +360,7 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
         db.add(row)
         audit(db, actor, "create", row)
         db.commit()
-        return public(row)
+        return present(row)
 
     @app.put("/api/v1/learning/publications/{key}")
     def update(key: str, body: PublicationInput, db: DB, actor: Actor):
@@ -280,6 +375,8 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
             raise HTTPException(409, "Não é permitido transferir publicação ou alterar o público")
         if not row.draft and body.draft:
             raise HTTPException(409, "Use arquivamento para retirar uma publicação")
+        if state(row) == "published" and body.publish_at and security.utc(body.publish_at) > now():
+            raise HTTPException(409, "Publicação já visível não pode voltar a ser agendada")
         if row.kind == "event":
             count = db.scalar(
                 select(func.count())
@@ -294,7 +391,7 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
         row.version += 1
         audit(db, actor, "update", row, before)
         db.commit()
-        return public(row)
+        return present(row)
 
     @app.patch("/api/v1/learning/publications/{key}/archive")
     def archive(key: str, body: schemas.ArchiveInput, db: DB, actor: Actor):
@@ -304,12 +401,12 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
         row.version += 1
         audit(db, actor, "archive" if body.archived else "restore", row, before)
         db.commit()
-        return public(row)
+        return present(row)
 
     @app.put("/api/v1/learning/activities/{key}/submission")
     def submit(key: str, body: SubmissionInput, db: DB, actor: Actor):
         row = publication(db, actor, key, lock=True)
-        if actor.role != "student" or row.kind != "activity" or row.draft:
+        if actor.role != "student" or row.kind != "activity" or state(row) != "published":
             raise HTTPException(403, "Entrega restrita ao aluno da atividade publicada")
         if security.now() > security.utc(row.due_at):
             raise HTTPException(409, "Prazo de entrega encerrado")
@@ -343,6 +440,7 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
         actor: Actor,
         offset: int = Query(0, ge=0),
         limit: int = Query(25, ge=1, le=100),
+        pending: bool = False,
     ):
         activity = publication(db, actor, key)
         if activity.kind != "activity":
@@ -355,10 +453,51 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
             if actor.role == "student"
             else query.where(Submission.draft.is_(False))
         )
+        if pending:
+            query = query.where(Submission.grade.is_(None))
+        rows = db.execute(
+            query.join(User, User.id == Submission.student_id)
+            .add_columns(User.name)
+            .order_by(User.name, Submission.id)
+            .offset(offset)
+            .limit(limit)
+        )
         return [
-            {**public(row), "student_name": db.get(User, row.student_id).name}
-            for row in db.scalars(query.order_by(Submission.student_id).offset(offset).limit(limit))
+            {
+                **public(row),
+                "student_name": name,
+                "late": bool(
+                    row.submitted_at
+                    and security.utc(row.submitted_at) > security.utc(activity.due_at)
+                ),
+            }
+            for row, name in rows
         ]
+
+    @app.get("/api/v1/learning/activities/{key}/summary")
+    def delivery_summary(key: str, db: DB, actor: Actor):
+        activity = publication(db, actor, key, write=True)
+        if activity.kind != "activity":
+            raise HTTPException(404, "Atividade não encontrada")
+        sent = select(Submission.student_id).where(
+            Submission.publication_id == key,
+            Submission.draft.is_(False),
+            Submission.archived.is_(False),
+        )
+        missing = db.execute(
+            select(User.id, User.name)
+            .where(User.id.in_(active_students(activity.group_id)), User.id.not_in(sent))
+            .order_by(User.name, User.id)
+            .limit(200)
+        )
+        counts = delivery_counts(db, key, activity.group_id)
+        return {
+            **counts,
+            "pending_count": counts["submitted_count"] - counts["graded_count"],
+            "missing": [{"id": item, "name": name} for item, name in missing],
+            "due_at": activity.due_at,
+            "closed": security.now() > security.utc(activity.due_at),
+        }
 
     @app.put("/api/v1/learning/submissions/{key}/grade")
     def grade(key: str, body: GradeInput, db: DB, actor: Actor):
@@ -371,6 +510,7 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
             raise HTTPException(409, "Entrega indisponível ou alterada")
         before = public(row)
         row.grade, row.feedback = body.grade, body.feedback
+        row.graded_at = security.now() if body.grade is not None else None
         row.version += 1
         audit(db, actor, "graded", row, before)
         db.commit()
@@ -398,7 +538,11 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
     @app.put("/api/v1/learning/events/{key}/enrollment")
     def enroll(key: str, body: schemas.ArchiveInput, db: DB, actor: Actor):
         event = publication(db, actor, key, lock=True)
-        if event.kind != "event" or event.draft or security.now() >= security.utc(event.starts_at):
+        if (
+            event.kind != "event"
+            or state(event) != "published"
+            or security.now() >= security.utc(event.starts_at)
+        ):
             raise HTTPException(409, "Inscrição fora do período permitido")
         row = db.scalar(
             select(Enrollment).where(
@@ -421,6 +565,76 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
         audit(db, actor, "event_cancel" if body.archived else "event_enroll", row, before)
         db.commit()
         return {"enrolled": not row.archived}
+
+    @app.get("/api/v1/learning/events/{key}/enrollments")
+    def enrollments(
+        key: str,
+        db: DB,
+        actor: Actor,
+        offset: int = Query(0, ge=0),
+        limit: int = Query(50, ge=1, le=100),
+    ):
+        event = publication(db, actor, key, write=True)
+        if event.kind != "event":
+            raise HTTPException(404, "Evento não encontrado")
+        rows = db.execute(
+            select(Enrollment.created_at, User.id, User.name, User.email, User.role)
+            .join(User, User.id == Enrollment.user_id)
+            .where(Enrollment.publication_id == key, Enrollment.archived.is_(False))
+            .order_by(Enrollment.created_at, Enrollment.id)
+            .offset(offset)
+            .limit(limit)
+        )
+        return [
+            {"user_id": user, "name": name, "email": email, "role": role, "created_at": created}
+            for created, user, name, email, role in rows
+        ]
+
+    @app.get("/api/v1/learning/reach")
+    def reach(
+        db: DB,
+        actor: Actor,
+        audience: Literal["group", "institution"],
+        group_id: str | None = Query(None, max_length=36),
+    ):
+        """Show how many people a publication reaches before it is confirmed."""
+        if actor.role == "student":
+            raise HTTPException(403, "Escrita restrita à equipe acadêmica")
+        if audience == "institution":
+            if actor.role != "coordinator":
+                raise HTTPException(403, "Publicação institucional exige coordenação")
+            counts = dict(
+                db.execute(
+                    select(User.role, func.count())
+                    .where(User.archived.is_(False))
+                    .group_by(User.role)
+                ).all()
+            )
+        else:
+            if not group_id:
+                raise HTTPException(422, "Selecione a turma")
+            group_allowed(db, actor, group_id)
+            today = local_today()
+            counts = dict(
+                db.execute(
+                    select(User.role, func.count(func.distinct(User.id)))
+                    .join(Membership, Membership.user_id == User.id)
+                    .where(
+                        Membership.group_id == group_id,
+                        Membership.archived.is_(False),
+                        Membership.starts_on <= today,
+                        Membership.ends_on >= today,
+                        User.archived.is_(False),
+                    )
+                    .group_by(User.role)
+                ).all()
+            )
+        return {
+            "students": counts.get("student", 0),
+            "teachers": counts.get("teacher", 0),
+            "coordinators": counts.get("coordinator", 0),
+            "total": sum(counts.values()),
+        }
 
     @app.get("/api/v1/learning/schedule")
     def schedule(
@@ -526,39 +740,68 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
         attachment_scope(db, actor, kind, key)
         field = Attachment.publication_id if kind == "publication" else Attachment.submission_id
         return [
-            {"id": row.id, "name": row.name}
+            {
+                "id": row.id,
+                "name": row.name,
+                "media_type": row.media_type,
+                "size": row.size,
+                "created_at": row.created_at,
+            }
             for row in db.scalars(
                 select(Attachment).where(field == key, Attachment.archived.is_(False)).limit(10)
             )
         ]
+
+    @app.get("/api/v1/learning/attachment-types")
+    def attachment_types(actor: Actor):
+        return {
+            "extensions": files.accepted_extensions(),
+            "max_bytes": upload_limit,
+            "text_max_bytes": min(files.TEXT_LIMIT, upload_limit),
+        }
 
     @app.post("/api/v1/learning/{kind}/{key}/attachments", status_code=201)
     async def upload(
         kind: Literal["publication", "submission"], key: str, request: Request, db: DB, actor: Actor
     ):
         await run_in_threadpool(attachment_scope, db, actor, kind, key)
-        if request.headers.get("content-type", "").split(";")[0] != "text/plain":
-            raise HTTPException(415, "Homologação aceita somente arquivos de texto UTF-8 (.txt)")
+        declared = request.headers.get("content-type", "").split(";")[0].strip().lower()
+        if declared not in files.DECLARED:
+            raise HTTPException(415, "Tipo de arquivo não aceito")
+        name = files.clean_name(request.headers.get("x-file-name", ""))
+        if not name:
+            raise HTTPException(422, "Use um nome de arquivo simples, com extensão")
+        file_kind = files.kind_for(name)
+        if not file_kind:
+            raise HTTPException(
+                415, "Formatos aceitos: " + ", ".join(files.accepted_extensions()).upper()
+            )
+        maximum = files.limit_for(file_kind, upload_limit)
         content = bytearray()
         async for chunk in request.stream():
-            if len(content) + len(chunk) > 512 * 1024:
-                raise HTTPException(413, "Limite de 512 KiB por arquivo")
+            if len(content) + len(chunk) > maximum:
+                raise HTTPException(413, f"Limite de {maximum // 1024} KiB para este formato")
             content.extend(chunk)
-        try:
-            content.decode("utf-8")
-        except UnicodeError:
-            raise HTTPException(415, "Arquivo deve ser texto UTF-8") from None
-        name = request.headers.get("x-file-name", "anexo.txt")
-        if not re.fullmatch(r"[A-Za-z0-9 _.-]{1,96}\.txt", name):
-            raise HTTPException(422, "Use nome simples terminado em .txt")
-        return await run_in_threadpool(save_attachment, db, actor, kind, key, name, bytes(content))
+        problem = files.verify(file_kind, name, bytes(content))
+        if problem:
+            raise HTTPException(415, problem)
+        return await run_in_threadpool(
+            save_attachment, db, actor, kind, key, name, bytes(content), file_kind.media_type
+        )
 
-    def save_attachment(db, actor, kind, key, name, content):
+    def save_attachment(db, actor, kind, key, name, content, media_type):
         attachment_scope(db, actor, kind, key, write=True)
         field = Attachment.publication_id if kind == "publication" else Attachment.submission_id
         if db.scalar(select(func.count()).select_from(Attachment).where(field == key)) >= 10:
             raise HTTPException(409, "Limite de dez arquivos por registro")
-        row = Attachment(**{field.key: key}, owner_id=actor.id, name=name, content=bytes(content))
+        row = Attachment(
+            **{field.key: key},
+            owner_id=actor.id,
+            name=name,
+            content=bytes(content),
+            media_type=media_type,
+            size=len(content),
+        )
         db.add(row)
         db.flush()
         # Never copy file contents into the audit trail.
@@ -568,11 +811,13 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
                 action="attachment_added",
                 entity="attachments",
                 entity_id=row.id,
-                changes=json.dumps({"name": name, "bytes": len(content), "target": key}),
+                changes=json.dumps(
+                    {"name": name, "bytes": len(content), "type": media_type, "target": key}
+                ),
             )
         )
         db.commit()
-        return {"id": row.id, "name": row.name}
+        return {"id": row.id, "name": row.name, "media_type": media_type, "size": len(content)}
 
     @app.get("/api/v1/learning/attachments/{key}")
     def download(key: str, db: DB, actor: Actor):
@@ -587,9 +832,9 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
         attachment_scope(db, actor, kind, target)
         return Response(
             row.content,
-            media_type="text/plain",
+            media_type=row.media_type,
             headers={
-                "Content-Disposition": f'attachment; filename="{row.name}"',
+                "Content-Disposition": files.disposition(row.name),
                 "Content-Security-Policy": "sandbox; default-src 'none'",
             },
         )
@@ -617,3 +862,79 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
         )
         db.commit()
         return {"id": row.id, "archived": row.archived}
+
+    def feed(db, actor, since=None, limit=30):
+        """In-app reminders: visible publications by others and grades received."""
+        stamp = now()
+        groups = visible_groups(actor).with_only_columns(ClassGroup.id)
+        query = select(Publication).where(
+            or_(Publication.audience == "institution", Publication.group_id.in_(groups)),
+            Publication.archived.is_(False),
+            Publication.creator_id != actor.id,
+            live(stamp),
+        )
+        grades = (
+            select(Submission, Publication)
+            .join(Publication, Publication.id == Submission.publication_id)
+            .where(
+                Submission.student_id == actor.id,
+                Submission.archived.is_(False),
+                Submission.graded_at.is_not(None),
+                Publication.archived.is_(False),
+                Publication.group_id.in_(groups),
+            )
+        )
+        if since:
+            query = query.where(visible_since > since)
+            grades = grades.where(Submission.graded_at > since)
+        items = [
+            {
+                "type": "publication",
+                "id": row.id,
+                "kind": row.kind,
+                "title": row.title,
+                "group_id": row.group_id,
+                "at": security.utc(row.publish_at or row.created_at),
+                "publication": present(row),
+            }
+            for row in db.scalars(query.order_by(visible_since.desc(), Publication.id).limit(limit))
+        ]
+        items += [
+            {
+                "type": "grade",
+                "id": submission.id,
+                "kind": "activity",
+                "title": activity.title,
+                "group_id": activity.group_id,
+                "at": security.utc(submission.graded_at),
+                "grade": submission.grade,
+                "publication": present(activity),
+            }
+            for submission, activity in db.execute(
+                grades.order_by(Submission.graded_at.desc()).limit(limit)
+            )
+        ]
+        return sorted(items, key=lambda item: item["at"], reverse=True)[:limit]
+
+    @app.get("/api/v1/learning/notifications")
+    def notifications(db: DB, actor: Actor, limit: int = Query(30, ge=1, le=50)):
+        marker = db.get(NotificationState, actor.id)
+        read_at = security.utc(marker.read_at) if marker else None
+        items = feed(db, actor, limit=limit)
+        for item in items:
+            item["unread"] = read_at is None or item["at"] > read_at
+        return {
+            "read_at": read_at,
+            "unread": len(feed(db, actor, since=read_at, limit=50)),
+            "items": items,
+        }
+
+    @app.post("/api/v1/learning/notifications/read", status_code=204)
+    def mark_read(db: DB, actor: Actor):
+        marker = db.get(NotificationState, actor.id)
+        if marker:
+            marker.read_at = now()
+        else:
+            db.add(NotificationState(user_id=actor.id, read_at=now()))
+        db.commit()
+        return Response(status_code=204)

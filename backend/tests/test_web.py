@@ -168,7 +168,12 @@ def test_web_academic_flow_persistence_and_scope(system):
     )
     assert membership.status_code == 200
     counts = client.get("/api/v1/dashboard").json()
+    alerts = counts.pop("alerts")
     assert counts == {"courses": 1, "subjects": 1, "groups": 1, "users": 2, "memberships": 1}
+    # The only class has a student but neither a teacher nor a timetable yet.
+    assert alerts["groups_without_teacher"]["count"] == 1
+    assert alerts["groups_without_schedule"]["items"][0]["id"] == group["id"]
+    assert alerts["teacher_memberships_ending"] == 0
     assert (
         client.get("/api/v1/lookup/groups?q=noturno").json()[0]["label"]
         == "Banco de Dados · Noturno A · 2026/2"
@@ -179,7 +184,7 @@ def test_web_academic_flow_persistence_and_scope(system):
     try:
         with TestClient(app, base_url="https://testserver") as restarted:
             restarted.cookies.update(client.cookies)
-            assert restarted.get("/api/v1/dashboard").json() == counts
+            assert restarted.get("/api/v1/dashboard").json() == {**counts, "alerts": alerts}
         client.post("/api/v1/auth/logout")
         token = client.post(
             "/api/v1/auth/login", json={"email": student["email"], "password": PASSWORD}

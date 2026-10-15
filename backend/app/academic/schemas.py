@@ -18,10 +18,20 @@ class PublicationInput(schemas.Input):
     starts_at: AwareDatetime | None = None
     ends_at: AwareDatetime | None = None
     capacity: int | None = Field(None, ge=1, le=100000)
+    publish_at: AwareDatetime | None = None
+    expires_at: AwareDatetime | None = None
     version: int = Field(0, ge=0)
 
     @model_validator(mode="after")
     def consistent(self):
+        if self.expires_at and self.kind != "notice":
+            raise ValueError("Data de saída do ar é exclusiva de avisos")
+        if self.publish_at and self.expires_at and self.expires_at <= self.publish_at:
+            raise ValueError("A saída do ar deve ser posterior à publicação")
+        if self.publish_at and self.due_at and self.due_at <= self.publish_at:
+            raise ValueError("O prazo deve ser posterior à publicação")
+        if self.publish_at and self.starts_at and self.starts_at <= self.publish_at:
+            raise ValueError("O evento deve começar depois da publicação")
         if (self.audience == "group") != bool(self.group_id):
             raise ValueError("Selecione o público e a turma correspondente")
         if self.kind in {"activity", "material"} and self.audience != "group":

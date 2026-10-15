@@ -1,10 +1,9 @@
 import json
 import os
 import secrets
-from datetime import datetime
+from datetime import timedelta
 from pathlib import Path
 from typing import Annotated
-from zoneinfo import ZoneInfo
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -17,6 +16,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from . import schemas, security
 from .academic.attendance import install_attendance
+from .academic.clock import local_today
 from .academic.enrollment import install_enrollment
 from .academic.files import max_bytes
 from .academic.routes import install_learning
@@ -32,6 +32,7 @@ from .models import (
     Course,
     Membership,
     MicrosoftIdentity,
+    Schedule,
     Session,
     Subject,
     User,
@@ -315,7 +316,7 @@ def create_app(url=None):
 
     @app.get("/api/v1/dashboard")
     def dashboard(db: DB, actor: Coordinator):
-        return {
+        counts = {
             key: db.scalar(select(func.count()).select_from(model).where(model.archived.is_(False)))
             for key, model in {
                 "courses": Course,
@@ -324,6 +325,64 @@ def create_app(url=None):
                 "users": User,
                 "memberships": Membership,
             }.items()
+        }
+        return {**counts, "alerts": structure_alerts(db)}
+
+    def structure_alerts(db):
+        """Gaps that leave students without a teacher, a timetable or access soon."""
+        today = local_today()
+        groups = (
+            select(ClassGroup, Subject.name)
+            .join(Subject)
+            .join(Course)
+            .where(
+                ClassGroup.archived.is_(False),
+                Subject.archived.is_(False),
+                Course.archived.is_(False),
+            )
+        )
+        teachers = (
+            select(Membership.group_id)
+            .join(User)
+            .where(
+                Membership.archived.is_(False),
+                Membership.starts_on <= today,
+                Membership.ends_on >= today,
+                User.role == "teacher",
+                User.archived.is_(False),
+            )
+        )
+        timetable = select(Schedule.group_id).where(
+            Schedule.archived.is_(False), Schedule.ends_on >= today
+        )
+
+        def listing(stmt):
+            rows = db.execute(stmt.order_by(Subject.name, ClassGroup.name).limit(6)).all()
+            total = db.scalar(select(func.count()).select_from(stmt.subquery()))
+            return {
+                "count": total,
+                "items": [
+                    {"id": row.id, "label": f"{name} · {row.name} · {row.semester}"}
+                    for row, name in rows[:5]
+                ],
+            }
+
+        ending = db.scalar(
+            select(func.count())
+            .select_from(Membership)
+            .join(User)
+            .where(
+                Membership.archived.is_(False),
+                Membership.ends_on >= today,
+                Membership.ends_on <= today + timedelta(days=30),
+                User.role == "teacher",
+                User.archived.is_(False),
+            )
+        )
+        return {
+            "groups_without_teacher": listing(groups.where(ClassGroup.id.not_in(teachers))),
+            "groups_without_schedule": listing(groups.where(ClassGroup.id.not_in(timetable))),
+            "teacher_memberships_ending": ending,
         }
 
     @app.get("/api/v1/lookup/{resource}")
@@ -652,7 +711,7 @@ def create_app(url=None):
             )
         )
         if actor.role != "coordinator":
-            today = datetime.now(ZoneInfo("America/Sao_Paulo")).date()
+            today = local_today()
             stmt = stmt.join(Membership).where(
                 Membership.user_id == actor.id,
                 Membership.archived.is_(False),
