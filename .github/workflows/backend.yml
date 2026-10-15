@@ -1,9 +1,9 @@
 name: Backend
 on:
   push:
-    paths: ['backend/**', '.github/workflows/backend.yml']
+    paths: ['backend/**', '.github/workflows/backend.yml', 'index.py', 'requirements.txt', 'vercel.json', '.python-version']
   pull_request:
-    paths: ['backend/**', '.github/workflows/backend.yml']
+    paths: ['backend/**', '.github/workflows/backend.yml', 'index.py', 'requirements.txt', 'vercel.json', '.python-version']
 permissions:
   contents: read
 jobs:
@@ -22,7 +22,7 @@ jobs:
       - run: python -m pip install -r requirements-dev.lock
       - run: python -m pytest -q
       - run: ruff check . && ruff format --check .
-      - run: node --check app/static/panel.js
+      - run: for file in app/static/*.js; do node --check "$file"; done
       - run: alembic upgrade head && alembic check
   postgres:
     runs-on: ubuntu-latest
