@@ -23,6 +23,7 @@ from ..models import (
     User,
     now,
 )
+from ..notifications import queue as push_queue
 from . import files
 from .clock import ZONE, local_today
 from .scheduling import lock_schedule, validate_schedule
@@ -359,6 +360,7 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
         row = Publication(**payload(body), creator_id=actor.id)
         db.add(row)
         audit(db, actor, "create", row)
+        push_queue.fanout(db, row)
         db.commit()
         return present(row)
 
@@ -390,6 +392,7 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
             setattr(row, field, value)
         row.version += 1
         audit(db, actor, "update", row, before)
+        push_queue.fanout(db, row)
         db.commit()
         return present(row)
 
@@ -513,6 +516,7 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
         row.graded_at = security.now() if body.grade is not None else None
         row.version += 1
         audit(db, actor, "graded", row, before)
+        push_queue.graded(db, row)
         db.commit()
         return public(row)
 

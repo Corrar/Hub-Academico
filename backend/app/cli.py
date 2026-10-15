@@ -1,4 +1,4 @@
-"""Run from backend/: python -m app.cli bootstrap|seed-demo|backup|restore-check."""
+"""Run from backend/: python -m app.cli <comando>; use --help para a lista."""
 
 import argparse
 import getpass
@@ -48,6 +48,25 @@ def seed_demo(password):
     engine = make_engine(database_url())
     try:
         return seed(make_sessions(engine), password)
+    finally:
+        engine.dispose()
+
+
+def dispatch_notifications(loop_seconds=0):
+    import time
+
+    from .notifications.channels import PushSettings, Sender
+    from .notifications.queue import dispatch
+
+    sender = Sender(PushSettings.from_env())
+    engine = make_engine(database_url())
+    try:
+        while True:
+            with make_sessions(engine)() as db:
+                print(dispatch(db, sender), flush=True)
+            if not loop_seconds:
+                return
+            time.sleep(loop_seconds)
     finally:
         engine.dispose()
 
@@ -110,6 +129,11 @@ def main():
         metavar="VARIAVEL",
         help="Lê a senha comum das contas fictícias desta variável de ambiente",
     )
+    commands.add_parser("vapid-keys", help="Gera o par de chaves VAPID para Web Push")
+    push = commands.add_parser("dispatch-notifications", help="Envia notificações pendentes")
+    push.add_argument(
+        "--loop", type=int, default=0, metavar="SEGUNDOS", help="Repete a cada N segundos"
+    )
     b = commands.add_parser("backup")
     b.add_argument("destination")
     r = commands.add_parser("restore-check")
@@ -133,6 +157,15 @@ def main():
         print("Dados fictícios criados. Contas locais (mesma senha informada):")
         for address in accounts.values():
             print("  " + address)
+    elif args.command == "vapid-keys":
+        from .notifications.webpush import generate_vapid_keys
+
+        private, public = generate_vapid_keys()
+        print("Guarde a chave privada como segredo da hospedagem; nunca a publique.")
+        print("VAPID_PUBLIC_KEY=" + public)
+        print("VAPID_PRIVATE_KEY=" + private)
+    elif args.command == "dispatch-notifications":
+        dispatch_notifications(args.loop)
     elif args.command == "backup":
         backup(args.destination)
         print("Backup criado e integridade verificada.")

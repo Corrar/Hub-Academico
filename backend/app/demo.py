@@ -26,7 +26,7 @@ from .models import (
     User,
     now,
 )
-from .security import passwords
+from .security import passwords, utc
 
 COURSES = [
     ("CD", "Ciência de Dados"),
@@ -140,6 +140,11 @@ class Seeder:
         self.attendance(schedules["APM"], "marcelo", people, {"diego": [1]})
         self.attendance(schedules["MKD"], "renata", people, {"lucas": [1, 2, 4]})
         self.publications(groups, people)
+        # Seeded content is history: only later publications trigger push.
+        self.db.flush()
+        for row in self.db.scalars(select(Publication)):
+            if not row.publish_at or utc(row.publish_at) <= now():
+                row.fanout_at = row.created_at or now()
         self.db.commit()
         return {key: row.email for key, row in people.items()}
 

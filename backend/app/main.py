@@ -1,6 +1,7 @@
 import json
 import os
 import secrets
+from contextlib import asynccontextmanager
 from datetime import timedelta
 from pathlib import Path
 from typing import Annotated
@@ -37,6 +38,8 @@ from .models import (
     Subject,
     User,
 )
+from .notifications.channels import PushSettings
+from .notifications.routes import install_notifications, start_loop
 from .staging import access_gate, validate_staging
 
 
@@ -84,11 +87,23 @@ def create_app(url=None):
     url = url or database_url()
     staging_settings = validate_staging(url) if environment == "staging" else None
     microsoft_settings = MicrosoftSettings.from_env()
+    push_settings = PushSettings.from_env()
     engine = make_engine(url)
     sessions = make_sessions(engine)
+
+    @asynccontextmanager
+    async def lifespan(app):
+        stop = None
+        if push_settings.interval:
+            stop = start_loop(sessions, push_settings, app.state.push_sender)
+        yield
+        if stop:
+            stop.set()
+
     app = FastAPI(
         title="Hub Acadêmico — ambiente de teste",
         version="0.1.0",
+        lifespan=lifespan,
         docs_url=None if staging_settings else "/docs",
         redoc_url=None if staging_settings else "/redoc",
         openapi_url=None if staging_settings else "/openapi.json",
@@ -802,4 +817,5 @@ def create_app(url=None):
     install_enrollment(app, DB, Coordinator, active_group, active, public, audit)
     install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
     install_attendance(app, DB, Actor, visible_groups, public)
+    install_notifications(app, DB, Actor, push_settings)
     return app
