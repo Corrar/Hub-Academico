@@ -215,6 +215,17 @@ def install_admin(app, DB, Administrator, microsoft, public):
         record(db, actor, "sessions_revoked", key, {"reason": body.reason})
         db.commit()
 
+    @app.post("/api/v1/admin/sessions/{key}/revoke", status_code=204)
+    def revoke_session(key: str, body: Reason, db: DB, actor: Administrator):
+        lock(db, actor)
+        session = db.scalar(select(Session).where(Session.id == key))
+        if not session:
+            raise HTTPException(404, "Sessão não encontrada")
+        user_id = session.user_id
+        db.delete(session)
+        record(db, actor, "session_revoked", user_id, {"session": key, "reason": body.reason})
+        db.commit()
+
     @app.get("/api/v1/admin/status")
     def status(db: DB, actor: Administrator):
         revision = db.execute(text("SELECT version_num FROM alembic_version")).scalar()

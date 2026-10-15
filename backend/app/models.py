@@ -151,6 +151,9 @@ class Publication(Record, Base):
     capacity: Mapped[int | None]
     version: Mapped[int] = mapped_column(default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    # Optional visibility window checked with the server clock on every read.
+    publish_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Submission(Record, Base):
@@ -167,6 +170,7 @@ class Submission(Record, Base):
     grade: Mapped[float | None]
     feedback: Mapped[str] = mapped_column(Text, default="")
     version: Mapped[int] = mapped_column(default=1)
+    graded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Enrollment(Record, Base):
@@ -203,3 +207,39 @@ class Attachment(Record, Base):
     owner_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
     name: Mapped[str] = mapped_column(String(100))
     content: Mapped[bytes] = mapped_column(LargeBinary)
+    media_type: Mapped[str] = mapped_column(
+        String(100), default="text/plain", server_default="text/plain"
+    )
+    size: Mapped[int] = mapped_column(default=0, server_default="0")
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class AttendanceLesson(Record, Base):
+    """One recorded class meeting; the roll call is the origin of attendance."""
+
+    __tablename__ = "attendance_lessons"
+    __table_args__ = (UniqueConstraint("schedule_id", "lesson_date"),)
+    group_id: Mapped[str] = mapped_column(ForeignKey("class_groups.id"), index=True)
+    schedule_id: Mapped[str] = mapped_column(ForeignKey("schedules.id"), index=True)
+    lesson_date: Mapped[date] = mapped_column(Date)
+    topic: Mapped[str] = mapped_column(String(200), default="")
+    recorded_by: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    version: Mapped[int] = mapped_column(default=1)
+
+
+class AttendanceRecord(Base):
+    __tablename__ = "attendance_records"
+    __table_args__ = (UniqueConstraint("lesson_id", "student_id"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
+    lesson_id: Mapped[str] = mapped_column(ForeignKey("attendance_lessons.id"), index=True)
+    student_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    present: Mapped[bool] = mapped_column(Boolean)
+
+
+class NotificationState(Base):
+    """Per-user read marker for the in-app reminders feed."""
+
+    __tablename__ = "notification_states"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    read_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

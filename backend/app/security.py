@@ -20,7 +20,14 @@ def utc(value):
     return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
 
 
-def login(db, email, password, ip):
+# Idle timeout renewed by activity, bounded by an absolute lifetime (OWASP).
+IDLE_TIMEOUT = timedelta(minutes=30)
+ABSOLUTE_TIMEOUT = timedelta(hours=8)
+RENEW_BELOW = timedelta(minutes=25)
+
+
+def attempt_buckets(db, email, ip):
+    """Per-account and per-peer counters shared by every password check."""
     # Serialize shared account/peer buckets across PostgreSQL instances.
     # Lock ordering prevents deadlocks; locks live only for this transaction.
     if db.bind.dialect.name == "postgresql":
@@ -44,6 +51,12 @@ def login(db, email, password, ip):
             bucket = LoginAttempt(key=key, attempts=0, window_start=stamp)
             db.add(bucket)
         buckets.append(bucket)
+    return buckets
+
+
+def login(db, email, password, ip):
+    buckets = attempt_buckets(db, email, ip)
+    stamp = now()
     user = db.scalar(select(User).where(User.email == email))
     valid = passwords.verify(password, user.password_hash if user else DUMMY_HASH)
     if (
@@ -61,10 +74,33 @@ def login(db, email, password, ip):
     db.execute(delete(Session).where(Session.expires_at <= stamp))
     token = secrets.token_urlsafe(48)
     db.add(
-        Session(token_hash=digest(token), user_id=user.id, expires_at=stamp + timedelta(minutes=30))
+        Session(
+            token_hash=digest(token),
+            user_id=user.id,
+            expires_at=stamp + IDLE_TIMEOUT,
+            authenticated_at=stamp,
+        )
     )
     db.commit()
     return {"access_token": token, "token_type": "bearer", "expires_in": 1800}
+
+
+def change_password(db, user, current, new, ip, keep_token):
+    """Verify the current secret under the login throttle, then end other sessions."""
+    buckets = attempt_buckets(db, user.email, ip)
+    if not passwords.verify(current, user.password_hash):
+        for bucket in buckets:
+            bucket.attempts += 1
+        db.commit()
+        raise HTTPException(403, "Senha atual incorreta")
+    if current == new:
+        raise HTTPException(422, "A nova senha deve ser diferente da atual")
+    buckets[0].attempts = 0
+    user.password_hash = passwords.hash(new)
+    revoked = db.execute(
+        delete(Session).where(Session.user_id == user.id, Session.token_hash != digest(keep_token))
+    ).rowcount
+    return revoked
 
 
 def authenticate(db, token, require_microsoft=False, admin_context=None):
@@ -84,4 +120,18 @@ def authenticate(db, token, require_microsoft=False, admin_context=None):
         or (admin_context and session.auth_context != admin_context)
     ):
         raise HTTPException(403, "Administrador exige login Microsoft com MFA institucional")
+    renew(db, session)
     return user
+
+
+def renew(db, session):
+    """Slide the idle timeout at most every few minutes, never past the absolute limit."""
+    if not session.authenticated_at:
+        return
+    stamp, expires = now(), utc(session.expires_at)
+    if expires - stamp >= RENEW_BELOW:
+        return
+    renewed = min(stamp + IDLE_TIMEOUT, utc(session.authenticated_at) + ABSOLUTE_TIMEOUT)
+    if renewed > expires:
+        session.expires_at = renewed
+        db.commit()

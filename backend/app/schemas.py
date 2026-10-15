@@ -81,3 +81,17 @@ class MembershipInput(Input):
 
 class ArchiveInput(Input):
     archived: bool
+
+
+class UserUpdate(Input):
+    name: Name
+    role: Literal["student", "teacher"]
+
+
+class PasswordReset(Input):
+    new_password: Password
+
+
+class PasswordChange(Input):
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: Password

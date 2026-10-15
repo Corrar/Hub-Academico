@@ -9,6 +9,10 @@ from sqlalchemy.pool import NullPool
 load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
 
 
+# Alembic head expected by readiness checks and restore verification.
+SCHEMA_REVISION = "0004"
+
+
 class Base(DeclarativeBase):
     pass
 

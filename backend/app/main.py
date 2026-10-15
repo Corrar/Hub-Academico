@@ -11,18 +11,31 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import delete, func, inspect, select, text
+from sqlalchemy import delete, func, inspect, or_, select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from . import schemas, security
+from .academic.attendance import install_attendance
 from .academic.enrollment import install_enrollment
+from .academic.files import max_bytes
 from .academic.routes import install_learning
 from .academic.scheduling import lock_schedule, validate_group_schedules
 from .admin import install_admin
-from .db import database_url, make_engine, make_sessions
+from .db import SCHEMA_REVISION, database_url, make_engine, make_sessions
+from .limits import BodyLimit
 from .microsoft import MicrosoftSettings, install_microsoft
-from .models import AdminGrant, Audit, ClassGroup, Course, Membership, Session, Subject, User
+from .models import (
+    AdminGrant,
+    Audit,
+    ClassGroup,
+    Course,
+    Membership,
+    MicrosoftIdentity,
+    Session,
+    Subject,
+    User,
+)
 from .staging import access_gate, validate_staging
 
 
@@ -103,9 +116,10 @@ def create_app(url=None):
         CORSMiddleware,
         allow_origins=sorted(trusted_origins),
         allow_methods=["GET", "POST", "PUT", "PATCH"],
-        allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
+        allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "X-File-Name"],
         allow_credentials=True,
     )
+    app.add_middleware(BodyLimit, upload_limit=max_bytes())
 
     def check_origin(request):
         if request.headers.get("origin") not in trusted_origins:
@@ -278,7 +292,7 @@ def create_app(url=None):
         response.set_cookie(
             cookie_name,
             token,
-            max_age=1800,
+            max_age=int(security.ABSOLUTE_TIMEOUT.total_seconds()),
             httponly=True,
             secure=secure_cookie,
             samesite=cookie_samesite,
@@ -365,7 +379,7 @@ def create_app(url=None):
     def ready(db: DB):
         try:
             revision = db.execute(text("SELECT version_num FROM alembic_version")).scalar()
-            if revision != "0003":
+            if revision != SCHEMA_REVISION:
                 return JSONResponse(status_code=503, content={"status": "migration_required"})
         except SQLAlchemyError:
             return JSONResponse(status_code=503, content={"status": "database_unavailable"})
@@ -423,17 +437,101 @@ def create_app(url=None):
         offset: int = Query(0, ge=0),
         limit: int = Query(50, ge=1, le=100),
         archived: bool = False,
+        q: str = Query("", max_length=120),
+        role: schemas.Role | None = None,
     ):
+        stmt = select(User).where(User.archived == archived)
+        if q:
+            stmt = stmt.where(
+                or_(
+                    User.name.icontains(q, autoescape=True),
+                    User.email.icontains(q, autoescape=True),
+                )
+            )
+        if role:
+            stmt = stmt.where(User.role == role)
         return [
             public(row)
-            for row in db.scalars(
-                select(User)
-                .where(User.archived == archived)
-                .order_by(User.name, User.id)
-                .offset(offset)
-                .limit(limit)
-            )
+            for row in db.scalars(stmt.order_by(User.name, User.id).offset(offset).limit(limit))
         ]
+
+    def managed_user(db, key):
+        row = active(db, User, key)
+        if row.role == "coordinator" or db.get(AdminGrant, row.id):
+            raise HTTPException(409, "Contas de coordenação exigem fluxo administrativo")
+        return row
+
+    @app.put("/api/v1/users/{key}")
+    def update_user(key: str, body: schemas.UserUpdate, db: DB, actor: Coordinator):
+        lock_schedule(db)
+        row = managed_user(db, key)
+        before = public(row)
+        role_changed = row.role != body.role
+        row.name, row.role = body.name, body.role
+        if role_changed:
+            if body.role == "teacher":
+                for group_id in db.scalars(
+                    select(Membership.group_id).where(
+                        Membership.user_id == row.id, Membership.archived.is_(False)
+                    )
+                ):
+                    validate_group_schedules(db, group_id)
+            # Permissions changed: existing sessions must not keep the old scope.
+            db.execute(delete(Session).where(Session.user_id == row.id))
+        audit(db, actor, "update", row, before)
+        db.commit()
+        return public(row)
+
+    def local_passwords(db, row):
+        if microsoft_settings or db.get(MicrosoftIdentity, row.id):
+            raise HTTPException(403, "A senha desta conta é gerenciada pela Microsoft")
+
+    @app.post("/api/v1/users/{key}/password", status_code=204)
+    def reset_password(key: str, body: schemas.PasswordReset, db: DB, actor: Coordinator):
+        row = managed_user(db, key)
+        local_passwords(db, row)
+        row.password_hash = security.passwords.hash(body.new_password)
+        revoked = db.execute(delete(Session).where(Session.user_id == row.id)).rowcount
+        db.add(
+            Audit(
+                actor_id=actor.id,
+                action="password_reset",
+                entity="users",
+                entity_id=row.id,
+                changes=json.dumps({"sessions_revoked": revoked}),
+            )
+        )
+        db.commit()
+        return Response(status_code=204)
+
+    @app.post("/api/v1/me/password", status_code=204)
+    def change_password(
+        body: schemas.PasswordChange,
+        request: Request,
+        actor: Actor,
+        db: DB,
+        credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
+    ):
+        local_passwords(db, actor)
+        revoked = security.change_password(
+            db,
+            actor,
+            body.current_password,
+            body.new_password,
+            request.client.host if request.client else "unknown",
+            request_token(request, credentials),
+        )
+        db.add(
+            Audit(
+                actor_id=actor.id,
+                action="password_changed",
+                entity="users",
+                entity_id=actor.id,
+                changes=json.dumps({"sessions_revoked": revoked}),
+            )
+        )
+        db.commit()
+        return Response(status_code=204)
 
     def register_catalog(path, model, schema, parent_field=None, parent_model=None):
         def validate_parent(db, body):
@@ -468,15 +566,22 @@ def create_app(url=None):
             offset: int = Query(0, ge=0),
             limit: int = Query(50, ge=1, le=100),
             archived: bool = False,
+            q: str = Query("", max_length=120),
         ):
+            stmt = select(model).where(model.archived == archived)
+            if q:
+                columns = [
+                    model.name,
+                    getattr(model, "code", None),
+                    getattr(model, "semester", None),
+                ]
+                stmt = stmt.where(
+                    or_(*(c.icontains(q, autoescape=True) for c in columns if c is not None))
+                )
             return [
                 public(row)
                 for row in db.scalars(
-                    select(model)
-                    .where(model.archived == archived)
-                    .order_by(model.id)
-                    .offset(offset)
-                    .limit(limit)
+                    stmt.order_by(model.name, model.id).offset(offset).limit(limit)
                 )
             ]
 
@@ -636,4 +741,5 @@ def create_app(url=None):
 
     install_enrollment(app, DB, Coordinator, active_group, active, public, audit)
     install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
+    install_attendance(app, DB, Actor, visible_groups, public)
     return app

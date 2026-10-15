@@ -286,3 +286,42 @@ def test_microsoft_flow_expiration(cloud):
         db.commit()
     assert "auth_error" in finish(cloud, query).headers["location"]
     assert cloud[0].cookies.get("hub_session") is None
+
+
+def test_admin_revokes_one_session_and_microsoft_disables_local_passwords(cloud):
+    client, app, actor, _ = cloud
+    admin_login(cloud)
+    with app.state.sessions() as db:
+        other = User(
+            name="Aluno",
+            email="aluno.ms@fatec.sp.gov.br",
+            role="student",
+            password_hash="unused",
+        )
+        db.add(other)
+        db.flush()
+        first, second = (
+            Session(
+                token_hash="a" * 64, user_id=other.id, expires_at=now() + timedelta(minutes=30)
+            ),
+            Session(
+                token_hash="b" * 64, user_id=other.id, expires_at=now() + timedelta(minutes=30)
+            ),
+        )
+        db.add_all([first, second])
+        db.commit()
+        other_id, first_id = other.id, first.id
+    reason = "Dispositivo perdido pelo aluno"
+    path = "/api/v1/admin/sessions/" + first_id + "/revoke"
+    assert client.post(path, json={"reason": reason}).status_code == 204
+    assert client.post(path, json={"reason": reason}).status_code == 404
+    remaining = client.get("/api/v1/admin/users/" + other_id + "/sessions").json()
+    assert len(remaining) == 1
+    with app.state.sessions() as db:
+        entry = db.scalar(select(Audit).where(Audit.action == "session_revoked"))
+        assert entry.entity_id == other_id and reason in entry.changes
+    # With Microsoft configured, password maintenance is not offered locally.
+    reset = client.post(
+        "/api/v1/users/" + other_id + "/password", json={"new_password": "Senha-local-123456"}
+    )
+    assert reset.status_code == 403

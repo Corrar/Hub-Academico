@@ -10,7 +10,7 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.engine import make_url
 
-from .db import database_url, make_engine, make_sessions
+from .db import SCHEMA_REVISION, database_url, make_engine, make_sessions
 from .main import audit
 from .models import User
 from .schemas import UserCreate
@@ -76,7 +76,7 @@ def restore_check(source, destination):
     with closing(
         sqlite3.connect(Path(destination).resolve().as_uri() + "?mode=ro", uri=True)
     ) as db:
-        if db.execute("SELECT version_num FROM alembic_version").fetchone() != ("0003",):
+        if db.execute("SELECT version_num FROM alembic_version").fetchone() != (SCHEMA_REVISION,):
             raise ValueError("Versão do banco incompatível")
         if db.execute("PRAGMA foreign_key_check").fetchall():
             raise ValueError("Existem vínculos inválidos")
