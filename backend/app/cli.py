@@ -1,4 +1,4 @@
-"""Run from backend/: python -m app.cli bootstrap|backup|restore-check."""
+"""Run from backend/: python -m app.cli bootstrap|seed-demo|backup|restore-check."""
 
 import argparse
 import getpass
@@ -33,6 +33,21 @@ def bootstrap(email, name, password):
             db.flush()
             audit(db, user, "bootstrap", user)
             db.commit()
+    finally:
+        engine.dispose()
+
+
+def seed_demo(password):
+    from .demo import seed
+    from .microsoft import MicrosoftSettings
+
+    if MicrosoftSettings.from_env():
+        raise ValueError("Dados de demonstração usam contas locais; o login Microsoft está ativo.")
+    if len(password) < 12:
+        raise ValueError("A senha de demonstração precisa ter ao menos 12 caracteres.")
+    engine = make_engine(database_url())
+    try:
+        return seed(make_sessions(engine), password)
     finally:
         engine.dispose()
 
@@ -89,6 +104,12 @@ def main():
     first = commands.add_parser("bootstrap")
     first.add_argument("--email", required=True)
     first.add_argument("--name", required=True)
+    demo = commands.add_parser("seed-demo", help="Popula base vazia com dados fictícios")
+    demo.add_argument(
+        "--password-env",
+        metavar="VARIAVEL",
+        help="Lê a senha comum das contas fictícias desta variável de ambiente",
+    )
     b = commands.add_parser("backup")
     b.add_argument("destination")
     r = commands.add_parser("restore-check")
@@ -101,6 +122,17 @@ def main():
             parser.error("As senhas não coincidem")
         bootstrap(args.email, args.name, password)
         print("Coordenação criada. Faça login pela API local.")
+    elif args.command == "seed-demo":
+        if args.password_env:
+            password = os.environ.get(args.password_env, "")
+        else:
+            password = getpass.getpass("Senha comum das contas fictícias (mínimo 12): ")
+            if password != getpass.getpass("Repita a senha: "):
+                parser.error("As senhas não coincidem")
+        accounts = seed_demo(password)
+        print("Dados fictícios criados. Contas locais (mesma senha informada):")
+        for address in accounts.values():
+            print("  " + address)
     elif args.command == "backup":
         backup(args.destination)
         print("Backup criado e integridade verificada.")
