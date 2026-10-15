@@ -3082,6 +3082,7 @@ td .badge + small {
   .login-art {
     display: block;
     width: min(380px, 80%);
+    height: auto;
     margin-top: 24px;
     filter: drop-shadow(0 24px 40px #0000004d);
   }
