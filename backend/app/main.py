@@ -723,13 +723,38 @@ def create_app(url=None):
         offset: int = Query(0, ge=0),
         limit: int = Query(50, ge=1, le=100),
         archived: bool = False,
+        q: str = Query("", max_length=120),
     ):
-        stmt = select(Membership).where(Membership.archived == archived)
+        stmt = (
+            select(Membership, User, ClassGroup, Subject.name)
+            .join(User, User.id == Membership.user_id)
+            .join(ClassGroup, ClassGroup.id == Membership.group_id)
+            .join(Subject, Subject.id == ClassGroup.subject_id)
+            .where(Membership.archived == archived)
+        )
         if group_id:
             stmt = stmt.where(Membership.group_id == group_id)
+        if q:
+            stmt = stmt.where(
+                or_(
+                    User.name.icontains(q, autoescape=True),
+                    User.email.icontains(q, autoescape=True),
+                )
+            )
+        rows = db.execute(
+            stmt.order_by(Subject.name, ClassGroup.name, User.role.desc(), User.name, Membership.id)
+            .offset(offset)
+            .limit(limit)
+        )
         return [
-            public(row)
-            for row in db.scalars(stmt.order_by(Membership.id).offset(offset).limit(limit))
+            {
+                **public(row),
+                "user_name": person.name,
+                "user_email": person.email,
+                "user_role": person.role,
+                "group_label": f"{subject} · {group.name} · {group.semester}",
+            }
+            for row, person, group, subject in rows
         ]
 
     def visible_groups(actor):

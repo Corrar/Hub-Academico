@@ -37,6 +37,21 @@ Herdado do bundle original, com uma correção deliberada.
 original reprovam no contraste WCAG AA (1,67:1 a 2,58:1). Foram substituídos por
 `#5A6873` e `#6B7580` em todas as telas novas. Não reintroduzir os antigos.
 
+## Padrões do painel em código
+
+O painel (`backend/app/static/`, espelhado em `frontend/assets/`) aplica o
+sistema acima com estes padrões, definidos em `panel.css` como tokens
+(`--radius*`, `--shadow*`, `--ease`):
+
+- Datas relativas (`when`, `deadline` em `panel.js`); nunca exibir data ISO ou UUID.
+- Turmas pelo rótulo estruturado (`groupParts`): disciplina em destaque, turma e
+  semestre como apoio.
+- Ação principal da página no cabeçalho (`pageAction`), filtros em controle
+  segmentado (`segmented`) e busca (`searchField`).
+- Status em aviso flutuante (`status`), carregamento com esqueleto e animação
+  desativada por `prefers-reduced-motion`.
+- Estilos só por classes e CSSOM: a CSP do painel bloqueia `style=` inline.
+
 ## Regras que as telas seguem
 
 Valem para a reconstrução em código, não só para o desenho:

@@ -28,6 +28,7 @@ descritos em [o que depende de terceiros](docs/RELATORIO-ANALISE-2026-10.md#o-qu
 | Antivírus | Verificação ClamAV dos anexos, ativada por configuração |
 | Privacidade (LGPD) | Cópia dos dados do titular, aviso de privacidade e retenção automática |
 | Diário oficial | Exportação CSV de frequência e notas por turma |
+| Interface | Datas relativas, agenda semanal, grade da coordenação, cartões com ação contextual, avisos flutuantes e login dividido no computador |
 | Acessibilidade | Auditoria WCAG 2.1 AA sem violações nas telas dos três perfis |
 | Coordenação | Visão geral com alertas (turma sem professor ou grade, vínculos a vencer) e auditoria |
 | Permissões | Toda leitura e escrita valida papel e vínculo no servidor |

@@ -151,6 +151,36 @@ abertura offline, download dos dados e o roteiro ponta a ponta anterior. A
 inscrição real em um serviço de push não pôde ser exercida no navegador sem
 interface gráfica deste ambiente; a cifra e o envio estão cobertos pelos testes.
 
+## Terceira etapa — design, UI e UX
+
+Uma revisão crítica das 35 telas dos três perfis orientou um redesenho do painel
+e do app que mantém a identidade (Plus Jakarta Sans, vermelho no aluno, slate no
+professor e na coordenação) e a política de segurança de conteúdo sem estilos
+inline.
+
+| Problema encontrado | O que mudou |
+| --- | --- |
+| Datas em formato técnico e prazos sem urgência | Datas relativas ("hoje, 19:00", "amanhã", dia da semana) e selos de prazo com cor por proximidade (menos de 24 h, até 3 dias, encerrado) |
+| Turmas como texto corrido ("Disciplina · Turma · 3º sem.") | Rótulo estruturado: disciplina em destaque, turma e semestre como apoio |
+| Mensagens de status presas no topo e listas que "piscam" ao carregar | Avisos flutuantes que somem sozinhos, esqueleto de carregamento e erro com "Tentar novamente" |
+| Ação principal escondida no fim da página | Ação principal no cabeçalho ("Novo aviso", "Nova atividade", "Novo horário") |
+| Cartões de atividade com um único botão "Abrir" | Cartões com situação, prazo e ação contextual (Entregar, Continuar entrega, Ver avaliação, Ver entregas); filtro A fazer / Entregues e média das notas |
+| Agenda como lista longa | Semana navegável com dias marcados, aula em andamento destacada e acesso ao mês |
+| Grade da coordenação em tabela de registros | Grade semanal por horário de início e dia, com cada aula clicável |
+| Vínculos e auditoria com identificadores | Vínculos com nome, e-mail, perfil e turma, com busca e filtro; auditoria com quem, o quê e uma tabela antes/depois legível |
+| Início, perfil e lembretes genéricos | Saudação com a data, próximo prazo em destaque, "Em seguida"; perfil com resumo, atalhos e conta; lembretes agrupados por Hoje, Ontem, Nesta semana |
+| Entregas, avaliações e eventos em diálogos densos | Cartões de entrega com situação e nota em destaque, devolutiva em citação, materiais de apoio separados, vagas com barra de ocupação |
+| Login simples no computador | Tela dividida com a marca, a proposta do Hub e a ilustração do onboarding |
+
+O backend ganhou o filtro `status=todo|done` nas atividades do aluno, a contagem
+de inscritos nos eventos e a listagem de vínculos com nomes legíveis e busca.
+
+Verificação da terceira etapa: 117 testes de API em SQLite (3 ignorados) e 119
+em PostgreSQL 16 (1 ignorado); 20 testes de interface; auditoria axe-core
+WCAG 2.1 A/AA sem violações (um contraste do novo seletor de dias corrigido);
+roteiro ponta a ponta dos quatro perfis, PWA e exportação de dados no Chromium,
+sem erros de console.
+
 ## O que depende de terceiros
 
 | Pendência | O que é necessário |

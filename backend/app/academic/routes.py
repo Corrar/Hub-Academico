@@ -289,12 +289,25 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
         group_id: str | None = Query(None, max_length=36),
         offset: int = Query(0, ge=0),
         limit: int = Query(25, ge=1, le=100),
+        status: Literal["todo", "done"] | None = None,
     ):
         groups = visible_groups(actor).with_only_columns(ClassGroup.id)
         scope = or_(Publication.audience == "institution", Publication.group_id.in_(groups))
         query = select(Publication).where(
             Publication.kind == kind, Publication.archived == archived, scope
         )
+        if status and kind == "activity" and actor.role == "student":
+            sent = select(Submission.publication_id).where(
+                Submission.student_id == actor.id,
+                Submission.draft.is_(False),
+                Submission.archived.is_(False),
+            )
+            # "A fazer": open and not yet sent; "Entregues": sent or graded.
+            query = (
+                query.where(Publication.id.not_in(sent), Publication.due_at > now())
+                if status == "todo"
+                else query.where(Publication.id.in_(sent))
+            )
         if group_id:
             query = query.where(Publication.group_id == group_id)
         if q:
@@ -318,6 +331,22 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
             )
         )
         result = [present(row) for row in rows]
+        if kind == "event":
+            for item in result:
+                item["enrolled_count"] = db.scalar(
+                    select(func.count())
+                    .select_from(Enrollment)
+                    .where(Enrollment.publication_id == item["id"], Enrollment.archived.is_(False))
+                )
+                item["enrolled"] = bool(
+                    db.scalar(
+                        select(Enrollment.id).where(
+                            Enrollment.publication_id == item["id"],
+                            Enrollment.user_id == actor.id,
+                            Enrollment.archived.is_(False),
+                        )
+                    )
+                )
         if kind == "activity" and rows:
             if actor.role == "student":
                 mine = {

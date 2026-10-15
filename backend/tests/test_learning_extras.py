@@ -269,3 +269,49 @@ def test_offsets_are_normalized_to_utc(system):
     assert created["due_at"].startswith("2026-12-11T02:59:00")
     listed = client.get(ROOT + "/publications?kind=activity", headers=people[0][1]).json()
     assert listed[0]["due_at"].startswith("2026-12-11T02:59:00")
+
+
+def test_activity_filters_and_event_counts_for_listing(system):
+    client, _, _ = system
+    groups, people = setup(client)
+    student = people[0][1]
+    first = publication(client, groups[0], title="Aberta")
+    publication(client, groups[0], title="Outra aberta")
+    client.put(
+        ROOT + "/activities/" + first["id"] + "/submission",
+        headers=student,
+        json={"body": "Feito", "draft": False},
+    )
+    titles = lambda status: [  # noqa: E731
+        row["title"]
+        for row in client.get(
+            ROOT + "/publications?kind=activity&status=" + status, headers=student
+        ).json()
+    ]
+    assert titles("todo") == ["Outra aberta"] and titles("done") == ["Aberta"]
+    event = publication(
+        client,
+        groups[0],
+        kind="event",
+        due_at=None,
+        starts_at=iso(timedelta(days=3)),
+        ends_at=iso(timedelta(days=4)),
+        capacity=5,
+    )
+    client.put(
+        ROOT + "/events/" + event["id"] + "/enrollment", headers=student, json={"archived": False}
+    )
+    mine = client.get(ROOT + "/publications?kind=event", headers=student).json()[0]
+    other = client.get(ROOT + "/publications?kind=event", headers=people[1][1]).json()[0]
+    assert (mine["enrolled_count"], mine["enrolled"], other["enrolled"]) == (1, True, False)
+
+
+def test_memberships_listing_is_readable_and_searchable(system):
+    client, _, _ = system
+    groups, people = setup(client)
+    rows = client.get("/api/v1/memberships").json()
+    assert {row["user_role"] for row in rows} == {"student", "teacher"}
+    assert rows[0]["user_role"] == "teacher"  # teacher listed first in each class
+    assert rows[0]["group_label"].startswith("Banco de Dados · A")
+    found = client.get("/api/v1/memberships?q=pessoa 1").json()
+    assert [row["user_name"] for row in found] == ["Pessoa 1"]

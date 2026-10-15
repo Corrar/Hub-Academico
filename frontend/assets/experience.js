@@ -47,6 +47,7 @@ const iconPaths = {
   attendance:
     "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8M16 11l2 2 4-4",
   alert: "M12 3 2 21h20ZM12 10v5M12 18h.01",
+  shield: "M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6ZM9 12l2 2 4-4",
 };
 const pageIcons = {
   dashboard: "home",
@@ -200,8 +201,17 @@ function updateHeading(key) {
   for (const node of [...$("heading-actions").children])
     if (node.id !== "new-record") node.remove();
   if (key === "home") {
-    $("page-title").textContent = user.name;
-    $("page-description").textContent = user.email + " · " + roles[user.role];
+    $("page-title").textContent = greeting(user.name);
+    $("page-description").textContent =
+      longDay(brDate(Date.now())) + " · " + roles[user.role];
+  }
+  if (key === "schedule") {
+    $("page-title").textContent =
+      user.role === "coordinator" ? "Grade de horários" : "Agenda";
+    $("page-description").textContent =
+      user.role === "coordinator"
+        ? "Horários das turmas em cada dia da semana."
+        : "Suas aulas, dia a dia.";
   }
   if (key === "attendance" && user.role !== "student") {
     $("page-title").textContent = "Chamadas e frequência";
@@ -233,6 +243,8 @@ function sectionHeading(title, key, label = "Ver todos") {
   return heading;
 }
 function pager(rows) {
+  // A single short page needs no pagination controls.
+  if (!offset && rows.length < 25) return document.createDocumentFragment();
   const box = el("div", undefined, "pagination"),
     prev = button("Anterior", () => {
       offset = Math.max(0, offset - 25);
@@ -251,38 +263,59 @@ function recentItem(row) {
   const item = button(
       "",
       learningAction(() => openPublication(row)),
-      "recent-item",
+      "recent-item " + row.kind,
     ),
     body = el("div");
+  const moment =
+    row.kind === "activity"
+      ? deadline(row.due_at).text
+      : row.kind === "event"
+        ? when(row.starts_at)
+        : when(row.publish_at || row.created_at);
   body.append(
     el("strong", row.title),
-    el(
-      "small",
-      academicPages[row.kind] +
-        " · " +
-        academicTime(row.starts_at || row.due_at || row.created_at),
-    ),
+    el("small", kindLabel[row.kind] + " · " + moment),
   );
   item.append(el("span", undefined, "recent-dot"), body, icon("arrow"));
   return item;
 }
-function lessonCard(row, recorded = false, date = "") {
-  const item = el("article", undefined, "lesson"),
+// Minutes since midnight in Brasília, to place today's lessons in time.
+function nowMinute() {
+  const [hour, minute] = clock(new Date()).split(":").map(Number);
+  return hour * 60 + minute;
+}
+function lessonCard(row, recorded = false, date = "", day = date) {
+  const parts = groupParts(reference("groups", row.group_id)),
+    today = brDate(Date.now()),
+    minute = nowMinute();
+  let phase = "";
+  if ((day || today) === today) {
+    if (minute >= row.ends_minute) phase = "past";
+    else if (minute >= row.starts_minute) phase = "now";
+  }
+  const item = el("article", undefined, "lesson" + (phase ? " " + phase : "")),
     time = el("div", minuteTime(row.starts_minute), "lesson-time"),
     body = el("div", undefined, "lesson-info");
   time.append(el("small", minuteTime(row.ends_minute)));
+  const title = el("strong", parts.subject);
   body.append(
-    el("strong", reference("groups", row.group_id)),
-    el("p", row.room),
+    title,
+    el("p", [parts.name, row.room].filter(Boolean).join(" · ")),
   );
+  if (phase === "now") title.append(el("span", "Agora", "badge green live"));
   item.append(time, body);
   if (date && user && user.role !== "student") {
     const call = button(
-      recorded ? "Corrigir chamada" : "Fazer chamada",
+      recorded === true
+        ? "Corrigir chamada"
+        : recorded === false
+          ? "Fazer chamada"
+          : "Chamada",
       learningAction(() => rollCall(row.id, date)),
-      recorded ? "secondary lesson-action" : "primary lesson-action",
+      recorded === false ? "primary lesson-action" : "secondary lesson-action",
     );
-    if (recorded) body.append(el("span", "Chamada registrada", "badge green"));
+    if (recorded === true)
+      body.append(el("span", "Chamada registrada", "badge green"));
     item.append(call);
   }
   return item;
@@ -339,18 +372,33 @@ async function renderExperience(key, ticket) {
       renderDashboard(counts, data);
     }
   } else if (key === "myGroups") {
-    const rows = await api("/learning/groups?limit=25&offset=" + offset);
+    const [rows, timetable] = await Promise.all([
+      api("/learning/groups?limit=25&offset=" + offset),
+      api("/learning/schedule?limit=100"),
+    ]);
     if (ticket !== generation) return;
+    const box = el("div", undefined, "group-grid");
     rows.forEach((row) => {
       labels.set("groups:" + row.id, row.label);
-      const card = button("", () => openGroup(row), "group-card");
-      card.append(
-        el("h2", row.label),
-        el("p", "Acesse os conteúdos desta turma"),
-        el("div", "Atividades · Materiais · Horários", "card-meta"),
+      const lesson = nextLesson(
+        timetable.filter((item) => item.group_id === row.id),
       );
-      $("view").append(card);
+      box.append(
+        groupCard(
+          row,
+          user.role === "student"
+            ? "Atividades, materiais e frequência"
+            : "Conteúdos, entregas, chamada e alunos",
+          infoLine(
+            lesson
+              ? `Próxima aula: ${lesson.label} · ${lesson.row.room}`
+              : "Sem aulas nas próximas duas semanas",
+            "schedule",
+          ),
+        ),
+      );
     });
+    $("view").append(box);
     if (!rows.length)
       $("view").append(
         emptyState(
@@ -360,12 +408,25 @@ async function renderExperience(key, ticket) {
         ),
       );
     $("view").append(pager(rows));
-  } else if (key === "profile") renderProfile();
+  } else if (key === "profile") await renderProfile(ticket);
   else if (key === "onboarding") renderOnboarding();
   else if (key === "calendar") await renderCalendar(ticket);
   else if (key === "attendance") await renderAttendance(ticket);
   else if (key === "search") await renderSearch(ticket);
   if (ticket === generation) status("");
+}
+function feedGroup(value) {
+  const days = Math.round(
+    (Date.parse(dayKey(new Date())) - Date.parse(dayKey(instant(value)))) /
+      86400000,
+  );
+  return days <= 0
+    ? "Hoje"
+    : days === 1
+      ? "Ontem"
+      : days < 7
+        ? "Nesta semana"
+        : "Anteriores";
 }
 async function renderReminders(data, ticket) {
   const feed = await api("/learning/notifications");
@@ -378,6 +439,7 @@ async function renderReminders(data, ticket) {
       feed.unread
         ? plural(feed.unread, "novidade não lida", "novidades não lidas")
         : "Você está em dia",
+      "feed-count",
     ),
   );
   if (feed.unread)
@@ -391,29 +453,41 @@ async function renderReminders(data, ticket) {
         }),
       ),
     );
+  $("view").append(toolbar);
+  if (data.upcoming.length) {
+    $("view").append(sectionHeading("Próximos prazos", "activity"));
+    const due = el("div", undefined, "section-card");
+    data.upcoming.forEach((row) => due.append(recentItem(row)));
+    $("view").append(due);
+  }
   const box = el("div", undefined, "section-card reminder-feed");
-  box.append(sectionHeading("Novidades"));
+  let current = "";
   for (const item of feed.items) {
+    const group = feedGroup(item.at);
+    if (group !== current) {
+      current = group;
+      box.append(el("h3", group, "feed-group"));
+    }
     const row = button(
         "",
         learningAction(() => openPublication(item.publication)),
-        "recent-item" + (item.unread ? " unread" : ""),
+        "recent-item " + item.kind + (item.unread ? " unread" : ""),
       ),
       body = el("div");
     const kind =
       item.type === "grade"
         ? "Nota " + String(item.grade).replace(".", ",") + " recebida"
-        : academicPages[item.kind];
+        : kindLabel[item.kind];
     body.append(
       el("strong", item.title),
       el(
         "small",
         kind +
           (item.group_id
-            ? " · " + reference("groups", item.group_id).split(" · ")[0]
+            ? " · " + groupParts(reference("groups", item.group_id)).subject
             : "") +
           " · " +
-          academicTime(item.at),
+          when(item.at),
       ),
     );
     row.append(el("span", undefined, "recent-dot"), body, icon("arrow"));
@@ -428,25 +502,16 @@ async function renderReminders(data, ticket) {
         "bell",
       ),
     );
-  box.append(sectionHeading("Próximos prazos", "activity"));
-  data.upcoming.forEach((row) => box.append(recentItem(row)));
-  if (!data.upcoming.length)
-    box.append(
-      emptyState(
-        "Nenhum prazo próximo",
-        "As atividades publicadas aparecerão aqui.",
-        "schedule",
-      ),
-    );
-  $("view").append(
-    toolbar,
-    box,
-    el(
-      "p",
-      "Lembretes consultados no aplicativo. Notificações push dependem do aplicativo móvel.",
-      "help",
+  $("view").append(sectionHeading("Novidades"), box);
+  const hint = el("p", "Receba estas novidades no celular: ", "help");
+  hint.append(
+    button(
+      "ativar notificações no perfil",
+      () => navigate("profile"),
+      "text-button inline",
     ),
   );
+  $("view").append(hint);
 }
 function renderHome(data, groups = [], frequency = null) {
   const target = data.upcoming[0],
@@ -472,7 +537,13 @@ function renderHome(data, groups = [], frequency = null) {
     el(
       "h2",
       teacher
-        ? data.pending_count + " avaliações pendentes"
+        ? data.pending_count
+          ? plural(
+              data.pending_count,
+              "avaliação pendente",
+              "avaliações pendentes",
+            )
+          : "Nenhuma avaliação pendente"
         : target?.title ||
             (data.pending_count
               ? "Confira suas entregas"
@@ -481,19 +552,23 @@ function renderHome(data, groups = [], frequency = null) {
     el(
       "p",
       teacher
-        ? "Acompanhe as entregas e dê o próximo feedback."
+        ? data.pending_count
+          ? "Acompanhe as entregas e dê o próximo feedback."
+          : "Todas as entregas recebidas já foram avaliadas."
         : target
-          ? "Prazo: " + academicTime(target.due_at)
+          ? (target.group_id
+              ? groupParts(reference("groups", target.group_id)).subject + " · "
+              : "") + deadline(target.due_at).text
           : "Consulte suas atividades e acompanhe os novos conteúdos.",
     ),
   );
   const link = el(
     "span",
-    teacher ? "Ver entregas" : "Ver atividades",
+    teacher ? "Ver entregas" : target ? "Abrir atividade" : "Ver atividades",
     "hero-link",
   );
   link.append(icon("arrow"));
-  if (teacher) hero.append(link);
+  hero.append(link);
   $("view").append(
     hero,
     searchBar("", (value) => {
@@ -525,13 +600,9 @@ function renderHome(data, groups = [], frequency = null) {
     $("view").append(sectionHeading("Minhas turmas", "myGroups"));
     groups.forEach((row) => {
       labels.set("groups:" + row.id, row.label);
-      const card = button("", () => openGroup(row), "group-card");
-      card.append(
-        el("h2", row.label),
-        el("p", "Conteúdos, entregas e avaliações"),
-        el("span", "Acessar turma →", "card-meta"),
+      $("view").append(
+        groupCard(row, "Conteúdos, entregas, chamada e avaliações"),
       );
-      $("view").append(card);
     });
     if (!groups.length)
       $("view").append(
@@ -557,16 +628,26 @@ function renderHome(data, groups = [], frequency = null) {
     $("view").append(alert);
   }
   $("view").append(sectionHeading("Aulas de hoje", "schedule", "Ver semana"));
-  data.lessons_today.forEach((row) =>
-    $("view").append(
-      lessonCard(row, data.recorded_today?.includes(row.id), data.date),
-    ),
+  const upcoming = data.lessons_today.find(
+    (row) => row.starts_minute > nowMinute(),
   );
+  data.lessons_today.forEach((row) => {
+    const card = lessonCard(
+      row,
+      data.recorded_today?.includes(row.id),
+      data.date,
+    );
+    if (row === upcoming && !card.classList.contains("now"))
+      card
+        .querySelector(".lesson-info strong")
+        .append(el("span", "Em seguida", "badge"));
+    $("view").append(card);
+  });
   if (!data.lessons_today.length)
     $("view").append(
       emptyState(
-        "Hoje sem aulas cadastradas",
-        "Confira a grade completa nos horários.",
+        "Sem aulas hoje",
+        "Aproveite para revisar os materiais. A semana completa está na Agenda.",
         "schedule",
       ),
     );
@@ -579,11 +660,9 @@ function renderHome(data, groups = [], frequency = null) {
       learningAction(() => openPublication(row)),
       "event-tile",
     );
-    tile.append(
-      el("span", "EVENTO", "badge"),
-      el("h3", row.title),
-      el("p", academicTime(row.starts_at)),
-    );
+    const text = el("div");
+    text.append(el("h3", row.title), el("p", eventWhen(row)));
+    tile.append(dateBlock(row.starts_at), text);
     carousel.append(tile);
   });
   if (events.length) $("view").append(carousel);
@@ -729,32 +808,79 @@ function readDialog(title) {
 }
 async function openPublication(row) {
   const { dialog, body } = readDialog(row.title);
-  dialog.classList.add("wide-dialog");
+  dialog.classList.add("wide-dialog", "detail-dialog");
+  dialog
+    .querySelector("h2")
+    .before(
+      el(
+        "p",
+        kindLabel[row.kind] +
+          " · " +
+          (row.group_id
+            ? groupParts(reference("groups", row.group_id)).subject
+            : "Toda a instituição"),
+        "detail-eyebrow",
+      ),
+    );
+  const meta = el("div", undefined, "detail-meta"),
+    badge = stateBadge(row);
+  if (badge) meta.append(badge);
+  if (row.due_at) meta.append(deadlineChip(row.due_at));
+  if (row.starts_at) meta.append(infoLine(eventWhen(row), "calendar"));
+  if (row.kind === "notice" || row.kind === "material")
+    meta.append(
+      el(
+        "span",
+        "Publicado " + when(row.publish_at || row.created_at),
+        "card-meta",
+      ),
+    );
   body.append(
-    stateBadge(row) || el("span", academicPages[row.kind], "badge"),
+    meta,
+    el(
+      "h3",
+      row.kind === "activity" ? "Instruções" : "Conteúdo",
+      "detail-section",
+    ),
     el("p", row.body, "academic-body"),
   );
-  if (row.due_at) body.append(el("p", "Prazo: " + academicTime(row.due_at)));
-  if (row.starts_at)
-    body.append(
-      el("p", academicTime(row.starts_at) + " a " + academicTime(row.ends_at)),
-    );
   const error = el("p", undefined, "error");
   error.setAttribute("role", "alert");
   body.append(error);
   try {
-    await attachmentPanel("publication", row.id, body, canManage(row));
+    await attachmentPanel(
+      "publication",
+      row.id,
+      body,
+      canManage(row),
+      row.kind === "activity" ? "Material de apoio" : "Arquivos",
+    );
     if (!dialog.isConnected) return;
     if (row.kind === "activity" && !row.draft) await activityDetails(row, body);
     if (row.kind === "event" && !row.draft && dialog.isConnected) {
       const info = await api("/learning/events/" + row.id + "/enrollment");
       if (!dialog.isConnected) return;
-      body.append(
+      const seats = el("div", undefined, "seats");
+      seats.append(
         el(
-          "p",
-          `${info.count} inscritos · ${info.capacity ?? "sem limite de"} vagas`,
+          "strong",
+          info.capacity
+            ? `${info.count} de ${info.capacity} vagas preenchidas`
+            : plural(info.count, "pessoa inscrita", "pessoas inscritas"),
         ),
       );
+      if (info.capacity) {
+        const bar = el("div", undefined, "progress"),
+          fill = el("span");
+        fill.style.width =
+          Math.min(100, (info.count / info.capacity) * 100) + "%";
+        bar.append(fill);
+        bar.setAttribute("aria-hidden", "true");
+        seats.append(bar);
+      }
+      if (info.enrolled)
+        seats.append(el("span", "Você está inscrito", "badge green"));
+      body.append(seats);
       if (canManage(row)) {
         const people = await api(
           "/learning/events/" + row.id + "/enrollments?limit=100",
@@ -772,8 +898,14 @@ async function openPublication(row) {
         if (!people.length) list.append(el("p", "Nenhuma inscrição ainda."));
         body.append(list);
       }
+      const full =
+        info.capacity && info.count >= info.capacity && !info.enrolled;
       const action = button(
-        info.enrolled ? "Cancelar inscrição" : "Inscrever-me",
+        info.enrolled
+          ? "Cancelar inscrição"
+          : full
+            ? "Vagas esgotadas"
+            : "Inscrever-me",
         async () => {
           action.disabled = true;
           error.textContent = "";
@@ -789,13 +921,54 @@ async function openPublication(row) {
             action.disabled = false;
           }
         },
-        "primary",
+        info.enrolled ? "secondary danger wide-action" : "primary wide-action",
       );
+      action.disabled = Boolean(full);
       body.append(action);
     }
   } catch (e) {
     error.textContent = e.message;
   }
+}
+// First class meeting from now on, within two weeks, for one group's timetable.
+function nextLesson(rows) {
+  const start = new Date(brDate(Date.now()) + "T12:00:00Z");
+  for (let offsetDays = 0; offsetDays < 14; offsetDays++) {
+    const date = new Date(start);
+    date.setUTCDate(start.getUTCDate() + offsetDays);
+    const key = date.toISOString().slice(0, 10);
+    const found = lessonsOn(rows, key).find(
+      (row) => offsetDays > 0 || row.starts_minute > nowMinute(),
+    );
+    if (found) {
+      const day =
+        offsetDays === 0
+          ? "hoje"
+          : offsetDays === 1
+            ? "amanhã"
+            : new Intl.DateTimeFormat("pt-BR", {
+                timeZone: "UTC",
+                weekday: "short",
+                day: "numeric",
+                month: "short",
+              }).format(date);
+      return {
+        row: found,
+        label: `${day}, ${minuteTime(found.starts_minute)}`,
+      };
+    }
+  }
+  return null;
+}
+function groupCard(row, detail, extra = null) {
+  const parts = groupParts(row.label),
+    card = button("", () => openGroup(row), "group-card");
+  card.append(el("h2", parts.subject), el("p", parts.rest, "group-meta"));
+  if (extra) card.append(extra);
+  const footer = el("span", detail, "card-meta");
+  footer.append(icon("arrow"));
+  card.append(footer);
+  return card;
 }
 function openGroup(row) {
   const { dialog, body } = readDialog(row.label);
@@ -911,7 +1084,7 @@ async function privacyDialog() {
     body.append(download);
   }
 }
-function renderProfile() {
+async function renderProfile(ticket) {
   const card = el("div", undefined, "section-card profile-card");
   card.append(
     el("span", initials(user.name), "avatar"),
@@ -925,32 +1098,69 @@ function renderProfile() {
       "badge",
     ),
   );
-  const menu = el("div", undefined, "profile-menu");
+  if (user.role === "student") {
+    const [frequency, averages] = await Promise.all([
+      api("/learning/attendance/summary").catch(() => null),
+      api("/learning/averages").catch(() => []),
+    ]);
+    if (ticket !== generation) return;
+    const graded = averages.reduce((total, item) => total + item.count, 0),
+      mean = graded
+        ? averages.reduce(
+            (total, item) => total + item.average * item.count,
+            0,
+          ) / graded
+        : null;
+    const stats = el("div", undefined, "profile-stats");
+    for (const [value, label, key] of [
+      [
+        mean === null ? "—" : mean.toFixed(1).replace(".", ","),
+        "Média do hub",
+        "activity",
+      ],
+      [percent(frequency?.attendance_percent), "Frequência", "attendance"],
+      [String(graded), "Avaliações", "activity"],
+    ]) {
+      const item = button("", () => navigate(key), "profile-stat");
+      item.append(el("strong", value), el("span", label));
+      stats.append(item);
+    }
+    card.append(stats);
+  }
+  const menu = el("div", undefined, "profile-menu quick-grid");
   for (const key of [
     "myGroups",
-    "activity",
-    "material",
     "attendance",
-    "notice",
-    "event",
     "calendar",
     "reminders",
+    "notice",
+    "event",
     "onboarding",
     ...(user.administrator ? ["adminUsers", "adminStatus"] : []),
   ])
-    if (allowedPages().includes(key)) {
-      const item = navButton(key);
-      item.append(icon("arrow"));
-      menu.append(item);
-    }
+    if (allowedPages().includes(key)) menu.append(navButton(key));
+  const account = el("div", undefined, "profile-menu account-list");
+  const entry = (label, name, handler, tone = "") => {
+    const item = button("", handler, "account-item " + tone);
+    item.append(icon(name), el("span", label), icon("arrow"));
+    return item;
+  };
   if (localLoginEnabled && !user.administrator)
-    menu.append(button("Alterar senha", learningAction(passwordDialog)));
-  menu.append(
-    button("Privacidade e meus dados", learningAction(privacyDialog)),
-    button("Ajuda com o acesso", () => $("help-dialog").showModal()),
-    button("Sair da conta", () => $("logout").click(), "secondary danger"),
+    account.append(
+      entry("Alterar senha", "lock", learningAction(passwordDialog)),
+    );
+  account.append(
+    entry("Privacidade e meus dados", "shield", learningAction(privacyDialog)),
+    entry("Ajuda com o acesso", "help", () => $("help-dialog").showModal()),
+    entry("Sair da conta", "logout", () => $("logout").click(), "danger"),
   );
-  $("view").append(card, menu);
+  $("view").append(
+    card,
+    sectionHeading("Acessos"),
+    menu,
+    sectionHeading("Conta"),
+    account,
+  );
   notificationPanel($("view")).catch((error) => status(error.message, true));
 }
 const onboardingStorageKey = "fatec:onboarding-completed:v1";
@@ -1136,11 +1346,14 @@ async function renderCalendar(ticket) {
     prev,
     el(
       "h2",
-      first.toLocaleDateString("pt-BR", {
-        month: "long",
-        year: "numeric",
-        timeZone: "UTC",
-      }),
+      (() => {
+        const text = first.toLocaleDateString("pt-BR", {
+          month: "long",
+          year: "numeric",
+          timeZone: "UTC",
+        });
+        return text.charAt(0).toUpperCase() + text.slice(1);
+      })(),
     ),
     next,
   );
@@ -1197,9 +1410,11 @@ async function renderCalendar(ticket) {
     grid.append(item);
   }
   box.append(grid);
-  $("view").append(box, sectionHeading(formatDate(calendarSelected)));
+  $("view").append(box, sectionHeading(longDay(calendarSelected)));
   const entries = entriesFor(calendarSelected);
-  entries.lessons.forEach((row) => $("view").append(lessonCard(row)));
+  entries.lessons.forEach((row) =>
+    $("view").append(lessonCard(row, false, "", calendarSelected)),
+  );
   entries.publications.forEach((row) => $("view").append(recentItem(row)));
   if (!entries.lessons.length && !entries.publications.length)
     $("view").append(

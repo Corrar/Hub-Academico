@@ -426,8 +426,12 @@ test("teacher controls keep mobile navigation and coordinator controls require a
     assert.ok(teacher.w.document.querySelector(".hero-card.teacher"));
     await teacher.navigate("activity");
     assert.match(
-      teacher.w.document.querySelector("#view").textContent,
-      /Nova publicação/,
+      teacher.w.document.querySelector("#heading-actions").textContent,
+      /Nova atividade/,
+    );
+    assert.match(
+      teacher.w.document.querySelector(".publication-card").textContent,
+      /Ver entregas/,
     );
     assert.equal(coordinator.w.document.body.dataset.page, "dashboard");
     assert.equal(
@@ -459,7 +463,7 @@ test("calendar navigation, empty states, search and expired sessions", async () 
   try {
     assert.match(
       app.w.document.querySelector("#view").textContent,
-      /Hoje sem aulas cadastradas/,
+      /Sem aulas hoje/,
     );
     await app.navigate("calendar");
     assert.ok(app.w.document.querySelector(".calendar-day"));
@@ -725,6 +729,71 @@ test("profile explains push support and saves notification preferences", async (
     assert.equal(JSON.parse(request.init.body).notices, false);
     assert.equal(request.init.headers["X-CSRF-Token"], "synthetic-csrf");
     assert.deepEqual(app.errors, []);
+  } finally {
+    app.dom.window.close();
+  }
+});
+
+test("student filters activities and browses the weekly agenda", async () => {
+  const app = await boot("student", {
+    lessons: [],
+  });
+  try {
+    await app.navigate("activity");
+    const doc = app.w.document;
+    const todo = [...doc.querySelectorAll(".segment")].find(
+      (node) => node.textContent === "A fazer",
+    );
+    assert.equal(todo.getAttribute("aria-pressed"), "false");
+    todo.click();
+    await settle();
+    const request = app.requests.findLast((item) =>
+      item.url.pathname.endsWith("/publications"),
+    );
+    assert.equal(request.url.searchParams.get("status"), "todo");
+    assert.equal(
+      [...doc.querySelectorAll(".segment")]
+        .find((node) => node.textContent === "A fazer")
+        .getAttribute("aria-pressed"),
+      "true",
+    );
+    await app.navigate("schedule");
+    assert.equal(doc.querySelector("#page-title").textContent, "Agenda");
+    const pills = doc.querySelectorAll(".week-strip .day-pill");
+    assert.equal(pills.length, 7);
+    assert.equal(
+      [...pills].filter((pill) => pill.getAttribute("aria-pressed") === "true")
+        .length,
+      1,
+    );
+    pills[0].click();
+    await settle();
+    assert.equal(
+      doc
+        .querySelectorAll(".week-strip .day-pill")[0]
+        .getAttribute("aria-pressed"),
+      "true",
+    );
+    assert.match(
+      doc.querySelector("#view").textContent,
+      /Sem aulas neste dia|Marketing|Ciência/,
+    );
+    assert.deepEqual(app.errors, []);
+  } finally {
+    app.dom.window.close();
+  }
+});
+test("confirmations appear as a toast that the next page clears", async () => {
+  const app = await boot("student");
+  try {
+    const doc = app.w.document;
+    app.w.status("Senha alterada.");
+    assert.equal(doc.querySelector("#status").className, "toast");
+    app.w.status("Falhou", true);
+    assert.equal(doc.querySelector("#status").className, "toast error");
+    await app.navigate("material");
+    assert.equal(doc.querySelector("#status").textContent, "");
+    assert.equal(doc.querySelector("#view").hasAttribute("aria-busy"), false);
   } finally {
     app.dom.window.close();
   }

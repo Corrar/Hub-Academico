@@ -427,14 +427,16 @@ async function scheduleEditor(row = null) {
     throw error;
   }
 }
-async function attachmentPanel(kind, key, box, writable) {
-  const section = el("section"),
-    heading = el("h3", "Anexos");
+async function attachmentPanel(kind, key, box, writable, title = "Anexos") {
+  const section = el("section", undefined, "attachments"),
+    heading = el("h3", title);
   section.append(heading);
   box.append(section);
   async function load() {
     const rows = await api(`/learning/${kind}/${key}/attachments`);
     if (!box.isConnected) return;
+    // Read-only sections without files stay out of the way.
+    section.hidden = !rows.length && !writable;
     section.replaceChildren(heading);
     for (const row of rows) {
       const line = el("p", undefined, "attachment-line"),
@@ -570,28 +572,58 @@ async function activityDetails(row, box) {
     );
     if (!box.isConnected) return;
     for (const [index, submission] of rows.entries()) {
-      const card = el("div", undefined, "guide");
+      const card = el("div", undefined, "submission-card"),
+        head = el("div", undefined, "submission-head");
+      if (staff)
+        head.append(
+          el("span", initials(submission.student_name), "avatar"),
+          el("h4", submission.student_name),
+        );
+      head.append(
+        submission.grade !== null
+          ? el("span", "Avaliada", "badge green")
+          : submission.draft
+            ? el("span", "Rascunho privado", "badge gold")
+            : submission.late
+              ? el("span", "Enviada após o prazo", "badge red")
+              : el("span", "Enviada no prazo", "badge green"),
+      );
       card.append(
-        el("h4", submission.student_name),
+        head,
         el(
           "p",
           submission.draft
-            ? "Rascunho privado — ainda não enviado"
-            : "Enviada em " +
-                academicTime(submission.submitted_at) +
-                (submission.late ? " · após o prazo" : " · no prazo"),
+            ? "Ainda não enviada ao professor."
+            : "Enviada " + when(submission.submitted_at),
+          "card-meta",
         ),
         el("p", submission.body, "academic-body"),
-        el(
-          "p",
-          "Nota: " +
-            (submission.grade === null
-              ? "Aguardando avaliação"
-              : String(submission.grade).replace(".", ",")),
-        ),
       );
-      if (submission.feedback)
-        card.append(el("p", "Devolutiva: " + submission.feedback, "feedback"));
+      const result = el("div", undefined, "grade-block");
+      if (submission.grade === null)
+        result.append(
+          el(
+            "span",
+            submission.draft
+              ? "Envie para ser avaliado."
+              : "Aguardando avaliação",
+            "muted",
+          ),
+        );
+      else {
+        const score = el("strong", String(submission.grade).replace(".", ","));
+        score.append(el("small", "/10"));
+        result.append(score, el("span", "nota no hub", "muted"));
+      }
+      card.append(result);
+      if (submission.feedback) {
+        const quote = el("blockquote", undefined, "feedback");
+        quote.append(
+          el("span", "Devolutiva", "eyebrow"),
+          el("p", submission.feedback),
+        );
+        card.append(quote);
+      }
       list.append(card);
       if (user.role === "student" && submission.grade === null && !closed) {
         card.append(
@@ -641,6 +673,7 @@ async function activityDetails(row, box) {
         user.role === "student" &&
           submission.draft &&
           submission.grade === null,
+        "Arquivos da entrega",
       );
     }
     if (skip === 0 && rows.length === 0) {
@@ -755,227 +788,570 @@ function gradeEditor(row, queue = [], activity = null) {
     return message;
   };
 }
-async function renderLearning(kind, ticket) {
-  const isSchedule = kind === "schedule",
-    path = isSchedule ? "/learning/schedule" : "/learning/publications";
-  const rows = await api(
-    path +
-      "?" +
-      new URLSearchParams({
-        ...(isSchedule ? {} : { kind, q: academicSearch[kind] || "" }),
-        ...(academicGroup ? { group_id: academicGroup } : {}),
-        offset: String(offset),
-        limit: "25",
-        archived: String(archived),
-      }),
+const kindLabel = {
+  activity: "Atividade",
+  material: "Material",
+  notice: "Aviso",
+  event: "Evento",
+};
+const newLabels = {
+  activity: "Nova atividade",
+  material: "Novo material",
+  notice: "Novo aviso",
+  event: "Novo evento",
+};
+let activityFilter = "",
+  agendaDay = null;
+// One primary action per page, in the heading, never duplicated on re-render.
+function pageAction(label, handler) {
+  $("heading-actions")
+    .querySelectorAll("[data-page-action]")
+    .forEach((node) => node.remove());
+  const node = button(label, learningAction(handler), "primary");
+  node.dataset.pageAction = "";
+  $("heading-actions").append(node);
+}
+function groupFilterChip(toolbar) {
+  if (!academicGroup) return;
+  const chip = el("span", undefined, "filter-chip");
+  chip.append(
+    el("span", groupParts(reference("groups", academicGroup)).subject),
   );
-  if (ticket !== generation) return;
-  const query = new URLSearchParams({ limit: "100" });
-  [...new Set(rows.map((row) => row.group_id).filter(Boolean))].forEach((id) =>
-    query.append("ids", id),
-  );
-  for (const group of await api("/learning/groups?" + query))
-    labels.set("groups:" + group.id, group.label);
-  if (ticket !== generation) return;
-  const toolbar = el("div", undefined, "toolbar"),
-    box = el("div", undefined, "publication-grid");
-  $("view").append(toolbar, box);
-  if (academicGroup)
-    toolbar.append(
-      el("span", reference("groups", academicGroup), "badge"),
-      button("Ver todas as turmas", () => {
-        academicGroup = "";
-        offset = 0;
-        render();
-      }),
-    );
-  if (!isSchedule) {
-    const search = el("input");
-    search.type = "search";
-    search.maxLength = 120;
-    search.value = academicSearch[kind] || "";
-    search.setAttribute(
-      "aria-label",
-      "Buscar em " + academicPages[kind].toLowerCase(),
-    );
-    const find = () => {
-      academicSearch[kind] = search.value;
+  const clear = button(
+    "×",
+    () => {
+      academicGroup = "";
       offset = 0;
       render();
-    };
-    search.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") find();
-    });
-    toolbar.append(search, button("Buscar", find));
-  }
-  const manage = isSchedule
-    ? user.role === "coordinator"
-    : user.role !== "student";
-  if (manage) {
-    toolbar.append(
-      button(
-        isSchedule ? "Novo horário" : "Nova publicação",
-        learningAction(() =>
-          isSchedule ? scheduleEditor() : publicationEditor(kind),
+    },
+    "chip-clear",
+  );
+  clear.setAttribute("aria-label", "Ver todas as turmas");
+  chip.append(clear);
+  toolbar.append(chip);
+}
+function dateBlock(value) {
+  const date = instant(value),
+    block = el("div", undefined, "date-block");
+  block.setAttribute("aria-hidden", "true");
+  block.append(
+    el(
+      "strong",
+      new Intl.DateTimeFormat("pt-BR", {
+        timeZone: zone,
+        day: "2-digit",
+      }).format(date),
+    ),
+    el(
+      "span",
+      new Intl.DateTimeFormat("pt-BR", { timeZone: zone, month: "short" })
+        .format(date)
+        .replace(".", ""),
+    ),
+  );
+  return block;
+}
+function eventWhen(row) {
+  return dayKey(instant(row.starts_at)) === dayKey(instant(row.ends_at))
+    ? when(row.starts_at) + "–" + clock(instant(row.ends_at))
+    : when(row.starts_at) + " até " + when(row.ends_at);
+}
+function infoLine(text, name) {
+  const line = el("p", undefined, "info-line");
+  line.append(icon(name), el("span", text));
+  return line;
+}
+function primaryLabel(row, kind) {
+  if (kind === "event")
+    return row.enrolled ? "Ver inscrição" : "Detalhes e inscrição";
+  if (kind === "material") return "Abrir material";
+  if (kind === "notice") return "Ler aviso";
+  if (user.role !== "student") return "Ver entregas";
+  const mine = row.my_submission,
+    closed = instant(row.due_at) < new Date();
+  if (!mine) return closed ? "Ver atividade" : "Entregar";
+  if (mine.state === "draft")
+    return closed ? "Ver atividade" : "Continuar entrega";
+  return mine.state === "graded" ? "Ver avaliação" : "Ver entrega";
+}
+function publicationCard(row, kind) {
+  const card = el(
+    "article",
+    undefined,
+    "publication-card " + kind + (row.archived ? " is-archived" : ""),
+  );
+  const top = el("div", undefined, "card-top");
+  top.append(
+    icon(kind),
+    el(
+      "span",
+      row.group_id
+        ? groupParts(reference("groups", row.group_id)).subject
+        : "Toda a instituição",
+      "card-eyebrow",
+    ),
+  );
+  const badge = stateBadge(row);
+  if (badge) top.append(badge);
+  if (kind === "activity" && user.role === "student" && !row.archived)
+    top.append(submissionBadge(row));
+  card.append(top);
+  const title = el("h2", row.title);
+  if (kind === "event") {
+    const head = el("div", undefined, "event-head"),
+      text = el("div");
+    text.append(title, infoLine(eventWhen(row), "calendar"));
+    head.append(dateBlock(row.starts_at), text);
+    card.append(head);
+  } else card.append(title);
+  card.append(el("p", row.body, "academic-body publication-body-preview"));
+  const footer = el("div", undefined, "card-info");
+  if (kind === "activity") {
+    footer.append(deadlineChip(row.due_at));
+    if (row.students_count !== undefined) {
+      const share = row.students_count
+        ? Math.round((row.submitted_count / row.students_count) * 100)
+        : 0;
+      const progress = el("div", undefined, "progress"),
+        fill = el("span");
+      fill.style.width = share + "%";
+      progress.append(fill);
+      progress.setAttribute("aria-hidden", "true");
+      const delivery = el("div", undefined, "delivery");
+      delivery.append(
+        el(
+          "p",
+          `${row.submitted_count} de ${row.students_count} entregaram · ${plural(row.submitted_count - row.graded_count, "a avaliar", "a avaliar")}`,
+          "card-meta delivery-meta",
         ),
+        progress,
+      );
+      card.append(delivery);
+    }
+  }
+  if (kind === "event") {
+    const full = row.capacity && row.enrolled_count >= row.capacity;
+    footer.append(
+      el(
+        "span",
+        row.capacity
+          ? `${row.enrolled_count} de ${row.capacity} vagas`
+          : plural(row.enrolled_count, "inscrito", "inscritos"),
+        "badge" + (full ? " red" : ""),
+      ),
+    );
+    if (row.enrolled)
+      footer.append(el("span", "Você está inscrito", "badge green"));
+    else if (full) footer.append(el("span", "Esgotado", "badge red"));
+  }
+  if (kind === "notice" || kind === "material")
+    footer.append(
+      el(
+        "span",
+        "Publicado " + when(row.publish_at || row.created_at),
+        "card-meta",
+      ),
+    );
+  if (row.expires_at)
+    footer.append(el("span", "Sai do ar " + when(row.expires_at), "card-meta"));
+  if (footer.childNodes.length) card.append(footer);
+  const actions = el("div", undefined, "card-actions");
+  if (!row.archived)
+    actions.append(
+      button(
+        primaryLabel(row, kind),
+        learningAction(() => openPublication(row)),
         "primary",
       ),
     );
-    const caption = el("label", "Mostrar arquivados"),
-      check = el("input");
-    check.type = "checkbox";
-    check.checked = archived;
-    check.addEventListener("change", () => {
-      archived = check.checked;
-      offset = 0;
-      render();
-    });
-    caption.prepend(check);
-    toolbar.append(caption);
-  }
-  if (kind === "activity" && user.role === "student") {
-    const averages = await api("/learning/averages");
-    if (ticket !== generation) return;
-    for (const item of averages)
-      box.append(
-        el(
-          "p",
-          `Média das atividades avaliadas no hub · ${reference("groups", item.group_id).split(" · ")[0]}: ${item.average.toFixed(1).replace(".", ",")} (${plural(item.count, "avaliação", "avaliações")}). Não é a nota oficial.`,
-          "help",
-        ),
-      );
-  }
-  for (const row of rows) {
-    const card = el("article", undefined, "publication-card " + kind);
-    box.append(card);
-    const metadata = el("div", undefined, "card-meta");
-    metadata.append(icon(kind), el("span", academicPages[kind]));
-    if (!isSchedule)
-      metadata.append(stateBadge(row) || el("span", "Publicado", "badge"));
-    if (kind === "activity" && user.role === "student" && !row.archived)
-      metadata.append(submissionBadge(row));
-    card.append(metadata);
-    card.append(
-      el(
-        "h2",
-        isSchedule
-          ? weekdays[row.weekday] +
-              " · " +
-              minuteTime(row.starts_minute) +
-              "–" +
-              minuteTime(row.ends_minute)
-          : row.title,
-      ),
-    );
-    card.append(
-      el(
-        "p",
-        row.group_id ? reference("groups", row.group_id) : "Toda a instituição",
-        "muted",
-      ),
-    );
-    if (isSchedule)
-      card.append(
-        el(
-          "p",
-          row.room +
-            " · " +
-            formatDate(row.starts_on) +
-            " a " +
-            formatDate(row.ends_on),
-        ),
-      );
-    else {
-      card.append(el("p", row.body, "academic-body publication-body-preview"));
-      if (row.due_at)
-        card.append(
-          el("p", "Prazo (Brasília): " + academicTime(row.due_at), "card-meta"),
-        );
-      if (kind === "activity" && row.students_count !== undefined)
-        card.append(
-          el(
-            "p",
-            `${row.submitted_count} de ${row.students_count} entregaram · ${row.submitted_count - row.graded_count} a avaliar`,
-            "card-meta delivery-meta",
-          ),
-        );
-      if (row.expires_at)
-        card.append(
-          el("p", "Sai do ar em " + academicTime(row.expires_at), "card-meta"),
-        );
-      if (row.starts_at)
-        card.append(
-          el(
-            "p",
-            "Evento (Brasília): " +
-              academicTime(row.starts_at) +
-              " a " +
-              academicTime(row.ends_at),
-            "card-meta",
-          ),
-        );
-    }
-    const actions = el("div", undefined, "card-actions");
-    card.append(actions);
-    if (isSchedule ? manage : canManage(row)) {
-      if (!row.archived)
-        actions.append(
-          button(
-            "Editar",
-            learningAction(() =>
-              isSchedule ? scheduleEditor(row) : publicationEditor(kind, row),
-            ),
-          ),
-        );
+  if (canManage(row)) {
+    if (!row.archived)
       actions.append(
         button(
-          row.archived ? "Restaurar" : "Arquivar",
-          learningAction(async () => {
-            if (
-              !confirm(
-                (row.archived ? "Restaurar" : "Arquivar") + " este registro?",
-              )
+          "Editar",
+          learningAction(() => publicationEditor(kind, row)),
+        ),
+      );
+    actions.append(
+      button(
+        row.archived ? "Restaurar" : "Arquivar",
+        learningAction(async () => {
+          if (
+            !confirm(
+              row.archived
+                ? "Restaurar esta publicação? Ela volta a ficar visível para o público."
+                : "Arquivar esta publicação? Ela deixa de aparecer, mas o histórico é preservado.",
             )
-              return;
-            await api(
-              (isSchedule ? "/learning/schedule/" : "/learning/publications/") +
-                row.id +
-                "/archive",
-              {
-                method: "PATCH",
-                body: JSON.stringify({ archived: !row.archived }),
-              },
-            );
-            await render();
-          }),
-        ),
-      );
-    }
-    if (!isSchedule && !row.archived)
-      actions.prepend(
-        button(
-          kind === "activity"
-            ? "Abrir atividade"
-            : kind === "event"
-              ? "Detalhes e inscrição"
-              : "Abrir conteúdo",
-          learningAction(() => openPublication(row)),
-          "primary",
-        ),
-      );
+          )
+            return;
+          await api("/learning/publications/" + row.id + "/archive", {
+            method: "PATCH",
+            body: JSON.stringify({ archived: !row.archived }),
+          });
+          await render();
+        }),
+        row.archived ? "secondary" : "secondary danger",
+      ),
+    );
   }
+  card.append(actions);
+  return card;
+}
+async function renderPublications(kind, ticket) {
+  const student = user.role === "student";
+  const rows = await api(
+    "/learning/publications?" +
+      new URLSearchParams({
+        kind,
+        q: academicSearch[kind] || "",
+        offset: String(offset),
+        limit: "25",
+        archived: String(archived),
+        ...(academicGroup ? { group_id: academicGroup } : {}),
+        ...(kind === "activity" && student && activityFilter
+          ? { status: activityFilter }
+          : {}),
+      }),
+  );
+  await groupLabels(rows);
+  if (ticket !== generation) return;
+  if (!student && !archived)
+    pageAction(newLabels[kind], () => publicationEditor(kind));
+  const toolbar = el("div", undefined, "toolbar");
+  groupFilterChip(toolbar);
+  toolbar.append(
+    searchField(
+      academicSearch[kind] || "",
+      "Buscar em " + academicPages[kind].toLowerCase(),
+      (value) => {
+        academicSearch[kind] = value;
+        offset = 0;
+        render();
+      },
+    ),
+  );
+  if (kind === "activity" && student)
+    toolbar.append(
+      segmented(
+        "Filtrar atividades",
+        [
+          ["", "Todas"],
+          ["todo", "A fazer"],
+          ["done", "Entregues"],
+        ],
+        activityFilter,
+        (key) => {
+          activityFilter = key;
+          offset = 0;
+          render();
+        },
+      ),
+    );
+  if (!student) toolbar.append(archivedToggle());
+  $("view").append(toolbar);
+  if (kind === "activity" && student) {
+    const averages = await api("/learning/averages");
+    if (ticket !== generation) return;
+    if (averages.length) {
+      const strip = el("section", undefined, "average-strip");
+      strip.append(
+        el("h2", "Média das atividades avaliadas no hub"),
+        el("p", "Não é a nota oficial da disciplina.", "muted"),
+      );
+      const list = el("div", undefined, "average-list");
+      for (const item of averages) {
+        const chip = el("div", undefined, "average-chip");
+        chip.append(
+          el("strong", item.average.toFixed(1).replace(".", ",")),
+          el(
+            "span",
+            `${groupParts(reference("groups", item.group_id)).subject} · ${plural(item.count, "avaliação", "avaliações")}`,
+          ),
+        );
+        list.append(chip);
+      }
+      strip.append(list);
+      $("view").append(strip);
+    }
+  }
+  const box = el("div", undefined, "publication-grid");
+  rows.forEach((row) => box.append(publicationCard(row, kind)));
   if (!rows.length)
     box.append(
       emptyState(
-        "Nada por aqui ainda",
+        academicSearch[kind]
+          ? "Nenhum resultado"
+          : activityFilter === "todo"
+            ? "Tudo em dia"
+            : "Nada por aqui ainda",
         academicSearch[kind]
           ? "Tente outro termo de busca."
-          : "Os conteúdos cadastrados para suas turmas aparecerão aqui.",
+          : activityFilter === "todo"
+            ? "Você não tem atividades pendentes."
+            : archived
+              ? "Os itens arquivados aparecerão aqui."
+              : "Os conteúdos das suas turmas aparecerão aqui.",
         kind,
       ),
     );
-  $("view").append(pager(rows));
+  $("view").append(box, pager(rows));
   status("");
+}
+function longDay(key) {
+  const text = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "UTC",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(new Date(key + "T12:00:00Z"));
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+function lessonsOn(rows, key) {
+  const weekday = (new Date(key + "T12:00:00Z").getUTCDay() + 6) % 7;
+  return rows
+    .filter(
+      (row) =>
+        row.weekday === weekday && row.starts_on <= key && row.ends_on >= key,
+    )
+    .sort((a, b) => a.starts_minute - b.starts_minute);
+}
+async function renderAgenda(ticket) {
+  const rows = await api(
+    "/learning/schedule?" +
+      new URLSearchParams({
+        limit: "100",
+        ...(academicGroup ? { group_id: academicGroup } : {}),
+      }),
+  );
+  await groupLabels(rows);
+  if (ticket !== generation) return;
+  const today = brDate(Date.now());
+  agendaDay ??= today;
+  const base = new Date(agendaDay + "T12:00:00Z"),
+    monday = new Date(base);
+  monday.setUTCDate(base.getUTCDate() - ((base.getUTCDay() + 6) % 7));
+  const shift = (days) => {
+    const next = new Date(base);
+    next.setUTCDate(base.getUTCDate() + days);
+    agendaDay = next.toISOString().slice(0, 10);
+    render();
+  };
+  const toolbar = el("div", undefined, "toolbar");
+  groupFilterChip(toolbar);
+  if (agendaDay !== today)
+    toolbar.append(
+      button("Hoje", () => {
+        agendaDay = today;
+        render();
+      }),
+    );
+  if (toolbar.childNodes.length) $("view").append(toolbar);
+  const week = el("div", undefined, "week"),
+    previous = button("‹", () => shift(-7), "icon-button"),
+    next = button("›", () => shift(7), "icon-button"),
+    strip = el("div", undefined, "week-strip");
+  previous.setAttribute("aria-label", "Semana anterior");
+  next.setAttribute("aria-label", "Próxima semana");
+  ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"].forEach((name, index) => {
+    const date = new Date(monday);
+    date.setUTCDate(monday.getUTCDate() + index);
+    const key = date.toISOString().slice(0, 10),
+      count = lessonsOn(rows, key).length;
+    const pill = button(
+      "",
+      () => {
+        agendaDay = key;
+        render();
+      },
+      "day-pill" +
+        (key === today ? " today" : "") +
+        (count ? " has-lessons" : ""),
+    );
+    pill.append(el("span", name), el("strong", String(date.getUTCDate())));
+    pill.setAttribute("aria-pressed", String(key === agendaDay));
+    pill.setAttribute(
+      "aria-label",
+      longDay(key) +
+        (count ? " · " + plural(count, "aula", "aulas") : " · sem aulas"),
+    );
+    strip.append(pill);
+  });
+  week.append(previous, strip, next);
+  $("view").append(week, sectionHeading(longDay(agendaDay)));
+  const lessons = lessonsOn(rows, agendaDay);
+  const staff = user.role !== "student";
+  lessons.forEach((row) =>
+    $("view").append(
+      lessonCard(
+        row,
+        null,
+        staff && agendaDay <= today ? agendaDay : "",
+        agendaDay,
+      ),
+    ),
+  );
+  if (!lessons.length)
+    $("view").append(
+      emptyState(
+        "Sem aulas neste dia",
+        "Aproveite para revisar os materiais e adiantar as atividades.",
+        "schedule",
+      ),
+    );
+  $("view").append(
+    button(
+      "Ver calendário do mês",
+      () => navigate("calendar"),
+      "text-button agenda-link",
+    ),
+  );
+  status("");
+}
+function scheduleDetails(row) {
+  const parts = groupParts(reference("groups", row.group_id));
+  const { dialog, body } = readDialog(parts.subject);
+  body.append(
+    el("p", parts.rest, "muted"),
+    infoLine(
+      `${weekdays[row.weekday]} · ${minuteTime(row.starts_minute)}–${minuteTime(row.ends_minute)}`,
+      "schedule",
+    ),
+    infoLine(row.room, "home"),
+    infoLine(
+      `Vigência: ${formatDate(row.starts_on)} a ${formatDate(row.ends_on)}`,
+      "calendar",
+    ),
+  );
+  const actions = el("div", undefined, "row-actions");
+  actions.append(
+    button(
+      "Editar horário",
+      learningAction(async () => {
+        dialog.close();
+        await scheduleEditor(row);
+      }),
+      "primary",
+    ),
+    button(
+      row.archived ? "Restaurar" : "Arquivar",
+      learningAction(async () => {
+        if (
+          !row.archived &&
+          !confirm(
+            "Arquivar este horário? A grade deixa de exibi-lo; o histórico é preservado.",
+          )
+        )
+          return;
+        await api("/learning/schedule/" + row.id + "/archive", {
+          method: "PATCH",
+          body: JSON.stringify({ archived: !row.archived }),
+        });
+        dialog.close();
+        await render();
+      }),
+      row.archived ? "secondary" : "secondary danger",
+    ),
+  );
+  body.append(actions);
+}
+function slotButton(row) {
+  const parts = groupParts(reference("groups", row.group_id));
+  const slot = button("", () => scheduleDetails(row), "slot");
+  slot.append(
+    el("strong", parts.subject),
+    el("span", parts.name),
+    el(
+      "small",
+      `${minuteTime(row.starts_minute)}–${minuteTime(row.ends_minute)} · ${row.room}`,
+    ),
+  );
+  slot.setAttribute(
+    "aria-label",
+    `${parts.subject}, ${weekdays[row.weekday]} ${minuteTime(row.starts_minute)}, ${row.room}`,
+  );
+  return slot;
+}
+async function renderTimetable(ticket) {
+  const rows = await api(
+    "/learning/schedule?" +
+      new URLSearchParams({
+        limit: "100",
+        archived: String(archived),
+        ...(academicGroup ? { group_id: academicGroup } : {}),
+      }),
+  );
+  await groupLabels(rows);
+  if (ticket !== generation) return;
+  if (!archived) pageAction("Novo horário", () => scheduleEditor());
+  const toolbar = el("div", undefined, "toolbar");
+  groupFilterChip(toolbar);
+  toolbar.append(
+    el(
+      "span",
+      "Clique em um horário para ver detalhes, editar ou arquivar.",
+      "muted",
+    ),
+    archivedToggle(),
+  );
+  $("view").append(toolbar);
+  if (!rows.length) {
+    $("view").append(
+      emptyState(
+        archived ? "Nenhum horário arquivado" : "Grade vazia",
+        archived
+          ? "Os horários arquivados aparecerão aqui."
+          : "Cadastre o primeiro horário com o botão Novo horário.",
+        "schedule",
+      ),
+    );
+    return;
+  }
+  const days = rows.some((row) => row.weekday === 6) ? 7 : 6,
+    starts = [...new Set(rows.map((row) => row.starts_minute))].sort(
+      (a, b) => a - b,
+    );
+  const scroll = el("div", undefined, "table-scroll timetable-scroll"),
+    grid = el("div", undefined, "timetable days-" + days);
+  grid.setAttribute("role", "table");
+  grid.setAttribute("aria-label", "Grade semanal de horários");
+  const header = el("div", undefined, "timetable-row");
+  header.setAttribute("role", "row");
+  header.append(el("span", "Início", "timetable-corner"));
+  for (let day = 0; day < days; day++) {
+    const cell = el(
+      "span",
+      weekdays[day].replace("-feira", ""),
+      "timetable-day",
+    );
+    cell.setAttribute("role", "columnheader");
+    header.append(cell);
+  }
+  grid.append(header);
+  for (const start of starts) {
+    const line = el("div", undefined, "timetable-row");
+    line.setAttribute("role", "row");
+    const time = el("span", minuteTime(start), "timetable-time");
+    time.setAttribute("role", "rowheader");
+    line.append(time);
+    for (let day = 0; day < days; day++) {
+      const cell = el("div", undefined, "timetable-cell");
+      cell.setAttribute("role", "cell");
+      rows
+        .filter((row) => row.weekday === day && row.starts_minute === start)
+        .forEach((row) => cell.append(slotButton(row)));
+      line.append(cell);
+    }
+    grid.append(line);
+  }
+  scroll.append(grid);
+  $("view").append(scroll);
+  status("");
+}
+async function renderLearning(kind, ticket) {
+  if (kind !== "schedule") return renderPublications(kind, ticket);
+  return user.role === "coordinator"
+    ? renderTimetable(ticket)
+    : renderAgenda(ticket);
 }
 
 async function membershipBatch() {

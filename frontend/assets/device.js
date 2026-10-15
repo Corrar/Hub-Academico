@@ -226,6 +226,7 @@ async function notificationPanel(target) {
     const caption = el("label", label),
       check = el("input");
     check.type = "checkbox";
+    check.setAttribute("role", "switch");
     check.checked = preferences[key];
     check.addEventListener(
       "change",
