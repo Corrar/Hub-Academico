@@ -21,3 +21,21 @@ node_modules/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Backend: dados locais, segredos e caches
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.py[cod]
+*.db
+*.db-*
+*.sqlite*
+*.dump
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+backend/backups/
+backend/build/
+backend/dist/

@@ -1,76 +1,73 @@
-<div align="center">
+# Hub Acadêmico — Fatec Adamantina
 
-# 🎓 Hub Acadêmico · Fatec Adamantina
+Hub acadêmico em Python/FastAPI com painel web para alunos, professores, coordenação e administrador. O aplicativo Expo faz parte do roteiro e ainda não foi implementado.
 
-Um app para a rotina de alunos, professores e coordenação da Fatec Adamantina:
-grade, prazos, materiais, entregas, eventos, avisos e frequência num lugar só.
+## Estado atual
 
-![Status](https://img.shields.io/badge/status-protótipo%20de%20design-f59e0b?style=flat-square)
-![Telas](https://img.shields.io/badge/telas-30-2E4756?style=flat-square)
-![WCAG](https://img.shields.io/badge/acessibilidade-WCAG%202.1%20AA-22c55e?style=flat-square)
+O projeto contém os protótipos originais, o backend e um **painel acadêmico
+conectado à API**, disponível em `/panel/` no mesmo servidor. O app Expo ainda
+não foi implementado. Esta versão serve ao desenvolvimento local com dados
+fictícios; a liberação para operação institucional continua bloqueada.
 
-<img src="fatec-adamantina-app/project/export/tela-login.png" alt="Tela de login do app do aluno" width="240" />
-&nbsp;&nbsp;
-<img src="fatec-adamantina-app/project/screenshots/02-cal2.png" alt="Home do aluno com o próximo prazo em destaque" width="440" />
+| Área | Implementação nesta versão |
+| --- | --- |
+| API | FastAPI, rotas `/api/v1`, contrato OpenAPI em `/docs` |
+| Banco | SQLAlchemy, migração Alembic; SQLite local e driver PostgreSQL |
+| Acesso local | Contas provisionadas, senhas Argon2, sessões opacas com expiração e logout |
+| Coordenação | Criar usuários; criar/editar cursos, disciplinas e ofertas de turma |
+| Vínculos | Matrícula de aluno e atribuição de professor com vigência explícita |
+| Permissões | Aluno/professor só consulta turma com vínculo ativo; gestão restrita à coordenação |
+| Histórico | Auditoria transacional e arquivamento/restauração de cadastros |
+| Recuperação local | Backup SQLite e restauração em novo arquivo com verificação |
+| Painel web | Visão geral, cadastros, vínculos, arquivamento e auditoria; paginação e seletores com busca |
+| Sessão web | Cookie HttpOnly/SameSite/Secure por padrão, validação de origem e CSRF |
+| Desenvolvedor/admin | Console de usuários, identidades, permissões, bloqueios e sessões; MFA/contexto Entra exigido |
+| Microsoft institucional | Fluxo OIDC implementado; ativação depende do registro e configuração no tenant da Fatec |
+| Design | Referências originais preservadas em `design/` e `fatec-adamantina-app/` |
 
-</div>
+Veja [como executar o backend](backend/README.md) e o
+[roteiro de implementação](docs/IMPLEMENTACAO.md).
 
-## 💡 Por quê
+## Fontes do produto
 
-A ideia é substituir o Teams na rotina do estudante por algo mais simples, e
-cobrir o que o Teams não cobre: **central de avisos, horário e frequência**. O hub
-é a origem do dado: o que a coordenação cadastra é o que alunos e professores veem.
+- `PRODUCT.md`: requisitos e decisões do produto.
+- `design/README.md`: identidade visual e referências de aluno, professor e coordenação.
+- `fatec-adamantina-app/README.md`: instruções do bundle original de design.
+- `docs/auditoria.html`: diagnóstico histórico do protótipo em 05/09/2026.
+  Suas referências a “nenhum repositório”, “nenhuma tela de professor/coordenação”
+  e “nenhum backend” já não descrevem o estado desta branch.
 
-## 📍 Estado atual
+Os nomes e números dos protótipos são fictícios. O backend inicia vazio.
 
-Este repositório é o **protótipo de design em alta fidelidade**: telas navegáveis
-em HTML/CSS/JS feitas no Claude Design, com dados fictícios. Ainda **não há app
-publicado nem back-end**. As telas são a referência visual e de comportamento para
-a implementação real.
+## Homologação na nuvem
 
-## 📱 Telas
+Configuração Vercel/FastAPI e modo de teste protegido na branch `feat/cloud-staging`.
+Veja o [roteiro de homologação](docs/HOMOLOGACAO-VERCEL.md), incluindo a correção
+do erro `vite: command not found`, banco separado e variáveis obrigatórias.
+A preparação não significa que houve deploy nem libera produção.
 
-| Papel | Telas |
-|---|---|
-| **Aluno** (app) | Abertura, onboarding (3), login, home (próximo prazo, aulas de hoje, eventos), cronograma da semana, calendário, eventos, atividades com filtros, detalhe com entrega de trabalho, materiais (curso → termo → matéria), lembretes, perfil e frequência |
-| **Professor** (app) | Minhas turmas, turma aberta, entregas da atividade, avaliar entrega, nova atividade, publicar material e chamada |
-| **Coordenação** (painel web) | Visão geral, avisos com público-alvo, eventos e inscritos, usuários e papéis, estrutura acadêmica, turmas e grade, matrículas e auditoria |
+Na arquitetura separada recomendada, o backend FastAPI roda no Render e o painel
+em `frontend/` roda na Vercel. O projeto Vercel deve usar Root Directory `frontend`;
+o proxy server-side mantém a senha da proteção fora do navegador e encaminha a API
+para `https://app-fatec.onrender.com`.
 
-## 🧭 Decisões de produto
+## Microsoft e administrador
 
-- **Tudo é auditável**: toda alteração fica registrada com autor, e excluir vira arquivar.
-- **A coordenação vem primeiro**: é ela que cadastra cursos, turmas e matrículas.
-- **A chamada é feita no app** pelo professor. A média mostrada é só das atividades do hub, não o boletim oficial.
-- **Todo aviso tem público-alvo** definido.
-- **A cor indica o papel**: vermelho `#E11D2A` para o aluno e slate `#2E4756` para professor e coordenação.
-- **Acessibilidade WCAG 2.1 AA**: os cinzas do protótipo original que reprovavam em contraste foram trocados, e as áreas de toque têm no mínimo 44px no app.
+Veja [como ativar o login e provisionar o primeiro administrador](docs/MICROSOFT-ADMIN.md).
+Execute `alembic upgrade head`: a migração atual é `0003` (fluxos acadêmicos). A `0002` encerra sessões antigas e preserva cadastros.
+A autenticação real e a validação no navegador ainda dependem da configuração institucional.
 
-## 🛠️ Tecnologias
+## Fluxos acadêmicos desta branch
 
-| | |
-|---|---|
-| **Protótipo** (este repositório) | HTML/CSS/JS no formato Design Component (`.dc.html`), React 18 e Babel via CDN, fonte Plus Jakarta Sans |
-| **Planejado** | App em **Expo (React Native)** para aluno e professor, Android e iOS do mesmo código, e **painel web** para a coordenação, consumindo a mesma API. Back-end, banco e login ainda em definição (a recomendação é entrar com a conta Microsoft institucional) |
+- Atividades, materiais, avisos e eventos: público explícito, rascunho, publicação,
+  edição com controle de versão, busca e arquivamento/restauração.
+- Entregas privadas, prazo pelo servidor, avaliação e feedback. A média do hub não
+  representa boletim oficial.
+- Eventos: inscrição, cancelamento e vagas verificadas no PostgreSQL.
+- Grade: vigência, sala, turma e conflito de professor considerando os vínculos.
+- Matrículas em lote: até 100 e-mails, prévia e aplicação transacional.
+- Anexos privados limitados a texto UTF-8 `.txt`, 512 KiB e 10 arquivos por registro.
 
-## 📁 Estrutura
-
-```
-PRODUCT.md                   # contexto do produto: usuários, propósito, decisões
-fatec-adamantina-app/        # protótipo original do app do aluno (Claude Design)
-└── project/                 # telas, logos, ilustrações e prints
-design/                      # telas novas, em formato .dc.html
-├── aluno/                   # frequência
-├── professor/               # 7 telas
-└── coordenacao/             # 8 telas do painel web
-docs/auditoria.html          # auditoria de completude, segurança e acessibilidade
-```
-
-Detalhes do sistema visual e das regras das telas em [`design/README.md`](design/README.md).
-
-## 🗺️ Próximos passos
-
-- [ ] Definir back-end, banco e hospedagem
-- [ ] Confirmar o login com a conta Microsoft institucional
-- [ ] Implementar o painel da coordenação (é ele que alimenta o resto)
-- [ ] Implementar o app em Expo a partir destas telas
-- [ ] Revisar o tratamento de dados pessoais (LGPD)
+Consulte o [relatório de revisão e pendências](docs/RELATORIO-REVISAO.md) e o
+[mapa das pastas](docs/ESTRUTURA.md). O pentest remoto aguarda a confirmação do
+responsável de que a homologação está publicada.
