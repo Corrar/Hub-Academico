@@ -19,6 +19,7 @@ from . import schemas, security
 from .academic.attendance import install_attendance
 from .academic.clock import local_today
 from .academic.enrollment import install_enrollment
+from .academic.exports import install_exports
 from .academic.files import max_bytes
 from .academic.routes import install_learning
 from .academic.scheduling import lock_schedule, validate_group_schedules
@@ -833,6 +834,7 @@ def create_app(url=None):
     install_enrollment(app, DB, Coordinator, active_group, active, public, audit)
     install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
     install_attendance(app, DB, Actor, visible_groups, public)
+    install_exports(app, DB, Actor, visible_groups)
     install_notifications(app, DB, Actor, push_settings)
     install_privacy(app, DB, Actor, public)
     return app

@@ -512,6 +512,20 @@ async function groupStudents(group) {
   }
   table.append(thead, tbody);
   scroll.append(table);
+  const exports = el("div", undefined, "row-actions");
+  for (const [kind, text] of [
+    ["attendance", "Exportar frequência (CSV)"],
+    ["grades", "Exportar notas (CSV)"],
+  ]) {
+    const link = el("a", text, "secondary button-link");
+    link.href =
+      "/api/v1/learning/groups/" +
+      encodeURIComponent(group.id) +
+      "/export/" +
+      kind;
+    link.download = "";
+    exports.append(link);
+  }
   body.append(
     scroll,
     el(
@@ -519,5 +533,6 @@ async function groupStudents(group) {
       "A média considera apenas atividades avaliadas no hub; não é a nota oficial.",
       "help",
     ),
+    exports,
   );
 }

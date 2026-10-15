@@ -135,6 +135,18 @@ def main():
         "--loop", type=int, default=0, metavar="SEGUNDOS", help="Repete a cada N segundos"
     )
     commands.add_parser("purge-expired", help="Remove dados operacionais vencidos")
+    dump = commands.add_parser("pg-backup", help="Backup verificado do PostgreSQL (pg_dump)")
+    dump.add_argument("destination")
+    check = commands.add_parser(
+        "pg-restore-check", help="Restaura um backup em banco vazio e verifica"
+    )
+    check.add_argument("source")
+    check.add_argument(
+        "--target-env",
+        required=True,
+        metavar="VARIAVEL",
+        help="Variável de ambiente com a URL do banco vazio de destino",
+    )
     b = commands.add_parser("backup")
     b.add_argument("destination")
     r = commands.add_parser("restore-check")
@@ -176,6 +188,19 @@ def main():
                 print(purge(db))
         finally:
             engine.dispose()
+    elif args.command == "pg-backup":
+        from .pgbackup import backup as pg_backup
+
+        target = pg_backup(database_url(), args.destination)
+        print(f"Backup criado e listado com sucesso: {target}")
+    elif args.command == "pg-restore-check":
+        from .pgbackup import restore_check as pg_restore_check
+
+        target_url = os.environ.get(args.target_env, "")
+        if not target_url:
+            parser.error("Defina a URL do banco vazio na variável informada")
+        result = pg_restore_check(args.source, target_url, database_url())
+        print(f"Restauração verificada (revisão {result['revision']}): {result['counts']}")
     elif args.command == "backup":
         backup(args.destination)
         print("Backup criado e integridade verificada.")
