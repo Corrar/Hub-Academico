@@ -26,6 +26,7 @@ from ..models import (
 from ..notifications import queue as push_queue
 from . import files
 from .clock import ZONE, local_today
+from .scanner import Scanner, ScannerUnavailable
 from .scheduling import lock_schedule, validate_schedule
 from .schemas import GradeInput, PublicationInput, ScheduleInput, SubmissionInput
 
@@ -58,6 +59,8 @@ visible_since = func.coalesce(Publication.publish_at, Publication.created_at)
 
 def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit):
     upload_limit = files.max_bytes()
+    scanner = Scanner.from_env()
+    app.state.scanner = scanner
 
     def present(row):
         return {**public(row), "state": state(row)}
@@ -789,9 +792,31 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
         problem = files.verify(file_kind, name, bytes(content))
         if problem:
             raise HTTPException(415, problem)
+        try:
+            verdict = await run_in_threadpool(app.state.scanner.scan, bytes(content))
+        except ScannerUnavailable:
+            raise HTTPException(
+                503, "Verificação antivírus indisponível. Tente novamente em instantes."
+            ) from None
+        if verdict and not verdict.clean:
+            await run_in_threadpool(blocked, db, actor, key, name, verdict.signature)
+            raise HTTPException(422, "Arquivo bloqueado pela verificação antivírus")
         return await run_in_threadpool(
             save_attachment, db, actor, kind, key, name, bytes(content), file_kind.media_type
         )
+
+    def blocked(db, actor, key, name, signature):
+        db.rollback()
+        db.add(
+            Audit(
+                actor_id=actor.id,
+                action="attachment_blocked",
+                entity="attachments",
+                entity_id=key,
+                changes=json.dumps({"name": name, "signature": signature, "target": key}),
+            )
+        )
+        db.commit()
 
     def save_attachment(db, actor, kind, key, name, content, media_type):
         attachment_scope(db, actor, kind, key, write=True)
@@ -816,7 +841,13 @@ def install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
                 entity="attachments",
                 entity_id=row.id,
                 changes=json.dumps(
-                    {"name": name, "bytes": len(content), "type": media_type, "target": key}
+                    {
+                        "name": name,
+                        "bytes": len(content),
+                        "type": media_type,
+                        "target": key,
+                        "scanned": app.state.scanner.enabled,
+                    }
                 ),
             )
         )
