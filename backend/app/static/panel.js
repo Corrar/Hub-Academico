@@ -1,6 +1,6 @@
 "use strict";
 const $ = (id) => document.getElementById(id);
-const titles = {dashboard:"Visão geral",courses:"Cursos",subjects:"Disciplinas",groups:"Turmas",memberships:"Matrículas e vínculos",users:"Usuários",audit:"Auditoria"};
+const titles = {dashboard:"Visão geral",courses:"Cursos",subjects:"Disciplinas",groups:"Turmas",memberships:"Matrículas e vínculos",users:"Usuários",audit:"Auditoria",adminUsers:"Administração de usuários",adminStatus:"Sistema e segurança",myGroups:"Minhas turmas"};
 const descriptions = {dashboard:"Acompanhe a base acadêmica e organize os próximos cadastros.",courses:"Os cursos que compõem a estrutura da unidade.",subjects:"Disciplinas vinculadas a cursos e períodos da matriz.",groups:"Ofertas de disciplinas em cada semestre letivo.",memberships:"Alunos e professores associados às turmas, com vigência definida.",users:"Contas provisionadas para uso no ambiente de desenvolvimento.",audit:"Histórico de alterações nos cadastros, com autor e valores registrados."};
 const roles = {student:"Aluno",teacher:"Professor",coordinator:"Coordenação"};
 const resources = {
@@ -10,6 +10,7 @@ const resources = {
   users: {fields:[['name','Nome completo','text'],['email','E-mail institucional','email'],['role','Perfil','role'],['password','Senha inicial de teste','password']]},
   memberships: {fields:[['user_id','Aluno ou professor','users'],['group_id','Turma','groups'],['starts_on','Início do vínculo','date'],['ends_on','Fim do vínculo','date']]}
 };
+let microsoftEnabled = false;
 let csrf = "", user = null, page = "dashboard", offset = 0, archived = false, generation = 0;
 let editing = null, editorResource = null, editorVersion = 0, saving = false;
 const labels = new Map();
@@ -17,16 +18,17 @@ function el(tag, text, className) { const node = document.createElement(tag); if
 function button(text, handler, className="secondary") {const node=el('button',text,className);node.type='button';node.addEventListener('click',handler);return node;}
 function status(message, error=false) {$('status').textContent=message;$('status').className=error?'error':'';}
 function resetSession(message="") {
+  document.querySelectorAll(".academic-dialog").forEach(node=>node.remove());
   csrf="";user=null;labels.clear();generation++;editorVersion++;
-  $('editor').close();$('fields').replaceChildren();$('view').replaceChildren();$('account-name').textContent='';
+  $('editor').close();$('admin-editor').close();$('admin-fields').replaceChildren();$('fields').replaceChildren();$('view').replaceChildren();$('account-name').textContent='';
   $('app-view').hidden=true;$('login-view').hidden=false;$('login-error').textContent=message;
 }
 async function api(path, options={}) {
   const headers = {...options.headers};
-  if(options.body) headers['Content-Type']='application/json';
+  if(options.body && !headers['Content-Type']) headers['Content-Type']='application/json';
   if(options.method && options.method!=='GET' && csrf) headers['X-CSRF-Token']=csrf;
   let response;
-  try { response=await fetch('/api/v1'+path,{...options,headers,credentials:'same-origin',cache:'no-store'}); }
+  try { response=await fetch('/api/v1'+path,{...options,headers,credentials:'include',cache:'no-store'}); }
   catch {throw new Error('Não foi possível conectar. Verifique a conexão e tente novamente.');}
   if(response.status===204) return null;
   const data=await response.json().catch(()=>({}));
@@ -41,10 +43,12 @@ async function api(path, options={}) {
 function enter(data) {
   user=data.user;csrf=data.csrf_token;
   $('login-view').hidden=true;$('app-view').hidden=false;$('account-name').textContent=user.name;
-  $('navigation').replaceChildren(...Object.entries(titles).map(([key,title])=>{
+  $('navigation').replaceChildren(...Object.entries(titles).filter(([key])=>user.role==='coordinator'?(!key.startsWith('admin')||user.administrator)&&key!=='myGroups':key==='myGroups'||Object.hasOwn(academicPages,key)).map(([key,title])=>{
     const item=button(title,()=>navigate(key));item.dataset.page=key;return item;
   }));
-  navigate('dashboard');
+  document.querySelector('.sidebar-title').textContent=user.administrator?'Administração':roles[user.role];
+  document.querySelector('.topbar .muted').textContent='/ '+(user.administrator?'Administração':roles[user.role]);
+  navigate(user.role==='coordinator'?'dashboard':'myGroups');
 }
 $('login-form').addEventListener('submit',async event=>{
   event.preventDefault();const submit=event.submitter;submit.disabled=true;$('login-error').textContent='';
@@ -61,8 +65,8 @@ $('logout').addEventListener('click',async()=>{
 function navigate(key) {
   page=key;offset=0;archived=false;
   for(const item of $('navigation').children) {if(item.dataset.page===key)item.setAttribute('aria-current','page');else item.removeAttribute('aria-current');}
-  $('page-title').textContent=titles[key];$('page-description').textContent=descriptions[key];
-  $('new-record').hidden=!resources[key];$('new-record').textContent=key==='memberships'?'Vincular pessoa':'Novo cadastro';
+  $('page-title').textContent=titles[key];$('page-description').textContent=descriptions[key]||'';
+  $('new-record').hidden=!resources[key]||(key==='users'&&microsoftEnabled);$('new-record').textContent=key==='memberships'?'Vincular pessoa':'Novo cadastro';
   render();
 }
 $('new-record').addEventListener('click',()=>openEditor());
@@ -80,6 +84,15 @@ async function render() {
   const ticket=++generation, resource=page;
   status('Carregando…');$('view').replaceChildren();
   try {
+    if(Object.hasOwn(academicPages,resource)){await renderLearning(resource,ticket);return;}
+    if(resource==='adminUsers'||resource==='adminStatus'){await renderAdmin(resource,ticket);return;}
+    if(resource==='myGroups'){
+      const rows=await api('/me/groups?offset='+offset+'&limit=25');if(ticket!==generation)return;
+      const box=el('div',undefined,'cards');rows.forEach(row=>{const card=el('div',undefined,'card');card.append(el('h2',row.name),el('p',row.semester));box.append(card);});
+      if(!rows.length)box.append(el('p','Nenhuma turma com vínculo vigente.'));
+      const prev=button('Anterior',()=>{offset=Math.max(0,offset-25);render();}),next=button('Próxima',()=>{offset+=25;render();});prev.disabled=offset===0;next.disabled=rows.length<25;
+      $('view').append(box,prev,next);status('');return;
+    }
     if(resource==='dashboard') {
       const counts=await api('/dashboard');if(ticket!==generation)return;
       const cards=el('div',undefined,'cards');
@@ -97,6 +110,7 @@ async function render() {
       const label=el('label','Mostrar arquivados');const check=el('input');check.type='checkbox';check.checked=archived;
       check.addEventListener('change',()=>{archived=check.checked;offset=0;render();});label.prepend(check);toolbar.append(label);
     } else toolbar.append(button('Atualizar',render));
+    if(resource==='memberships')toolbar.append(button('Importar lote',()=>membershipBatch()));
     box.append(toolbar);
     if(rows.length) {
       const scroll=el('div',undefined,'table-scroll'),table=el('table'),head=el('thead'),tr=el('tr');
@@ -189,4 +203,12 @@ $('record-form').addEventListener('submit',async event=>{
   try{await api('/'+resource+(row&&resource!=='memberships'?'/'+row.id:''),{method:resource==='memberships'||row?'PUT':'POST',body:JSON.stringify(payload)});saving=false;closeEditor();await render();status('Cadastro salvo e registrado na auditoria.');}
   catch(error){$('form-error').textContent=error.message;}finally{saving=false;if(payload.password)payload.password='';$('save-record').disabled=false;}
 });
-api('/web/session').then(enter).catch(error=>{if($('app-view').hidden&&error.message!=='Autenticação necessária')$('login-error').textContent=error.message;});
+const optionsReady=api('/auth/options').then(data=>{microsoftEnabled=data.microsoft;$('microsoft-login').hidden=!data.microsoft;$('login-form').hidden=!data.local;});
+$('microsoft-login').addEventListener('click',microsoftLogin);
+if(new URLSearchParams(location.search).has('auth_error')){$('login-error').textContent='Não foi possível autorizar o acesso Microsoft. Confira o vínculo institucional e a política MFA com o administrador.';history.replaceState(null,'','/panel/');}
+document.addEventListener('DOMContentLoaded',()=>{optionsReady.then(()=>api('/web/session')).then(enter).catch(error=>{if($('app-view').hidden&&error.message!=='Autenticação necessária')$('login-error').textContent=error.message;});});
+
+async function microsoftLogin() {
+  try {const result=await api('/microsoft/start',{method:'POST'});location.assign(result.url);}
+  catch(error){$('login-error').textContent=error.message;status(error.message,true);}
+}
