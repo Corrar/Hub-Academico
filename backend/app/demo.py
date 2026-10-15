@@ -5,7 +5,7 @@ runs against a base that already has courses, and it never creates the
 coordination account: run ``bootstrap`` first.
 """
 
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 
 from sqlalchemy import select
 
@@ -58,7 +58,7 @@ def email(name):
 
 
 def at(day, hour, minute=0):
-    return datetime.combine(day, time(hour, minute), ZONE)
+    return datetime.combine(day, time(hour, minute), ZONE).astimezone(timezone.utc)
 
 
 class Seeder:

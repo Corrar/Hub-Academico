@@ -38,7 +38,9 @@ function openAdmin(action, row = null) {
         ? "Permissões e situação"
         : action === "identity"
           ? "Vincular identidade Microsoft"
-          : "Revogar todas as sessões";
+          : action === "session"
+            ? "Revogar esta sessão"
+            : "Revogar todas as sessões";
   if (action === "create") {
     adminField("name", "Nome", "text");
     adminField("email", "E-mail institucional", "email");
@@ -83,16 +85,20 @@ $("admin-form").addEventListener("submit", async (event) => {
   for (const input of $("admin-fields").querySelectorAll("input,select"))
     body[input.name] = input.type === "checkbox" ? input.checked : input.value;
   const path =
-    "/admin/users" +
-    (adminTarget ? "/" + adminTarget.id : "") +
-    (adminAction === "identity"
-      ? "/identity"
-      : adminAction === "revoke"
-        ? "/revoke"
-        : "");
+    adminAction === "session"
+      ? "/admin/sessions/" + adminTarget.id + "/revoke"
+      : "/admin/users" +
+        (adminTarget ? "/" + adminTarget.id : "") +
+        (adminAction === "identity"
+          ? "/identity"
+          : adminAction === "revoke"
+            ? "/revoke"
+            : "");
   try {
     await api(path, {
-      method: ["create", "revoke"].includes(adminAction) ? "POST" : "PUT",
+      method: ["create", "revoke", "session"].includes(adminAction)
+        ? "POST"
+        : "PUT",
       body: JSON.stringify(body),
     });
     $("admin-editor").close();
@@ -116,7 +122,13 @@ async function renderAdmin(resource, ticket) {
       ["Migração", info.revision],
       ["Microsoft configurado", info.microsoft_configured ? "Sim" : "Não"],
       ["Contexto de autenticação", info.admin_context || "Pendente"],
-      ["Sessão", info.session_minutes + " minutos"],
+      [
+        "Sessão",
+        info.session_minutes +
+          " minutos sem atividade · máximo de " +
+          (info.session_absolute_hours || 8) +
+          " horas",
+      ],
       [
         "Confirmação de ações críticas",
         info.privileged_write_minutes + " minutos após autenticação",
@@ -175,16 +187,23 @@ async function renderAdmin(resource, ticket) {
           if (requestGeneration !== generation || !user) return;
           const detail = el("div", undefined, "guide");
           detail.append(el("h2", "Sessões de " + row.name));
-          sessions.forEach((session) =>
-            detail.append(
-              el(
-                "p",
-                session.method +
-                  " · expira em " +
-                  new Date(session.expires_at).toLocaleString("pt-BR"),
+          sessions.forEach((session) => {
+            const line = el(
+              "p",
+              session.method +
+                " · expira em " +
+                academicTime(session.expires_at) +
+                " ",
+            );
+            line.append(
+              button(
+                "Revogar",
+                () => openAdmin("session", session),
+                "secondary danger",
               ),
-            ),
-          );
+            );
+            detail.append(line);
+          });
           if (!sessions.length) detail.append(el("p", "Nenhuma sessão ativa."));
           $("view").append(detail);
         } catch (error) {

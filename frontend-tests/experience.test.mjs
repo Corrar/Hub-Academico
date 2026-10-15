@@ -7,8 +7,8 @@ import { Script } from "node:vm";
 const staticRoot = new URL("../backend/app/static/", import.meta.url);
 const html = await readFile(new URL("index.html", staticRoot), "utf8");
 const scripts = await Promise.all(
-  ["panel.js", "admin.js", "academic.js", "experience.js"].map((name) =>
-    readFile(new URL(name, staticRoot), "utf8"),
+  ["panel.js", "admin.js", "academic.js", "attendance.js", "experience.js"].map(
+    (name) => readFile(new URL(name, staticRoot), "utf8"),
   ),
 );
 const settle = async () => {
@@ -265,7 +265,8 @@ async function boot(role = "student", options = {}) {
         groups_count: options.empty ? 0 : 1,
         pending_count: options.empty ? 0 : 2,
         material_count: options.empty ? 0 : 3,
-        lessons_today: [],
+        lessons_today: options.lessons || [],
+        recorded_today: [],
         upcoming: options.empty ? [] : [activity],
         recent: [],
       };
@@ -286,7 +287,34 @@ async function boot(role = "student", options = {}) {
       };
     else if (path.endsWith("/enrollment"))
       data = { count: 2, capacity: 10, enrolled: false };
-    else if (path === "/auth/logout") {
+    else if (path.endsWith("/enrollments")) data = [];
+    else if (path === "/learning/attendance/summary")
+      data = options.frequency || {
+        student: { id: "person-1", name: "Pessoa de Teste" },
+        limit_percent: 25,
+        recorded_lessons: 0,
+        absences: 0,
+        attendance_percent: null,
+        groups: [],
+        notice: "Não substitui o diário oficial.",
+      };
+    else if (path === "/learning/attendance/sheet") data = options.sheet;
+    else if (path === "/learning/attendance/lessons") data = [];
+    else if (path === "/learning/notifications")
+      data = options.notifications || { read_at: null, unread: 0, items: [] };
+    else if (path === "/learning/attachment-types")
+      data = {
+        extensions: ["pdf", "txt"],
+        max_bytes: 4194304,
+        text_max_bytes: 524288,
+      };
+    else if (
+      path === "/me/password" ||
+      path === "/learning/notifications/read"
+    ) {
+      code = 204;
+      data = null;
+    } else if (path === "/auth/logout") {
       code = 204;
       data = null;
     }
@@ -469,6 +497,190 @@ test("event enrollment submits CSRF and only one details dialog remains", async 
     assert.equal(request.init.headers["X-CSRF-Token"], "synthetic-csrf");
     assert.deepEqual(JSON.parse(request.init.body), { archived: false });
     assert.equal(app.w.document.querySelectorAll(".academic-dialog").length, 1);
+    assert.deepEqual(app.errors, []);
+  } finally {
+    app.dom.window.close();
+  }
+});
+
+const lesson = {
+  id: "schedule-1",
+  group_id: "group-1",
+  weekday: 2,
+  starts_minute: 1140,
+  ends_minute: 1240,
+  starts_on: "2026-08-01",
+  ends_on: "2026-12-20",
+  room: "Lab 03",
+};
+test("teacher records a roll call marking only the absent student", async () => {
+  const app = await boot("teacher", {
+    lessons: [lesson],
+    sheet: {
+      schedule: lesson,
+      group_label: group.label,
+      lesson_date: "2026-09-09",
+      lesson: null,
+      students: [
+        { id: "s1", name: "Ana <b>Ribeiro</b>", present: null },
+        { id: "s2", name: "Bruno Lima", present: null },
+      ],
+    },
+  });
+  try {
+    const call = [...app.w.document.querySelectorAll(".lesson button")].find(
+      (node) => node.textContent === "Fazer chamada",
+    );
+    assert.ok(call);
+    call.click();
+    await settle();
+    const dialog = app.w.document.querySelector(".academic-dialog");
+    assert.match(dialog.textContent, /Todos entram como presentes/);
+    assert.equal(dialog.querySelectorAll(".roll-student b").length, 0);
+    const toggles = dialog.querySelectorAll(".roll-student");
+    assert.equal(toggles.length, 2);
+    toggles[1].click();
+    await settle();
+    assert.equal(toggles[1].getAttribute("aria-pressed"), "true");
+    assert.equal(
+      dialog.querySelector(".roll-counters strong").textContent,
+      "1",
+    );
+    dialog.querySelector("#learning-topic").value = "Normalização";
+    dialog
+      .querySelector("form")
+      .dispatchEvent(new app.w.Event("submit", { cancelable: true }));
+    await settle();
+    const request = app.requests.findLast((item) => item.init.method === "PUT");
+    assert.ok(request.url.pathname.endsWith("/learning/attendance/sheet"));
+    assert.equal(request.init.headers["X-CSRF-Token"], "synthetic-csrf");
+    assert.deepEqual(JSON.parse(request.init.body), {
+      schedule_id: "schedule-1",
+      lesson_date: "2026-09-09",
+      topic: "Normalização",
+      absent_ids: ["s2"],
+      version: 0,
+    });
+    assert.deepEqual(app.errors, []);
+  } finally {
+    app.dom.window.close();
+  }
+});
+test("student sees attendance warnings, home stat and missed lessons", async () => {
+  const frequency = {
+    student: { id: "person-1", name: "Pessoa de Teste" },
+    limit_percent: 25,
+    recorded_lessons: 10,
+    absences: 5,
+    attendance_percent: 50,
+    notice: "Não substitui o diário oficial.",
+    groups: [
+      {
+        group_id: "group-1",
+        group_label: "Marketing Digital · Noturno A · 2026/2",
+        planned_lessons: 20,
+        recorded_lessons: 10,
+        absences: 5,
+        attendance_percent: 50,
+        allowed_absences: 5,
+        remaining_absences: 0,
+        remaining_lessons: 10,
+        state: "critical",
+        missed: [{ lesson_date: "2026-09-02", topic: "Persona" }],
+      },
+    ],
+  };
+  const app = await boot("student", { frequency });
+  try {
+    const doc = app.w.document;
+    assert.match(doc.querySelector(".stats-grid").textContent, /50%Frequência/);
+    assert.match(
+      doc.querySelector(".alert-banner").textContent,
+      /Marketing Digital/,
+    );
+    await app.navigate("attendance");
+    const view = doc.querySelector("#view").textContent;
+    assert.match(view, /não pode faltar mais nenhuma aula/);
+    assert.match(view, /Limite de faltas atingido/);
+    assert.match(view, /Persona/);
+    assert.match(view, /diário oficial/);
+    assert.deepEqual(app.errors, []);
+  } finally {
+    app.dom.window.close();
+  }
+});
+test("reminders show unread items and mark them as read", async () => {
+  const app = await boot("student", {
+    notifications: {
+      read_at: null,
+      unread: 1,
+      items: [
+        {
+          type: "grade",
+          id: "sub-1",
+          kind: "activity",
+          title: "Lista 1",
+          group_id: "group-1",
+          at: "2026-09-09T22:00:00Z",
+          grade: 8.5,
+          unread: true,
+          publication: activity,
+        },
+      ],
+    },
+  });
+  try {
+    const bell = app.w.document.querySelector("#open-reminders");
+    assert.equal(bell.querySelector(".count-badge").textContent, "1");
+    assert.match(bell.getAttribute("aria-label"), /1 não lido/);
+    await app.navigate("reminders");
+    const item = app.w.document.querySelector(".recent-item.unread");
+    assert.match(item.textContent, /Nota 8,5 recebida/);
+    const mark = [...app.w.document.querySelectorAll("#view button")].find(
+      (node) => node.textContent === "Marcar todas como lidas",
+    );
+    mark.click();
+    await settle();
+    assert.ok(
+      app.requests.some(
+        (item) =>
+          item.url.pathname.endsWith("/notifications/read") &&
+          item.init.method === "POST",
+      ),
+    );
+    assert.deepEqual(app.errors, []);
+  } finally {
+    app.dom.window.close();
+  }
+});
+test("profile changes the local password and clears the fields", async () => {
+  const app = await boot("student");
+  try {
+    await app.navigate("profile");
+    const open = [
+      ...app.w.document.querySelectorAll(".profile-menu button"),
+    ].find((node) => node.textContent === "Alterar senha");
+    open.click();
+    await settle();
+    const doc = app.w.document;
+    doc.querySelector("#learning-current_password").value = "senha-antiga-123";
+    doc.querySelector("#learning-new_password").value = "senha-nova-4567";
+    doc.querySelector("#learning-confirm_password").value = "senha-diferente";
+    const form = doc.querySelector(".academic-dialog form");
+    form.dispatchEvent(new app.w.Event("submit", { cancelable: true }));
+    await settle();
+    assert.match(form.textContent, /confirmação não corresponde/);
+    doc.querySelector("#learning-confirm_password").value = "senha-nova-4567";
+    form.dispatchEvent(new app.w.Event("submit", { cancelable: true }));
+    await settle();
+    const request = app.requests.findLast((item) =>
+      item.url.pathname.endsWith("/me/password"),
+    );
+    assert.deepEqual(JSON.parse(request.init.body), {
+      current_password: "senha-antiga-123",
+      new_password: "senha-nova-4567",
+    });
+    assert.equal(doc.querySelectorAll(".academic-dialog").length, 0);
     assert.deepEqual(app.errors, []);
   } finally {
     app.dom.window.close();

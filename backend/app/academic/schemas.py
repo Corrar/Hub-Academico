@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timezone
 from typing import Literal
 from uuid import UUID
 
@@ -24,6 +24,11 @@ class PublicationInput(schemas.Input):
 
     @model_validator(mode="after")
     def consistent(self):
+        # Store instants in UTC: SQLite would otherwise drop the offset silently.
+        for key in ["due_at", "starts_at", "ends_at", "publish_at", "expires_at"]:
+            value = getattr(self, key)
+            if value is not None:
+                setattr(self, key, value.astimezone(timezone.utc))
         if self.expires_at and self.kind != "notice":
             raise ValueError("Data de saída do ar é exclusiva de avisos")
         if self.publish_at and self.expires_at and self.expires_at <= self.publish_at:

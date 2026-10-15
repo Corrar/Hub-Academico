@@ -1728,3 +1728,322 @@ body[data-role="teacher"] .workspace {
     scroll-behavior: auto !important;
   }
 }
+
+/* Reminders: unread counter and read state. */
+#open-reminders,
+#navigation [data-page="reminders"] {
+  position: relative;
+}
+.count-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--red);
+  color: white;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 20px;
+  text-align: center;
+}
+#navigation [data-page="reminders"] .count-badge {
+  position: static;
+  margin-left: auto;
+}
+.reminder-feed .recent-item:not(.unread) .recent-dot {
+  background: #c9d0d6;
+}
+.reminder-feed .recent-item.unread strong {
+  font-weight: 800;
+}
+/* Attendance: alerts, per-subject balance and missed lessons. */
+.alert-banner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  background: var(--pink);
+  color: var(--red-dark);
+  border-color: #f6c5cb;
+  margin: 0 0 20px;
+}
+.frequency-alert {
+  cursor: default;
+}
+.frequency-overall {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px;
+  margin-bottom: 8px;
+}
+.frequency-overall strong {
+  font-size: 34px;
+  letter-spacing: -1px;
+  color: var(--slate);
+  flex-shrink: 0;
+}
+.frequency-overall p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.frequency-list {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.frequency-card {
+  background: white;
+  border: 1.5px solid #eceef1;
+  border-left: 4px solid var(--green);
+  border-radius: 18px;
+  padding: 16px;
+}
+.frequency-card.warning {
+  border-left-color: var(--gold);
+}
+.frequency-card.critical,
+.frequency-card.exceeded {
+  border-left-color: var(--red);
+}
+.frequency-card.no_data {
+  border-left-color: #c9d0d6;
+}
+.frequency-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+.frequency-top h3 {
+  margin: 0;
+  font-size: 14px;
+}
+.frequency-card p {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.frequency-card .frequency-balance {
+  color: var(--ink);
+  font-weight: 700;
+}
+.frequency-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: #eef1f4;
+  margin-top: 10px;
+  overflow: hidden;
+}
+.frequency-bar span {
+  display: block;
+  height: 100%;
+  background: var(--slate);
+  border-radius: 4px;
+}
+.frequency-card.warning .frequency-bar span {
+  background: var(--gold);
+}
+.frequency-card.critical .frequency-bar span,
+.frequency-card.exceeded .frequency-bar span {
+  background: var(--red);
+}
+.missed-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f3f5;
+  font-size: 13px;
+}
+.missed-item small {
+  grid-column: 2;
+  color: var(--muted);
+}
+/* Roll call. */
+.wide-dialog {
+  width: min(760px, calc(100% - 28px));
+}
+.roll-counters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 12px 0;
+}
+.roll-counters div {
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 12px;
+  text-align: center;
+}
+.roll-counters strong {
+  display: block;
+  font-size: 24px;
+}
+.roll-counters div:last-child strong {
+  color: var(--red-dark);
+}
+.roll-counters span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.roll-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 16px;
+  display: grid;
+  gap: 8px;
+}
+.roll-student {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  background: white;
+  border-color: var(--line);
+  min-height: 52px;
+}
+.roll-student .avatar {
+  background: var(--slate);
+}
+.roll-name {
+  flex: 1;
+  min-width: 0;
+}
+.roll-mark {
+  font-size: 12px;
+  color: var(--green);
+}
+.roll-student.absent {
+  background: var(--pink);
+  border-color: #f6c5cb;
+}
+.roll-student.absent .avatar {
+  background: var(--red);
+}
+.roll-student.absent .roll-mark {
+  color: var(--red-dark);
+}
+.lesson .lesson-info {
+  flex: 1;
+}
+.lesson-info .badge {
+  margin-top: 6px;
+}
+.lesson-action {
+  flex-shrink: 0;
+}
+.roll-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f3f5;
+}
+.roll-item > div:first-of-type {
+  flex: 1;
+  min-width: 0;
+}
+.roll-item h3 {
+  font-size: 14px;
+  margin: 0;
+}
+.roll-item p {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 3px 0 0;
+}
+.roll-item .row-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.roll-item .row-actions button {
+  min-height: 40px;
+  padding: 8px 12px;
+}
+.group-options {
+  display: grid;
+  gap: 8px;
+}
+/* Deliveries, grading and attachments. */
+.delivery-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 10px 0;
+}
+.delivery-stats div {
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 10px;
+  text-align: center;
+}
+.delivery-stats strong {
+  display: block;
+  font-size: 18px;
+}
+.delivery-stats span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.delivery-meta {
+  font-weight: 700;
+  color: var(--slate);
+}
+.enrollment-list {
+  margin: 10px 0;
+  font-size: 13px;
+}
+.enrollment-list summary {
+  cursor: pointer;
+  font-weight: 700;
+  min-height: 24px;
+}
+.feedback {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+.submission-preview {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 12px;
+  max-height: 220px;
+  overflow: auto;
+}
+.attachment-line small {
+  color: var(--muted);
+}
+.reach {
+  font-weight: 700;
+  color: var(--slate);
+}
+.table-search {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1 1 420px;
+}
+.table-search input[type="search"],
+.table-search select {
+  width: auto;
+  flex: 1 1 160px;
+  max-width: 260px;
+  min-height: 44px;
+}
+.wide-dialog .table-scroll table {
+  min-width: 600px;
+}
+.wide-dialog td small {
+  overflow-wrap: normal;
+  word-break: normal;
+}

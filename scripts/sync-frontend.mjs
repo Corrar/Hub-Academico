@@ -11,6 +11,7 @@ const files = [
   "panel.css",
   "panel.js",
   "academic.js",
+  "attendance.js",
   "admin.js",
   "experience.js",
   "logo-fatec.png",

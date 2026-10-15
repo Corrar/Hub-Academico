@@ -9,6 +9,7 @@ const experiencePages = {
   profile: "Meu perfil",
   search: "Buscar",
   onboarding: "Conheça o aplicativo",
+  attendance: "Frequência",
 };
 Object.assign(titles, experiencePages);
 Object.assign(descriptions, {
@@ -43,6 +44,9 @@ const iconPaths = {
     "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2",
   help: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M9 9a3 3 0 0 1 6 0c0 2-3 2-3 5M12 17h.01",
   logout: "M9 4H3v16h6M9 12h12M17 8l4 4-4 4",
+  attendance:
+    "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8M16 11l2 2 4-4",
+  alert: "M12 3 2 21h20ZM12 10v5M12 18h.01",
 };
 const pageIcons = {
   dashboard: "home",
@@ -58,6 +62,7 @@ const pageIcons = {
   event: "calendar",
   reminders: "bell",
   onboarding: "help",
+  attendance: "attendance",
 };
 function icon(name) {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -90,6 +95,7 @@ function allowedPages() {
     "notice",
     "event",
     "schedule",
+    "attendance",
     "calendar",
     "reminders",
     "profile",
@@ -118,7 +124,7 @@ function setupExperience() {
   const nav = $("navigation");
   nav.replaceChildren();
   const sections = [
-    ["Principal", ["dashboard", "event", "notice"]],
+    ["Principal", ["dashboard", "reminders", "event", "notice"]],
     [
       "Acadêmico",
       [
@@ -126,6 +132,7 @@ function setupExperience() {
         "subjects",
         "groups",
         "schedule",
+        "attendance",
         "memberships",
         "users",
         "activity",
@@ -151,6 +158,35 @@ function setupExperience() {
     ].map(([key, label]) => navButton(key, label)),
   );
 }
+let unreadReminders = 0;
+async function refreshReminders() {
+  const session = user;
+  try {
+    const data = await api("/learning/notifications?limit=1");
+    if (session !== user) return;
+    unreadReminders = data.unread;
+  } catch {
+    return;
+  }
+  const label = unreadReminders
+    ? `Abrir lembretes, ${unreadReminders} não ${unreadReminders === 1 ? "lido" : "lidos"}`
+    : "Abrir lembretes";
+  $("open-reminders").setAttribute("aria-label", label);
+  for (const target of [
+    $("open-reminders"),
+    ...document.querySelectorAll('#navigation [data-page="reminders"]'),
+  ]) {
+    target.querySelector(".count-badge")?.remove();
+    if (unreadReminders)
+      target.append(
+        el(
+          "span",
+          unreadReminders > 9 ? "9+" : String(unreadReminders),
+          "count-badge",
+        ),
+      );
+  }
+}
 function initials(name) {
   return name
     .trim()
@@ -166,6 +202,11 @@ function updateHeading(key) {
   if (key === "home") {
     $("page-title").textContent = user.name;
     $("page-description").textContent = user.email + " · " + roles[user.role];
+  }
+  if (key === "attendance" && user.role !== "student") {
+    $("page-title").textContent = "Chamadas e frequência";
+    $("page-description").textContent =
+      "Registre a chamada das aulas e corrija lançamentos com histórico auditado.";
   }
   if (key === "dashboard")
     for (const [kind, label] of [
@@ -225,7 +266,7 @@ function recentItem(row) {
   item.append(el("span", undefined, "recent-dot"), body, icon("arrow"));
   return item;
 }
-function lessonCard(row) {
+function lessonCard(row, recorded = false, date = "") {
   const item = el("article", undefined, "lesson"),
     time = el("div", minuteTime(row.starts_minute), "lesson-time"),
     body = el("div", undefined, "lesson-info");
@@ -235,6 +276,15 @@ function lessonCard(row) {
     el("p", row.room),
   );
   item.append(time, body);
+  if (date && user && user.role !== "student") {
+    const call = button(
+      recorded ? "Corrigir chamada" : "Fazer chamada",
+      learningAction(() => rollCall(row.id, date)),
+      recorded ? "secondary lesson-action" : "primary lesson-action",
+    );
+    if (recorded) body.append(el("span", "Chamada registrada", "badge green"));
+    item.append(call);
+  }
   return item;
 }
 async function groupLabels(rows) {
@@ -267,39 +317,22 @@ function searchBar(value, submit) {
 }
 let globalSearch = "";
 async function renderExperience(key, ticket) {
+  if (["home", "dashboard", "reminders"].includes(key)) void refreshReminders();
   if (key === "home" || key === "dashboard" || key === "reminders") {
     const data = await api("/learning/overview");
     await groupLabels([...data.lessons_today, ...data.upcoming]);
     if (ticket !== generation) return;
     if (key === "home") {
-      const groups =
-        user.role === "teacher" ? await api("/learning/groups?limit=4") : [];
+      const [groups, frequency] = await Promise.all([
+        user.role === "teacher" ? api("/learning/groups?limit=4") : [],
+        user.role === "student"
+          ? api("/learning/attendance/summary").catch(() => null)
+          : null,
+      ]);
       if (ticket !== generation) return;
-      renderHome(data, groups);
+      renderHome(data, groups, frequency);
     }
-    if (key === "reminders") {
-      const box = el("div", undefined, "section-card");
-      box.append(sectionHeading("Próximos prazos", "activity"));
-      data.upcoming.forEach((row) => box.append(recentItem(row)));
-      if (!data.upcoming.length)
-        box.append(
-          emptyState(
-            "Nenhum prazo próximo",
-            "As atividades publicadas aparecerão aqui.",
-            "schedule",
-          ),
-        );
-      box.append(sectionHeading("Comunicados recentes", "notice"));
-      data.recent.forEach((row) => box.append(recentItem(row)));
-      $("view").append(
-        box,
-        el(
-          "p",
-          "Lembretes consultados no aplicativo. Não enviamos notificações push.",
-          "help",
-        ),
-      );
-    }
+    if (key === "reminders") await renderReminders(data, ticket);
     if (key === "dashboard") {
       const counts = await api("/dashboard");
       if (ticket !== generation) return;
@@ -330,10 +363,92 @@ async function renderExperience(key, ticket) {
   } else if (key === "profile") renderProfile();
   else if (key === "onboarding") renderOnboarding();
   else if (key === "calendar") await renderCalendar(ticket);
+  else if (key === "attendance") await renderAttendance(ticket);
   else if (key === "search") await renderSearch(ticket);
   if (ticket === generation) status("");
 }
-function renderHome(data, groups = []) {
+async function renderReminders(data, ticket) {
+  const feed = await api("/learning/notifications");
+  await groupLabels(feed.items);
+  if (ticket !== generation) return;
+  const toolbar = el("div", undefined, "toolbar");
+  toolbar.append(
+    el(
+      "span",
+      feed.unread
+        ? plural(feed.unread, "novidade não lida", "novidades não lidas")
+        : "Você está em dia",
+    ),
+  );
+  if (feed.unread)
+    toolbar.append(
+      button(
+        "Marcar todas como lidas",
+        learningAction(async () => {
+          await api("/learning/notifications/read", { method: "POST" });
+          await refreshReminders();
+          await render();
+        }),
+      ),
+    );
+  const box = el("div", undefined, "section-card reminder-feed");
+  box.append(sectionHeading("Novidades"));
+  for (const item of feed.items) {
+    const row = button(
+        "",
+        learningAction(() => openPublication(item.publication)),
+        "recent-item" + (item.unread ? " unread" : ""),
+      ),
+      body = el("div");
+    const kind =
+      item.type === "grade"
+        ? "Nota " + String(item.grade).replace(".", ",") + " recebida"
+        : academicPages[item.kind];
+    body.append(
+      el("strong", item.title),
+      el(
+        "small",
+        kind +
+          (item.group_id
+            ? " · " + reference("groups", item.group_id).split(" · ")[0]
+            : "") +
+          " · " +
+          academicTime(item.at),
+      ),
+    );
+    row.append(el("span", undefined, "recent-dot"), body, icon("arrow"));
+    if (item.unread) row.setAttribute("aria-label", "Não lido: " + item.title);
+    box.append(row);
+  }
+  if (!feed.items.length)
+    box.append(
+      emptyState(
+        "Nenhuma novidade",
+        "Avisos, materiais, atividades e notas aparecerão aqui.",
+        "bell",
+      ),
+    );
+  box.append(sectionHeading("Próximos prazos", "activity"));
+  data.upcoming.forEach((row) => box.append(recentItem(row)));
+  if (!data.upcoming.length)
+    box.append(
+      emptyState(
+        "Nenhum prazo próximo",
+        "As atividades publicadas aparecerão aqui.",
+        "schedule",
+      ),
+    );
+  $("view").append(
+    toolbar,
+    box,
+    el(
+      "p",
+      "Lembretes consultados no aplicativo. Notificações push dependem do aplicativo móvel.",
+      "help",
+    ),
+  );
+}
+function renderHome(data, groups = [], frequency = null) {
   const target = data.upcoming[0],
     teacher = user.role === "teacher";
   const hero = button(
@@ -396,7 +511,9 @@ function renderHome(data, groups = []) {
   const stats = el("div", undefined, "stats-grid");
   for (const [count, label, key] of [
     [data.pending_count, teacher ? "Para avaliar" : "Sem entrega", "activity"],
-    [data.groups_count, "Turmas", "myGroups"],
+    frequency
+      ? [percent(frequency.attendance_percent), "Frequência", "attendance"]
+      : [data.groups_count, "Turmas", "myGroups"],
     [data.material_count, "Materiais", "material"],
   ]) {
     const item = button("", () => navigate(key), "stat");
@@ -425,8 +542,26 @@ function renderHome(data, groups = []) {
         ),
       );
   }
+  const warning = frequency?.groups.find((item) =>
+    ["exceeded", "critical"].includes(item.state),
+  );
+  if (warning) {
+    const alert = button("", () => navigate("attendance"), "alert-banner");
+    alert.append(
+      icon("alert"),
+      el(
+        "span",
+        `Atenção à frequência em ${warning.group_label.split(" · ")[0]}: ${frequencyBalance(warning).toLowerCase()}.`,
+      ),
+    );
+    $("view").append(alert);
+  }
   $("view").append(sectionHeading("Aulas de hoje", "schedule", "Ver semana"));
-  data.lessons_today.forEach((row) => $("view").append(lessonCard(row)));
+  data.lessons_today.forEach((row) =>
+    $("view").append(
+      lessonCard(row, data.recorded_today?.includes(row.id), data.date),
+    ),
+  );
   if (!data.lessons_today.length)
     $("view").append(
       emptyState(
@@ -502,9 +637,44 @@ function renderDashboard(counts, data) {
       "Os vínculos definem o acesso às turmas.",
       "memberships",
     ]);
+  const alerts = counts.alerts || {};
+  const describe = (info) =>
+    info.items.map((item) => item.label.split(" · ")[0]).join(", ") +
+    (info.count > info.items.length ? " e outras" : "");
+  if (alerts.groups_without_teacher?.count)
+    actions.push([
+      plural(
+        alerts.groups_without_teacher.count,
+        "turma sem professor",
+        "turmas sem professor",
+      ),
+      describe(alerts.groups_without_teacher) +
+        ". Vincule um professor vigente.",
+      "memberships",
+    ]);
+  if (alerts.groups_without_schedule?.count)
+    actions.push([
+      plural(
+        alerts.groups_without_schedule.count,
+        "turma sem grade",
+        "turmas sem grade",
+      ),
+      describe(alerts.groups_without_schedule) + ". Cadastre os horários.",
+      "schedule",
+    ]);
+  if (alerts.teacher_memberships_ending)
+    actions.push([
+      plural(
+        alerts.teacher_memberships_ending,
+        "vínculo de professor vence",
+        "vínculos de professor vencem",
+      ) + " em 30 dias",
+      "Renove a vigência para não interromper o acesso.",
+      "memberships",
+    ]);
   if (data.pending_count)
     actions.push([
-      data.pending_count + " avaliações pendentes",
+      plural(data.pending_count, "avaliação pendente", "avaliações pendentes"),
       "Acompanhe as entregas recebidas.",
       "activity",
     ]);
@@ -559,8 +729,9 @@ function readDialog(title) {
 }
 async function openPublication(row) {
   const { dialog, body } = readDialog(row.title);
+  dialog.classList.add("wide-dialog");
   body.append(
-    el("span", row.draft ? "Rascunho" : academicPages[row.kind], "badge"),
+    stateBadge(row) || el("span", academicPages[row.kind], "badge"),
     el("p", row.body, "academic-body"),
   );
   if (row.due_at) body.append(el("p", "Prazo: " + academicTime(row.due_at)));
@@ -584,6 +755,23 @@ async function openPublication(row) {
           `${info.count} inscritos · ${info.capacity ?? "sem limite de"} vagas`,
         ),
       );
+      if (canManage(row)) {
+        const people = await api(
+          "/learning/events/" + row.id + "/enrollments?limit=100",
+        );
+        if (!dialog.isConnected) return;
+        const list = el("details", undefined, "enrollment-list");
+        list.append(el("summary", "Ver inscritos (" + people.length + ")"));
+        for (const person of people)
+          list.append(
+            el(
+              "p",
+              `${person.name} · ${person.email} · ${academicTime(person.created_at)}`,
+            ),
+          );
+        if (!people.length) list.append(el("p", "Nenhuma inscrição ainda."));
+        body.append(list);
+      }
       const action = button(
         info.enrolled ? "Cancelar inscrição" : "Inscrever-me",
         async () => {
@@ -612,13 +800,66 @@ async function openPublication(row) {
 function openGroup(row) {
   const { dialog, body } = readDialog(row.label);
   body.append(el("p", "Escolha o conteúdo que deseja consultar."));
-  for (const key of ["activity", "material", "schedule"])
-    body.append(
-      button(titles[key], () => {
-        dialog.close();
-        navigate(key, { groupId: row.id });
-      }),
+  const options = el("div", undefined, "group-options");
+  for (const key of ["activity", "material", "schedule", "attendance"])
+    options.append(
+      button(
+        key === "attendance" && user.role !== "student"
+          ? "Chamadas"
+          : titles[key],
+        () => {
+          dialog.close();
+          navigate(key, { groupId: row.id });
+        },
+      ),
     );
+  if (user.role !== "student")
+    options.append(
+      button(
+        "Alunos e desempenho",
+        learningAction(async () => {
+          dialog.close();
+          await groupStudents(row);
+        }),
+      ),
+    );
+  body.append(options);
+}
+function passwordDialog() {
+  const ui = learningDialog("Alterar senha");
+  const current = ui.field("current_password", "Senha atual", "password");
+  current.autocomplete = "current-password";
+  const fresh = ui.field("new_password", "Nova senha", "password");
+  const again = ui.field("confirm_password", "Repita a nova senha", "password");
+  for (const input of [fresh, again]) {
+    input.autocomplete = "new-password";
+    input.minLength = 12;
+    input.maxLength = 128;
+  }
+  ui.fields.append(
+    el(
+      "p",
+      "Mínimo de 12 caracteres. As outras sessões abertas desta conta serão encerradas.",
+      "help",
+    ),
+  );
+  ui.save.textContent = "Alterar senha";
+  ui.form.save = async () => {
+    if (fresh.value !== again.value)
+      throw new Error("A confirmação não corresponde à nova senha.");
+    try {
+      await api("/me/password", {
+        method: "POST",
+        body: JSON.stringify({
+          current_password: current.value,
+          new_password: fresh.value,
+        }),
+      });
+    } finally {
+      current.value = fresh.value = again.value = "";
+    }
+    return "Senha alterada. As outras sessões foram encerradas.";
+  };
 }
 function renderProfile() {
   const card = el("div", undefined, "section-card profile-card");
@@ -639,6 +880,7 @@ function renderProfile() {
     "myGroups",
     "activity",
     "material",
+    "attendance",
     "notice",
     "event",
     "calendar",
@@ -651,6 +893,8 @@ function renderProfile() {
       item.append(icon("arrow"));
       menu.append(item);
     }
+  if (localLoginEnabled && !user.administrator)
+    menu.append(button("Alterar senha", learningAction(passwordDialog)));
   menu.append(
     button("Ajuda com o acesso", () => $("help-dialog").showModal()),
     button("Sair da conta", () => $("logout").click(), "secondary danger"),

@@ -248,6 +248,7 @@ def create_app(url=None):
             "index.html",
             "panel.js",
             "academic.js",
+            "attendance.js",
             "admin.js",
             "experience.js",
             "plus-jakarta-sans-latin-wght-normal.woff2",

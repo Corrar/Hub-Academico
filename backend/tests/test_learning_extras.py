@@ -260,3 +260,12 @@ def test_reminders_feed_unread_count_and_grades(system):
         ROOT + "/notifications", headers=login_user(client, outsider["email"])
     ).json()
     assert [item["title"] for item in items["items"]] == ["Prova"]
+
+
+def test_offsets_are_normalized_to_utc(system):
+    client, _, _ = system
+    groups, people = setup(client)
+    created = publication(client, groups[0], due_at="2026-12-10T23:59:00-03:00")
+    assert created["due_at"].startswith("2026-12-11T02:59:00")
+    listed = client.get(ROOT + "/publications?kind=activity", headers=people[0][1]).json()
+    assert listed[0]["due_at"].startswith("2026-12-11T02:59:00")

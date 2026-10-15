@@ -22,7 +22,11 @@ function academicTime(value) {
   if (!value) return "—";
   return new Date(
     /[Zz]|[+-]\d\d:\d\d$/.test(value) ? value : value + "Z",
-  ).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  ).toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    dateStyle: "short",
+    timeStyle: "short",
+  });
 }
 function minuteTime(value) {
   return (
@@ -35,6 +39,53 @@ function dateInput(value) {
   if (!value) return "";
   const d = new Date(/[Zz]|[+-]\d\d:\d\d$/.test(value) ? value : value + "Z");
   return new Date(d.getTime() - 3 * 3600000).toISOString().slice(0, 16);
+}
+function stateBadge(row) {
+  const states = {
+    archived: ["Arquivado", ""],
+    draft: ["Rascunho", "gold"],
+    scheduled: [
+      "Agendado · " + (row.publish_at ? academicTime(row.publish_at) : ""),
+      "gold",
+    ],
+    expired: ["Fora do ar", ""],
+  };
+  const current = row.archived
+    ? "archived"
+    : row.state || (row.draft ? "draft" : "");
+  return states[current]
+    ? el("span", states[current][0], "badge " + states[current][1])
+    : null;
+}
+function submissionBadge(row) {
+  const mine = row.my_submission;
+  const closed = row.due_at && academicInstant(row.due_at) < new Date();
+  if (!mine)
+    return closed
+      ? el("span", "Prazo encerrado · sem entrega", "badge red")
+      : el("span", "Pendente", "badge gold");
+  if (mine.state === "graded")
+    return el(
+      "span",
+      "Avaliada · nota " + String(mine.grade).replace(".", ","),
+      "badge green",
+    );
+  if (mine.state === "submitted") return el("span", "Entregue", "badge green");
+  return el(
+    "span",
+    closed ? "Rascunho não enviado" : "Rascunho salvo",
+    closed ? "badge red" : "badge gold",
+  );
+}
+function fileSize(bytes) {
+  return bytes >= 1024 * 1024
+    ? (bytes / 1024 / 1024).toFixed(1).replace(".", ",") + " MB"
+    : Math.max(1, Math.round(bytes / 1024)) + " KB";
+}
+let attachmentRules = null;
+async function attachmentTypes() {
+  attachmentRules ??= await api("/learning/attachment-types");
+  return attachmentRules;
 }
 function canManage(row) {
   return (
@@ -112,9 +163,11 @@ function learningDialog(title) {
     cancel.disabled = true;
     error.textContent = "";
     try {
-      await form.save();
+      const message = await form.save();
       dialog.close();
       await render();
+      // A save may return a confirmation shown after the page refreshes.
+      if (typeof message === "string") status(message);
     } catch (e) {
       error.textContent = e.message;
     } finally {
@@ -178,11 +231,43 @@ async function publicationEditor(kind, row = null) {
     );
     audience.disabled = Boolean(row);
     const group = await learningGroups(ui, row?.group_id || "", Boolean(row));
+    const reach = el("p", "", "help reach");
+    reach.setAttribute("aria-live", "polite");
+    ui.fields.append(reach);
+    let reachTotal = null,
+      reachTicket = 0;
+    const updateReach = async () => {
+      const ticket = ++reachTicket;
+      reachTotal = null;
+      if (audience.value === "group" && !group.value) {
+        reach.textContent = "Selecione a turma para ver o alcance.";
+        return;
+      }
+      reach.textContent = "Calculando alcance…";
+      try {
+        const data = await api(
+          "/learning/reach?" +
+            new URLSearchParams({
+              audience: audience.value,
+              ...(audience.value === "group" ? { group_id: group.value } : {}),
+            }),
+        );
+        if (ticket !== reachTicket) return;
+        reachTotal = data.total;
+        reach.textContent = `Alcance: ${plural(data.total, "pessoa", "pessoas")} (${plural(data.students, "aluno", "alunos")}, ${plural(data.teachers, "professor", "professores")}).`;
+      } catch (error) {
+        if (ticket === reachTicket) reach.textContent = error.message;
+      }
+    };
     const sync = () => {
-      group.required = audience.value === "group";
-      group.disabled = Boolean(row) || audience.value !== "group";
+      const scoped = audience.value === "group";
+      group.required = scoped;
+      group.disabled = Boolean(row) || !scoped;
+      group.hidden = group.labels[0].hidden = !scoped;
+      void updateReach();
     };
     audience.addEventListener("change", sync);
+    group.addEventListener("change", updateReach);
     sync();
     if (kind === "activity")
       ui.field(
@@ -214,6 +299,31 @@ async function publicationEditor(kind, row = null) {
       capacity.min = 1;
       capacity.max = 100000;
     }
+    const visible = row && row.state === "published";
+    const publishAt = ui.field(
+      "publish_at",
+      "Publicar em (opcional) — horário de Brasília",
+      "datetime-local",
+      dateInput(row?.publish_at),
+    );
+    publishAt.required = false;
+    publishAt.disabled = Boolean(visible);
+    if (kind === "notice") {
+      const expiresAt = ui.field(
+        "expires_at",
+        "Sai do ar em (opcional) — horário de Brasília",
+        "datetime-local",
+        dateInput(row?.expires_at),
+      );
+      expiresAt.required = false;
+    }
+    ui.fields.append(
+      el(
+        "p",
+        "Sem data de publicação, o conteúdo aparece assim que deixar de ser rascunho.",
+        "help",
+      ),
+    );
     const draft = ui.field(
       "draft",
       "Manter como rascunho",
@@ -236,6 +346,11 @@ async function publicationEditor(kind, row = null) {
           body[key] = new Date(
             ui.controls[key].value + ":00-03:00",
           ).toISOString();
+      for (const key of ["publish_at", "expires_at"])
+        if (ui.controls[key])
+          body[key] = ui.controls[key].value
+            ? new Date(ui.controls[key].value + ":00-03:00").toISOString()
+            : null;
       if (ui.controls.capacity)
         body.capacity = ui.controls.capacity.value
           ? Number(ui.controls.capacity.value)
@@ -244,7 +359,11 @@ async function publicationEditor(kind, row = null) {
         body.audience === "institution" &&
         !body.draft &&
         !confirm(
-          "Publicar para TODA a instituição?\n\n" +
+          "Publicar para TODA a instituição" +
+            (reachTotal === null
+              ? ""
+              : ` (${plural(reachTotal, "pessoa", "pessoas")})`) +
+            "?\n\n" +
             body.title +
             "\n\n" +
             body.body,
@@ -318,11 +437,20 @@ async function attachmentPanel(kind, key, box, writable) {
     if (!box.isConnected) return;
     section.replaceChildren(heading);
     for (const row of rows) {
-      const line = el("p"),
+      const line = el("p", undefined, "attachment-line"),
         link = el("a", row.name);
       link.href = "/api/v1/learning/attachments/" + encodeURIComponent(row.id);
       link.download = row.name;
-      line.append(link);
+      line.append(
+        link,
+        el(
+          "small",
+          " · " +
+            (row.name.split(".").pop() || "").toUpperCase() +
+            " · " +
+            fileSize(row.size || 0),
+        ),
+      );
       if (writable)
         line.append(
           button(
@@ -340,39 +468,48 @@ async function attachmentPanel(kind, key, box, writable) {
     }
     if (!rows.length) section.append(el("p", "Nenhum anexo."));
     if (writable) {
+      const rules = await attachmentTypes();
+      if (!box.isConnected) return;
       const caption = el(
           "label",
-          "Texto UTF-8 (.txt), até 512 KiB. Máximo de 10 arquivos por registro, incluindo arquivados.",
+          `Formatos: ${rules.extensions.join(", ").toUpperCase()}. Até ${fileSize(rules.max_bytes)} por arquivo (textos até ${fileSize(rules.text_max_bytes)}). Máximo de 10 arquivos por registro, incluindo arquivados.`,
         ),
-        file = el("input");
+        file = el("input"),
+        problem = el("p", "", "error");
+      problem.setAttribute("role", "alert");
       file.type = "file";
-      file.accept = ".txt,text/plain";
+      file.accept = rules.extensions.map((item) => "." + item).join(",");
       caption.append(file);
       section.append(caption);
-      const upload = button(
-        "Enviar arquivo",
-        learningAction(async () => {
-          const selected = file.files[0];
+      const upload = button("Enviar arquivo", async () => {
+        problem.textContent = "";
+        const selected = file.files[0];
+        try {
           if (!selected) throw new Error("Selecione um arquivo.");
-          if (selected.size > 512 * 1024)
-            throw new Error("Arquivo maior que 512 KiB.");
+          const extension = selected.name.split(".").pop().toLowerCase();
+          if (!rules.extensions.includes(extension))
+            throw new Error("Formato não aceito.");
+          const textual = ["txt", "csv", "ipynb"].includes(extension);
+          const limit = textual ? rules.text_max_bytes : rules.max_bytes;
+          if (selected.size > limit)
+            throw new Error("Arquivo maior que " + fileSize(limit) + ".");
           upload.disabled = true;
-          try {
-            await api(`/learning/${kind}/${key}/attachments`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "text/plain",
-                "X-File-Name": selected.name,
-              },
-              body: selected,
-            });
-            await load();
-          } finally {
-            upload.disabled = false;
-          }
-        }),
-      );
-      section.append(upload);
+          await api(`/learning/${kind}/${key}/attachments`, {
+            method: "POST",
+            headers: {
+              "Content-Type": selected.type || "application/octet-stream",
+              "X-File-Name": encodeURIComponent(selected.name),
+            },
+            body: selected,
+          });
+          await load();
+        } catch (error) {
+          problem.textContent = error.message;
+        } finally {
+          upload.disabled = false;
+        }
+      });
+      section.append(upload, problem);
     }
   }
   await load();
@@ -380,40 +517,123 @@ async function attachmentPanel(kind, key, box, writable) {
 async function activityDetails(row, box) {
   const section = el("section"),
     list = el("div");
-  section.append(
-    el("h3", user.role === "student" ? "Minha entrega" : "Entregas recebidas"),
-    list,
-  );
+  const staff = user.role !== "student",
+    closed = academicInstant(row.due_at) < new Date();
+  section.append(el("h3", staff ? "Entregas recebidas" : "Minha entrega"));
+  let pendingOnly = false;
+  if (staff) {
+    const summary = await api(`/learning/activities/${row.id}/summary`);
+    if (!box.isConnected) return;
+    const stats = el("div", undefined, "delivery-stats");
+    for (const [value, label] of [
+      [`${summary.submitted_count} de ${summary.students_count}`, "entregaram"],
+      [String(summary.pending_count), "a avaliar"],
+      [String(summary.missing.length), "sem entrega"],
+    ]) {
+      const item = el("div");
+      item.append(el("strong", value), el("span", label));
+      stats.append(item);
+    }
+    section.append(stats);
+    if (summary.missing.length) {
+      const missing = el("details", undefined, "enrollment-list");
+      missing.append(
+        el(
+          "summary",
+          "Quem ainda não entregou (" + summary.missing.length + ")",
+        ),
+        el("p", summary.missing.map((item) => item.name).join(", ")),
+      );
+      section.append(missing);
+    }
+    const filter = el("label", "Somente entregas a avaliar"),
+      check = el("input");
+    check.type = "checkbox";
+    check.addEventListener("change", () => {
+      pendingOnly = check.checked;
+      skip = 0;
+      list.replaceChildren();
+      learningAction(load)();
+    });
+    filter.prepend(check);
+    section.append(filter);
+  }
+  section.append(list);
   box.append(section);
   let skip = 0;
   const more = button("Carregar mais entregas", learningAction(load));
   section.append(more);
   async function load() {
     const rows = await api(
-      `/learning/activities/${row.id}/submissions?offset=${skip}&limit=25`,
+      `/learning/activities/${row.id}/submissions?offset=${skip}&limit=25` +
+        (pendingOnly ? "&pending=true" : ""),
     );
     if (!box.isConnected) return;
-    for (const submission of rows) {
+    for (const [index, submission] of rows.entries()) {
       const card = el("div", undefined, "guide");
       card.append(
         el("h4", submission.student_name),
         el(
           "p",
           submission.draft
-            ? "Rascunho privado"
-            : "Enviada em " + academicTime(submission.submitted_at),
+            ? "Rascunho privado — ainda não enviado"
+            : "Enviada em " +
+                academicTime(submission.submitted_at) +
+                (submission.late ? " · após o prazo" : " · no prazo"),
         ),
         el("p", submission.body, "academic-body"),
-        el("p", "Nota: " + (submission.grade ?? "Aguardando avaliação")),
-        el("p", submission.feedback),
+        el(
+          "p",
+          "Nota: " +
+            (submission.grade === null
+              ? "Aguardando avaliação"
+              : String(submission.grade).replace(".", ",")),
+        ),
       );
+      if (submission.feedback)
+        card.append(el("p", "Devolutiva: " + submission.feedback, "feedback"));
       list.append(card);
-      if (user.role === "student" && submission.grade === null)
+      if (user.role === "student" && submission.grade === null && !closed) {
         card.append(
           button("Editar entrega", () => submissionEditor(row, submission)),
         );
-      if (user.role !== "student")
-        card.append(button("Avaliar / reabrir", () => gradeEditor(submission)));
+        if (!submission.draft)
+          card.append(
+            button(
+              "Desfazer entrega",
+              learningAction(async () => {
+                if (
+                  !confirm(
+                    "Desfazer a entrega? Ela volta a ser um rascunho privado e precisa ser enviada de novo antes do prazo.",
+                  )
+                )
+                  return;
+                await api("/learning/activities/" + row.id + "/submission", {
+                  method: "PUT",
+                  body: JSON.stringify({
+                    body: submission.body,
+                    draft: true,
+                    version: submission.version,
+                  }),
+                });
+                await openPublication(row);
+              }),
+              "secondary danger",
+            ),
+          );
+      }
+      if (staff)
+        card.append(
+          button(
+            submission.grade === null ? "Avaliar" : "Revisar avaliação",
+            () =>
+              gradeEditor(
+                submission,
+                rows.slice(index + 1).filter((item) => item.grade === null),
+                row,
+              ),
+          ),
+        );
       await attachmentPanel(
         "submission",
         submission.id,
@@ -424,9 +644,22 @@ async function activityDetails(row, box) {
       );
     }
     if (skip === 0 && rows.length === 0) {
-      list.append(el("p", "Nenhuma entrega."));
-      if (user.role === "student")
-        list.append(button("Preparar entrega", () => submissionEditor(row)));
+      list.append(
+        el(
+          "p",
+          staff
+            ? pendingOnly
+              ? "Nenhuma entrega aguardando avaliação."
+              : "Nenhuma entrega recebida."
+            : closed
+              ? "Prazo encerrado sem entrega."
+              : "Você ainda não entregou.",
+        ),
+      );
+      if (user.role === "student" && !closed)
+        list.append(
+          button("Preparar entrega", () => submissionEditor(row), "primary"),
+        );
     }
     skip += rows.length;
     more.hidden = rows.length < 25;
@@ -458,7 +691,7 @@ function submissionEditor(activity, row = null) {
       }),
     });
 }
-function gradeEditor(row) {
+function gradeEditor(row, queue = [], activity = null) {
   const ui = learningDialog("Avaliação · " + row.student_name),
     grade = ui.field(
       "grade",
@@ -476,8 +709,32 @@ function gradeEditor(row) {
     "textarea",
     row.feedback,
   ).maxLength = 10000;
-  ui.form.save = async () =>
-    api("/learning/submissions/" + row.id + "/grade", {
+  ui.fields.prepend(el("p", row.body, "academic-body submission-preview"));
+  ui.fields.append(
+    el(
+      "p",
+      "Deixe a nota vazia para reabrir a entrega ao aluno. A nota vale apenas como média das atividades do hub.",
+      "help",
+    ),
+  );
+  let advance = false;
+  if (queue.length) {
+    const next = el(
+      "button",
+      `Salvar e ir para o próximo (${queue.length})`,
+      "secondary",
+    );
+    next.type = "submit";
+    next.addEventListener("click", () => {
+      advance = true;
+    });
+    ui.save.addEventListener("click", () => {
+      advance = false;
+    });
+    ui.save.before(next);
+  }
+  ui.form.save = async () => {
+    await api("/learning/submissions/" + row.id + "/grade", {
       method: "PUT",
       body: JSON.stringify({
         grade: grade.value === "" ? null : Number(grade.value),
@@ -485,6 +742,18 @@ function gradeEditor(row) {
         version: row.version,
       }),
     });
+    const message = "Avaliação salva e registrada na auditoria.";
+    if (advance)
+      ui.dialog.addEventListener("close", () =>
+        gradeEditor(queue[0], queue.slice(1), activity),
+      );
+    else if (activity)
+      ui.dialog.addEventListener("close", () =>
+        openPublication(activity).catch((error) => status(error.message, true)),
+      );
+    advance = false;
+    return message;
+  };
 }
 async function renderLearning(kind, ticket) {
   const isSchedule = kind === "schedule",
@@ -571,7 +840,8 @@ async function renderLearning(kind, ticket) {
       box.append(
         el(
           "p",
-          `Média das atividades avaliadas no hub · ${reference("groups", item.group_id)}: ${item.average.toFixed(2)} (${item.count} avaliações). Não é a nota oficial.`,
+          `Média das atividades avaliadas no hub · ${reference("groups", item.group_id).split(" · ")[0]}: ${item.average.toFixed(1).replace(".", ",")} (${plural(item.count, "avaliação", "avaliações")}). Não é a nota oficial.`,
+          "help",
         ),
       );
   }
@@ -581,13 +851,9 @@ async function renderLearning(kind, ticket) {
     const metadata = el("div", undefined, "card-meta");
     metadata.append(icon(kind), el("span", academicPages[kind]));
     if (!isSchedule)
-      metadata.append(
-        el(
-          "span",
-          row.archived ? "Arquivado" : row.draft ? "Rascunho" : "Publicado",
-          row.draft ? "badge gold" : "badge",
-        ),
-      );
+      metadata.append(stateBadge(row) || el("span", "Publicado", "badge"));
+    if (kind === "activity" && user.role === "student" && !row.archived)
+      metadata.append(submissionBadge(row));
     card.append(metadata);
     card.append(
       el(
@@ -624,6 +890,18 @@ async function renderLearning(kind, ticket) {
       if (row.due_at)
         card.append(
           el("p", "Prazo (Brasília): " + academicTime(row.due_at), "card-meta"),
+        );
+      if (kind === "activity" && row.students_count !== undefined)
+        card.append(
+          el(
+            "p",
+            `${row.submitted_count} de ${row.students_count} entregaram · ${row.submitted_count - row.graded_count} a avaliar`,
+            "card-meta delivery-meta",
+          ),
+        );
+      if (row.expires_at)
+        card.append(
+          el("p", "Sai do ar em " + academicTime(row.expires_at), "card-meta"),
         );
       if (row.starts_at)
         card.append(

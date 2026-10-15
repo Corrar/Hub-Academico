@@ -236,5 +236,6 @@ def install_admin(app, DB, Administrator, microsoft, public):
             "admin_context": microsoft.context if microsoft else None,
             "production_enabled": False,
             "session_minutes": 30,
+            "session_absolute_hours": int(security.ABSOLUTE_TIMEOUT.total_seconds() // 3600),
             "privileged_write_minutes": 5,
         }

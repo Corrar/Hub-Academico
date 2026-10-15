@@ -79,6 +79,10 @@ let editing = null,
   editorResource = null,
   editorVersion = 0,
   saving = false;
+// Search and role filter of the administrative listings.
+let adminSearch = "",
+  adminRole = "";
+const searchable = new Set(["courses", "subjects", "groups", "users"]);
 const labels = new Map();
 function el(tag, text, className) {
   const node = document.createElement(tag);
@@ -230,6 +234,7 @@ function navigate(key, { groupId = "" } = {}) {
   academicGroup = groupId;
   offset = 0;
   archived = false;
+  adminSearch = adminRole = "";
   for (const item of document.querySelectorAll("nav button[data-page]")) {
     if (item.dataset.page === key) item.setAttribute("aria-current", "page");
     else item.removeAttribute("aria-current");
@@ -305,6 +310,10 @@ async function render() {
           offset: String(offset),
           limit: "25",
           ...(resource === "audit" ? {} : { archived: String(archived) }),
+          ...(searchable.has(resource) && adminSearch
+            ? { q: adminSearch }
+            : {}),
+          ...(resource === "users" && adminRole ? { role: adminRole } : {}),
         }),
     );
     await resolveReferences(rows);
@@ -334,6 +343,50 @@ async function render() {
     } else toolbar.append(button("Atualizar", render));
     if (resource === "memberships")
       toolbar.append(button("Importar lote", () => membershipBatch()));
+    if (searchable.has(resource)) {
+      const form = el("form", undefined, "table-search"),
+        input = el("input");
+      input.type = "search";
+      input.maxLength = 120;
+      input.value = adminSearch;
+      input.placeholder =
+        resource === "users" ? "Nome ou e-mail" : "Nome ou código";
+      input.setAttribute(
+        "aria-label",
+        "Buscar em " + titles[resource].toLowerCase(),
+      );
+      form.append(input);
+      if (resource === "users") {
+        const role = el("select");
+        role.setAttribute("aria-label", "Filtrar por perfil");
+        for (const [value, label] of [
+          ["", "Todos os perfis"],
+          ...Object.entries(roles),
+        ]) {
+          const option = el("option", label);
+          option.value = value;
+          role.append(option);
+        }
+        role.value = adminRole;
+        role.addEventListener("change", () => {
+          adminRole = role.value;
+          adminSearch = input.value.trim();
+          offset = 0;
+          render();
+        });
+        form.append(role);
+      }
+      const submit = el("button", "Buscar", "secondary");
+      submit.type = "submit";
+      form.append(submit);
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        adminSearch = input.value.trim();
+        offset = 0;
+        render();
+      });
+      toolbar.append(form);
+    }
     box.append(toolbar);
     if (rows.length) {
       const scroll = el("div", undefined, "table-scroll"),
@@ -391,7 +444,7 @@ async function render() {
             }).format(
               new Date(
                 row.occurred_at.endsWith("Z") ||
-                  /[+-]\d\d:\d\d$/.test(row.occurred_at)
+                /[+-]\d\d:\d\d$/.test(row.occurred_at)
                   ? row.occurred_at
                   : row.occurred_at + "Z",
               ),
@@ -403,6 +456,13 @@ async function render() {
               upsert: "Vínculo",
               archive: "Arquivamento",
               restore: "Restauração",
+              attendance_recorded: "Chamada",
+              attendance_corrected: "Correção de chamada",
+              password_changed: "Troca de senha",
+              password_reset: "Redefinição de senha",
+              graded: "Avaliação",
+              submitted: "Entrega",
+              demo_seed: "Dados fictícios",
             }[row.action] || row.action,
             row.entity,
           ];
@@ -423,6 +483,13 @@ async function render() {
             actions = el("div", undefined, "row-actions");
           if (!archived && resource !== "users")
             actions.append(button("Editar", () => openEditor(row)));
+          if (!archived && resource === "users" && row.role !== "coordinator") {
+            actions.append(button("Editar", () => userEditor(row)));
+            if (localLoginEnabled)
+              actions.append(
+                button("Redefinir senha", () => passwordReset(row)),
+              );
+          }
           if (!(resource === "users" && row.role === "coordinator"))
             actions.append(
               button(
@@ -451,7 +518,9 @@ async function render() {
             ? "Os registros arquivados aparecerão aqui."
             : resource === "audit"
               ? "As alterações nos cadastros aparecerão aqui."
-              : "Use o botão de novo cadastro para começar.",
+              : adminSearch || adminRole
+                ? "Nenhum resultado para este filtro."
+                : "Use o botão de novo cadastro para começar.",
         ),
       );
       box.append(empty);
@@ -506,6 +575,57 @@ async function archiveRow(resource, row) {
   } catch (error) {
     status(error.message, true);
   }
+}
+function userEditor(row) {
+  const ui = learningDialog("Editar · " + row.name);
+  ui.field("name", "Nome completo", "text", row.name);
+  ui.field("role", "Perfil", "select", row.role, [
+    ["student", roles.student],
+    ["teacher", roles.teacher],
+  ]);
+  ui.fields.append(
+    el(
+      "p",
+      "Mudar o perfil encerra as sessões abertas da pessoa. O e-mail institucional não pode ser alterado.",
+      "help",
+    ),
+  );
+  ui.form.save = async () => {
+    await api("/users/" + row.id, {
+      method: "PUT",
+      body: JSON.stringify({
+        name: ui.controls.name.value,
+        role: ui.controls.role.value,
+      }),
+    });
+    return "Cadastro salvo e registrado na auditoria.";
+  };
+}
+function passwordReset(row) {
+  const ui = learningDialog("Redefinir senha · " + row.name);
+  const input = ui.field("new_password", "Nova senha temporária", "password");
+  input.minLength = 12;
+  input.maxLength = 128;
+  input.autocomplete = "new-password";
+  ui.fields.append(
+    el(
+      "p",
+      "Mínimo de 12 caracteres. As sessões da pessoa serão encerradas. Entregue a senha por canal seguro e peça que ela a altere no perfil.",
+      "help",
+    ),
+  );
+  ui.save.textContent = "Redefinir senha";
+  ui.form.save = async () => {
+    try {
+      await api("/users/" + row.id + "/password", {
+        method: "POST",
+        body: JSON.stringify({ new_password: input.value }),
+      });
+    } finally {
+      input.value = "";
+    }
+    return "Senha redefinida e registrada na auditoria.";
+  };
 }
 function closeEditor() {
   if (saving) return;

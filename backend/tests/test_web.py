@@ -126,6 +126,7 @@ def test_panel_assets_headers_and_auth_boundaries(system):
         "panel.js",
         "admin.js",
         "academic.js",
+        "attendance.js",
         "experience.js",
         "plus-jakarta-sans-latin-wght-normal.woff2",
         "logo-fatec.png",
