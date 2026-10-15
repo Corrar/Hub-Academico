@@ -1,0 +1,476 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { JSDOM } from "jsdom";
+import { Script } from "node:vm";
+
+const staticRoot = new URL("../backend/app/static/", import.meta.url);
+const html = await readFile(new URL("index.html", staticRoot), "utf8");
+const scripts = await Promise.all(
+  ["panel.js", "admin.js", "academic.js", "experience.js"].map((name) =>
+    readFile(new URL(name, staticRoot), "utf8"),
+  ),
+);
+const settle = async () => {
+  for (let i = 0; i < 12; i++)
+    await new Promise((resolve) => setImmediate(resolve));
+};
+const activity = {
+  id: "activity-1",
+  kind: "activity",
+  title: "Trabalho de dados",
+  body: "Enunciado de teste",
+  group_id: "group-1",
+  audience: "group",
+  draft: false,
+  archived: false,
+  due_at: "2026-09-12T23:00:00Z",
+  created_at: "2026-09-01T12:00:00Z",
+};
+const group = { id: "group-1", label: "Ciência de Dados · Turma A · 2026/2" };
+test("login preserves the original controls during failure and enables only authorized methods after retry", async () => {
+  const app = await boot("student", { anonymous: true, authFailure: 502 });
+  try {
+    const doc = app.w.document;
+    assert.equal(doc.querySelector("#login-form").hidden, false);
+    assert.equal(doc.querySelector("#microsoft-login").hidden, false);
+    assert.equal(doc.querySelector("#login-fields").disabled, false);
+    doc.querySelector("#email").value = "pessoa@example.test";
+    doc.querySelector("#password").value = "synthetic-test-password";
+    await app.click("#toggle-password");
+    assert.equal(doc.querySelector("#password").type, "text");
+    doc
+      .querySelector("#login-form")
+      .dispatchEvent(new app.w.Event("submit", { cancelable: true }));
+    await settle();
+    assert.equal(
+      app.requests.filter((item) => item.url.pathname.endsWith("/web/login"))
+        .length,
+      0,
+    );
+    assert.equal(doc.querySelector("#microsoft-login").disabled, true);
+    assert.equal(doc.querySelector("#login-submit").disabled, true);
+    await app.click("#login-help");
+    assert.equal(doc.querySelector("#help-dialog").open, true);
+    doc.querySelector("#help-dialog").close();
+    assert.match(doc.querySelector("#login-error").textContent, /HTTP 502/);
+    assert.equal(doc.querySelector("#retry-login").hidden, false);
+    app.recover();
+    await app.click("#retry-login");
+    assert.equal(doc.querySelector("#login-fields").disabled, false);
+    assert.equal(doc.querySelector("#login-submit").disabled, false);
+    assert.equal(doc.querySelector("#microsoft-login").disabled, true);
+    assert.equal(doc.querySelector("#login-error").textContent, "");
+    assert.equal(doc.querySelector("#login-view").hidden, false);
+    assert.equal(
+      app.requests.filter((item) => item.url.pathname.endsWith("/web/login"))
+        .length,
+      0,
+    );
+    assert.deepEqual(app.errors, []);
+  } finally {
+    app.dom.window.close();
+  }
+});
+test("Microsoft-only mode preserves the login layout without enabling password authentication", async () => {
+  const app = await boot("student", {
+    anonymous: true,
+    authPayload: { local: false, microsoft: true },
+  });
+  try {
+    assert.equal(app.w.document.querySelector("#login-fields").disabled, false);
+    assert.equal(app.w.document.querySelector("#login-form").hidden, false);
+    assert.equal(
+      app.w.document.querySelector("#microsoft-login").disabled,
+      false,
+    );
+    app.w.document
+      .querySelector("#login-form")
+      .dispatchEvent(new app.w.Event("submit", { cancelable: true }));
+    await settle();
+    assert.equal(
+      app.requests.filter((item) => item.url.pathname.endsWith("/web/login"))
+        .length,
+      0,
+    );
+  } finally {
+    app.dom.window.close();
+  }
+});
+test("onboarding completes all three steps and preserves calendar access from profile", async () => {
+  const app = await boot();
+  try {
+    await app.navigate("profile");
+    assert.ok(
+      app.w.document.querySelector('.profile-menu [data-page="calendar"]'),
+    );
+    await app.navigate("onboarding");
+    for (let step = 1; step <= 3; step++) {
+      assert.equal(
+        app.w.document.querySelector(".onboarding").dataset.step,
+        String(step),
+      );
+      assert.match(
+        app.w.document.querySelector(".onboarding img").src,
+        new RegExp("onb" + step + "\\.png$"),
+      );
+      await app.click(".onboarding-next");
+    }
+    assert.equal(app.w.document.body.dataset.page, "home");
+    assert.deepEqual(app.errors, []);
+  } finally {
+    app.dom.window.close();
+  }
+});
+test("first visit shows splash, three introduction screens, then the unchanged login", async () => {
+  const app = await boot("student", {
+    anonymous: true,
+    firstVisit: true,
+    holdSplash: true,
+  });
+  try {
+    const doc = app.w.document;
+    assert.ok(doc.querySelector("#startup-view .splash"));
+    assert.equal(doc.querySelector("#login-view").inert, true);
+    assert.equal(
+      app.w.localStorage.getItem("fatec:onboarding-completed:v1"),
+      null,
+    );
+    await app.finishSplash();
+    for (let step = 1; step <= 3; step++) {
+      assert.equal(
+        doc.querySelector("#startup-view .onboarding").dataset.step,
+        String(step),
+      );
+      assert.equal(doc.activeElement.tagName, "H2");
+      await app.click("#startup-view .onboarding-next");
+    }
+    assert.equal(doc.querySelector("#startup-view").hidden, true);
+    assert.equal(doc.body.classList.contains("starting-app"), false);
+    assert.equal(doc.querySelector("#login-view").inert, false);
+    assert.equal(doc.querySelector("#login-view").hidden, false);
+    assert.equal(
+      app.w.localStorage.getItem("fatec:onboarding-completed:v1"),
+      "true",
+    );
+    assert.equal(doc.activeElement, doc.querySelector("#login-view h1"));
+    assert.deepEqual(app.errors, []);
+  } finally {
+    app.dom.window.close();
+  }
+});
+test("skip works without storage or an available authentication service", async () => {
+  const app = await boot("student", {
+    anonymous: true,
+    firstVisit: true,
+    storageBlocked: true,
+    authPending: true,
+  });
+  try {
+    await app.click("#startup-view .onboarding-skip");
+    assert.equal(app.w.document.querySelector("#startup-view").hidden, true);
+    assert.equal(app.w.document.querySelector("#login-view").hidden, false);
+    assert.equal(app.w.document.querySelector("#login-fields").disabled, false);
+    assert.equal(
+      app.w.document.querySelector("#microsoft-login").disabled,
+      true,
+    );
+    assert.deepEqual(app.errors, []);
+  } finally {
+    app.dom.window.close();
+  }
+});
+test("return visits keep the opening splash but skip the completed introduction", async () => {
+  const app = await boot("student", { anonymous: true, holdSplash: true });
+  try {
+    assert.ok(app.w.document.querySelector("#startup-view .splash"));
+    await app.finishSplash();
+    assert.equal(app.w.document.querySelector("#startup-view").hidden, true);
+    assert.equal(app.w.document.querySelector("#login-view").hidden, false);
+    assert.equal(
+      app.w.document.querySelector("#startup-view .onboarding"),
+      null,
+    );
+  } finally {
+    app.dom.window.close();
+  }
+});
+async function boot(role = "student", options = {}) {
+  const requests = [],
+    errors = [];
+  const dom = new JSDOM(html, {
+      url: "https://hub.example/panel/",
+      runScripts: "outside-only",
+    }),
+    w = dom.window;
+  if (!options.firstVisit)
+    w.localStorage.setItem("fatec:onboarding-completed:v1", "true");
+  if (options.storageBlocked) {
+    w.Storage.prototype.getItem = w.Storage.prototype.setItem = () => {
+      throw new Error("Storage unavailable");
+    };
+  }
+  let splashTimer;
+  const originalTimeout = w.setTimeout.bind(w);
+  w.setTimeout = (callback, delay, ...args) => {
+    if (delay === 700) {
+      splashTimer = callback;
+      return 1;
+    }
+    return originalTimeout(callback, delay, ...args);
+  };
+  w.addEventListener("error", (event) => errors.push(event.error));
+  w.HTMLDialogElement.prototype.showModal = function () {
+    this.open = true;
+  };
+  w.HTMLDialogElement.prototype.close = function () {
+    this.open = false;
+    this.dispatchEvent(new w.Event("close"));
+  };
+  let expire = false;
+  let authFailure = options.authFailure;
+  w.fetch = async (input, init = {}) => {
+    const url = new URL(input, w.location.href),
+      path = url.pathname.replace("/api/v1", "");
+    requests.push({ url, init });
+    let data = [];
+    let code = 200;
+    if (path === "/auth/options" && options.authPending)
+      return new Promise(() => {});
+    if (path === "/auth/options" && authFailure) {
+      data = {};
+      code = authFailure;
+    } else if (path === "/web/session" && options.anonymous) {
+      data = { detail: "Autenticação necessária" };
+      code = 401;
+    } else if (expire && path !== "/auth/options") {
+      data = { detail: "Autenticação necessária" };
+      code = 401;
+    } else if (path === "/auth/options")
+      data = options.authPayload || { local: true, microsoft: false };
+    else if (path === "/web/session")
+      data = {
+        user: {
+          id: "person-1",
+          name: "Pessoa de Teste",
+          email: "pessoa@example.test",
+          role,
+          administrator: options.admin || false,
+        },
+        csrf_token: "synthetic-csrf",
+      };
+    else if (path === "/learning/overview")
+      data = {
+        date: "2026-09-09",
+        groups_count: options.empty ? 0 : 1,
+        pending_count: options.empty ? 0 : 2,
+        material_count: options.empty ? 0 : 3,
+        lessons_today: [],
+        upcoming: options.empty ? [] : [activity],
+        recent: [],
+      };
+    else if (path === "/learning/groups") data = options.empty ? [] : [group];
+    else if (path === "/learning/publications")
+      data = options.empty ? [] : [{ ...activity, ...options.publication }];
+    else if (path === "/learning/calendar")
+      data = { publications: [activity], lessons: [], truncated: false };
+    else if (path === "/dashboard")
+      data = { courses: 1, subjects: 2, groups: 1, users: 3, memberships: 3 };
+    else if (path === "/admin/status")
+      data = {
+        database: "postgresql",
+        revision: "test",
+        microsoft_configured: true,
+        session_minutes: 60,
+        privileged_write_minutes: 10,
+      };
+    else if (path.endsWith("/enrollment"))
+      data = { count: 2, capacity: 10, enrolled: false };
+    else if (path === "/auth/logout") {
+      code = 204;
+      data = null;
+    }
+    return { status: code, ok: code < 400, json: async () => data };
+  };
+  scripts.forEach((code) =>
+    new Script(code).runInContext(dom.getInternalVMContext()),
+  );
+  await settle();
+  const finishSplash = async () => {
+    assert.ok(splashTimer);
+    splashTimer();
+    await settle();
+  };
+  if (!options.holdSplash) await finishSplash();
+  return {
+    finishSplash,
+    w,
+    dom,
+    requests,
+    errors,
+    recover: () => {
+      authFailure = 0;
+    },
+    expire: () => {
+      expire = true;
+    },
+    click: async (selector) => {
+      const node = w.document.querySelector(selector);
+      assert.ok(node, selector);
+      node.click();
+      await settle();
+    },
+    navigate: async (key) => {
+      w.navigate(key);
+      await settle();
+    },
+  };
+}
+test("student navigation, scoped group and safe publication content", async () => {
+  const app = await boot("student", {
+    publication: {
+      title: "<img src=x onerror=alert(1)>",
+      body: "<script>bad()</script>",
+    },
+  });
+  try {
+    assert.equal(app.w.document.body.dataset.role, "student");
+    assert.equal(app.w.document.body.dataset.page, "home");
+    assert.equal(
+      app.w.document.querySelectorAll("#bottom-navigation button").length,
+      5,
+    );
+    await app.navigate("adminUsers");
+    assert.equal(app.w.document.body.dataset.page, "home");
+    await app.navigate("myGroups");
+    await app.click(".group-card");
+    const action = [...app.w.document.querySelectorAll("dialog button")].find(
+      (node) => node.textContent === "Atividades",
+    );
+    action.click();
+    await settle();
+    const request = app.requests.findLast((item) =>
+      item.url.pathname.endsWith("/publications"),
+    );
+    assert.equal(request.url.searchParams.get("group_id"), "group-1");
+    assert.equal(
+      app.w.document.querySelector(".publication-card h2").textContent,
+      "<img src=x onerror=alert(1)>",
+    );
+    assert.equal(
+      app.w.document.querySelectorAll(
+        ".publication-card img,.publication-card script",
+      ).length,
+      0,
+    );
+    await app.click(".card-actions .primary");
+    assert.equal(app.w.document.querySelectorAll(".academic-dialog").length, 1);
+    assert.match(
+      app.w.document.querySelector(".academic-dialog").textContent,
+      /Minha entrega/,
+    );
+    assert.deepEqual(app.errors, []);
+  } finally {
+    app.dom.window.close();
+  }
+});
+test("teacher controls keep mobile navigation and coordinator controls require admin", async () => {
+  const teacher = await boot("teacher"),
+    coordinator = await boot("coordinator"),
+    admin = await boot("coordinator", { admin: true });
+  try {
+    assert.ok(teacher.w.document.querySelector(".hero-card.teacher"));
+    await teacher.navigate("activity");
+    assert.match(
+      teacher.w.document.querySelector("#view").textContent,
+      /Nova publicação/,
+    );
+    assert.equal(coordinator.w.document.body.dataset.page, "dashboard");
+    assert.equal(
+      coordinator.w.document.querySelector(
+        "#navigation [data-page=adminUsers]",
+      ),
+      null,
+    );
+    assert.ok(
+      admin.w.document.querySelector("#navigation [data-page=adminUsers]"),
+    );
+    await admin.navigate("adminStatus");
+    assert.match(
+      admin.w.document.querySelector("#view").textContent,
+      /PostgreSQL|postgresql/,
+    );
+    assert.deepEqual(
+      [...teacher.errors, ...coordinator.errors, ...admin.errors],
+      [],
+    );
+  } finally {
+    teacher.dom.window.close();
+    coordinator.dom.window.close();
+    admin.dom.window.close();
+  }
+});
+test("calendar navigation, empty states, search and expired sessions", async () => {
+  const app = await boot("student", { empty: true });
+  try {
+    assert.match(
+      app.w.document.querySelector("#view").textContent,
+      /Hoje sem aulas cadastradas/,
+    );
+    await app.navigate("calendar");
+    assert.ok(app.w.document.querySelector(".calendar-day"));
+    const previous = app.requests.findLast((item) =>
+      item.url.pathname.endsWith("/calendar"),
+    ).url.search;
+    await app.click('[aria-label="Próximo mês"]');
+    assert.notEqual(
+      app.requests.findLast((item) => item.url.pathname.endsWith("/calendar"))
+        .url.search,
+      previous,
+    );
+    await app.navigate("search");
+    const search = app.w.document.querySelector(".search-bar input");
+    search.value = "segurança";
+    search.form.dispatchEvent(new app.w.Event("submit", { cancelable: true }));
+    await settle();
+    assert.ok(
+      app.requests.some(
+        (item) => item.url.searchParams.get("q") === "segurança",
+      ),
+    );
+    app.expire();
+    await app.navigate("material");
+    assert.equal(app.w.document.querySelector("#app-view").hidden, true);
+    assert.equal(app.w.document.querySelector("#login-view").hidden, false);
+    assert.equal(app.w.document.querySelector("#view").children.length, 0);
+    assert.deepEqual(app.errors, []);
+  } finally {
+    app.dom.window.close();
+  }
+});
+test("event enrollment submits CSRF and only one details dialog remains", async () => {
+  const app = await boot("student", {
+    publication: {
+      kind: "event",
+      starts_at: "2026-09-15T22:00:00Z",
+      ends_at: "2026-09-15T23:00:00Z",
+    },
+  });
+  try {
+    await app.navigate("event");
+    await app.click(".card-actions .primary");
+    const enroll = [
+      ...app.w.document.querySelectorAll(".academic-dialog button"),
+    ].find((node) => node.textContent === "Inscrever-me");
+    assert.ok(enroll);
+    enroll.click();
+    await settle();
+    const request = app.requests.findLast((item) => item.init.method === "PUT");
+    assert.equal(request.init.headers["X-CSRF-Token"], "synthetic-csrf");
+    assert.deepEqual(JSON.parse(request.init.body), { archived: false });
+    assert.equal(app.w.document.querySelectorAll(".academic-dialog").length, 1);
+    assert.deepEqual(app.errors, []);
+  } finally {
+    app.dom.window.close();
+  }
+});

@@ -234,8 +234,16 @@ def create_app(url=None):
             "panel.js",
             "academic.js",
             "admin.js",
+            "experience.js",
+            "plus-jakarta-sans-latin-wght-normal.woff2",
+            "PLUS-JAKARTA-SANS-LICENSE.txt",
             "panel.css",
             "logo-fatec.png",
+            "logo-cps-t.png",
+            "logo-sp-t.png",
+            "onb1.png",
+            "onb2.png",
+            "onb3.png",
         }:
             raise HTTPException(404, "Arquivo não encontrado")
         return FileResponse(static / filename)

@@ -25,16 +25,53 @@ async function requestBody(request) {
 }
 
 async function handler(request, response) {
+  response.setHeader("X-Hub-Proxy", "render-v1");
+  response.setHeader("Cache-Control", "no-store");
   const backend = (process.env.RENDER_BACKEND_URL || "").replace(/\/$/, "");
   const password = process.env.STAGING_ACCESS_PASSWORD || "";
   if (!backend || !password) {
-    response.status(503).json({ detail: "Proxy da homologação não configurado" });
+    response
+      .status(503)
+      .json({ detail: "Proxy da homologação não configurado" });
     return;
   }
 
   const incoming = new URL(request.url, "https://frontend.invalid");
-  const target = new URL(backend);
-  target.pathname = incoming.pathname;
+  let target;
+  try {
+    target = new URL(backend);
+    if (
+      target.protocol !== "https:" ||
+      target.username ||
+      target.password ||
+      target.pathname !== "/" ||
+      target.search ||
+      target.hash
+    )
+      throw new Error("Invalid backend origin");
+  } catch {
+    response
+      .status(503)
+      .json({
+        detail:
+          "RENDER_BACKEND_URL deve conter somente a origem HTTPS do backend",
+      });
+    return;
+  }
+  // Explicit Vercel rewrite works with the framework-free static frontend.
+  // Some runtimes retain the original URL; others expose the rewritten URL.
+  const path = incoming.pathname.startsWith("/api/v1/")
+    ? incoming.pathname.slice("/api/v1/".length)
+    : (request.query?.__hub_path ?? incoming.searchParams.get("__hub_path"));
+  if (
+    typeof path !== "string" ||
+    !/^[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*$/.test(path)
+  ) {
+    response.status(404).json({ detail: "Rota da API não encontrada" });
+    return;
+  }
+  target.pathname = "/api/v1/" + path;
+  incoming.searchParams.delete("__hub_path");
   target.search = incoming.search;
   const headers = new Headers();
   for (const [key, value] of Object.entries(request.headers)) {

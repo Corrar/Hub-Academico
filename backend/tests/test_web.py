@@ -121,7 +121,20 @@ def test_panel_assets_headers_and_auth_boundaries(system):
     assert "script-src 'self'" in response.headers["content-security-policy"]
     assert response.headers["x-frame-options"] == "DENY"
     assert response.headers["cache-control"] == "no-store"
-    for filename in ["panel.css", "panel.js", "admin.js", "academic.js", "logo-fatec.png"]:
+    for filename in [
+        "panel.css",
+        "panel.js",
+        "admin.js",
+        "academic.js",
+        "experience.js",
+        "plus-jakarta-sans-latin-wght-normal.woff2",
+        "logo-fatec.png",
+        "logo-cps-t.png",
+        "logo-sp-t.png",
+        "onb1.png",
+        "onb2.png",
+        "onb3.png",
+    ]:
         assert client.get("/panel/assets/" + filename).status_code == 200
     for endpoint in ["/api/v1/dashboard", "/api/v1/lookup/users", "/api/v1/courses"]:
         assert client.get(endpoint).status_code == 401
