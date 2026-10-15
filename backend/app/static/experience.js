@@ -861,6 +861,56 @@ function passwordDialog() {
     return "Senha alterada. As outras sessões foram encerradas.";
   };
 }
+async function privacyDialog() {
+  const { dialog, body } = readDialog("Privacidade e seus dados");
+  dialog.classList.add("wide-dialog");
+  let info = {};
+  try {
+    info = await api("/privacy");
+  } catch {
+    /* The notice is still shown without the configured contact. */
+  }
+  if (!dialog.isConnected) return;
+  const sections = [
+    [
+      "Quem trata os dados",
+      "A Fatec Adamantina, unidade do Centro Paula Souza, por meio do Hub Acadêmico.",
+    ],
+    [
+      "Quais dados",
+      "Nome, e-mail institucional, perfil, vínculos com turmas, entregas e anexos, avaliações e devolutivas, frequência registrada em aula, inscrições em eventos, preferências e dispositivos de notificação, registros de acesso e de auditoria.",
+    ],
+    [
+      "Para quê",
+      "Organizar a rotina acadêmica (aulas, prazos, materiais, avisos e eventos), registrar entregas, avaliações e frequência, enviar as notificações que você ativar e manter a segurança e a rastreabilidade das alterações.",
+    ],
+    [
+      "Quem acessa",
+      "Você; os professores das suas turmas, para entregas, notas e frequência; a coordenação; e o responsável técnico, para suporte e segurança. Os dados não são vendidos nem usados para publicidade.",
+    ],
+    [
+      "Por quanto tempo",
+      `Registros acadêmicos e a auditoria seguem as regras de guarda da instituição. Sessões terminam após ${info.session_idle_minutes || 30} minutos sem uso e em até ${info.session_max_hours || 8} horas; o histórico de notificações enviadas é apagado após ${info.notification_retention_days || 90} dias.`,
+    ],
+    [
+      "Seus direitos",
+      "Você pode baixar uma cópia dos seus dados, pedir correções à coordenação, desativar notificações a qualquer momento e solicitar informações sobre o tratamento.",
+    ],
+    [
+      "Contato",
+      info.contact ||
+        "O canal do encarregado de dados será informado pela instituição.",
+    ],
+  ];
+  for (const [title, text] of sections)
+    body.append(el("h3", title), el("p", text, "privacy-text"));
+  if (user) {
+    const download = el("a", "Baixar meus dados (JSON)", "primary button-link");
+    download.href = "/api/v1/me/export";
+    download.download = "meus-dados-hub.json";
+    body.append(download);
+  }
+}
 function renderProfile() {
   const card = el("div", undefined, "section-card profile-card");
   card.append(
@@ -896,6 +946,7 @@ function renderProfile() {
   if (localLoginEnabled && !user.administrator)
     menu.append(button("Alterar senha", learningAction(passwordDialog)));
   menu.append(
+    button("Privacidade e meus dados", learningAction(privacyDialog)),
     button("Ajuda com o acesso", () => $("help-dialog").showModal()),
     button("Sair da conta", () => $("logout").click(), "secondary danger"),
   );
@@ -1180,6 +1231,11 @@ $("toggle-password").addEventListener("click", () => {
   );
 });
 $("login-help").addEventListener("click", () => $("help-dialog").showModal());
+$("privacy-link").addEventListener("click", () =>
+  privacyDialog().catch((error) => {
+    $("login-error").textContent = error.message;
+  }),
+);
 $("menu-toggle").addEventListener("click", () => {
   $("menu-toggle").setAttribute(
     "aria-expanded",

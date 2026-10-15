@@ -2079,3 +2079,25 @@ body.offline .topbar,
 body.offline .mobile-header {
   box-shadow: inset 0 -3px 0 var(--gold);
 }
+.privacy-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  text-decoration: none;
+  margin-top: 12px;
+}
+.privacy-link {
+  margin: 12px auto 0;
+  display: block;
+}

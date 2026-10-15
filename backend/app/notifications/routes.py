@@ -3,6 +3,7 @@
 import logging
 import secrets
 import threading
+from datetime import timedelta
 from typing import Literal
 
 from fastapi import HTTPException, Request, Response
@@ -58,13 +59,20 @@ class PreferenceInput(schemas.Input):
 
 def start_loop(sessions, settings, sender):
     """Background dispatcher for single-service deployments (Render free plan)."""
+    from ..privacy import purge
+
     stop = threading.Event()
 
     def loop():
+        last_purge = None
         while not stop.wait(settings.interval):
             try:
                 with sessions() as db:
                     queue.dispatch(db, sender)
+                    # Retention runs hourly alongside delivery.
+                    if not last_purge or now() - last_purge >= timedelta(hours=1):
+                        purge(db)
+                        last_purge = now()
             except Exception:  # keep the loop alive; the next cycle retries
                 log.exception("Falha ao despachar notificações")
 

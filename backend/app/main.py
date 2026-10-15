@@ -40,6 +40,7 @@ from .models import (
 )
 from .notifications.channels import PushSettings
 from .notifications.routes import install_notifications, start_loop
+from .privacy import install_privacy
 from .staging import access_gate, validate_staging
 
 
@@ -833,4 +834,5 @@ def create_app(url=None):
     install_learning(app, DB, Actor, Coordinator, visible_groups, public, audit)
     install_attendance(app, DB, Actor, visible_groups, public)
     install_notifications(app, DB, Actor, push_settings)
+    install_privacy(app, DB, Actor, public)
     return app

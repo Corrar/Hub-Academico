@@ -134,6 +134,7 @@ def main():
     push.add_argument(
         "--loop", type=int, default=0, metavar="SEGUNDOS", help="Repete a cada N segundos"
     )
+    commands.add_parser("purge-expired", help="Remove dados operacionais vencidos")
     b = commands.add_parser("backup")
     b.add_argument("destination")
     r = commands.add_parser("restore-check")
@@ -166,6 +167,15 @@ def main():
         print("VAPID_PRIVATE_KEY=" + private)
     elif args.command == "dispatch-notifications":
         dispatch_notifications(args.loop)
+    elif args.command == "purge-expired":
+        from .privacy import purge
+
+        engine = make_engine(database_url())
+        try:
+            with make_sessions(engine)() as db:
+                print(purge(db))
+        finally:
+            engine.dispose()
     elif args.command == "backup":
         backup(args.destination)
         print("Backup criado e integridade verificada.")
