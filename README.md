@@ -1,10 +1,10 @@
 # Hub Acadêmico — Fatec Adamantina
 
-App de aluno/professor em Expo e painel web da coordenação, com uma API compartilhada.
+Hub acadêmico em Python/FastAPI com painel web para alunos, professores, coordenação e administrador. O aplicativo Expo faz parte do roteiro e ainda não foi implementado.
 
 ## Estado atual
 
-O projeto contém os protótipos originais, o backend e um **painel da coordenação
+O projeto contém os protótipos originais, o backend e um **painel acadêmico
 conectado à API**, disponível em `/panel/` no mesmo servidor. O app Expo ainda
 não foi implementado. Esta versão serve ao desenvolvimento local com dados
 fictícios; a liberação para operação institucional continua bloqueada.
@@ -46,8 +46,28 @@ Veja o [roteiro de homologação](docs/HOMOLOGACAO-VERCEL.md), incluindo a corre
 do erro `vite: command not found`, banco separado e variáveis obrigatórias.
 A preparação não significa que houve deploy nem libera produção.
 
+Na arquitetura separada recomendada, o backend FastAPI roda no Render e o painel
+em `frontend/` roda na Vercel. O projeto Vercel deve usar Root Directory `frontend`;
+o proxy server-side mantém a senha da proteção fora do navegador e encaminha a API
+para `https://app-fatec.onrender.com`.
+
 ## Microsoft e administrador
 
 Veja [como ativar o login e provisionar o primeiro administrador](docs/MICROSOFT-ADMIN.md).
-A entrega exige migração `0002`, que encerra sessões antigas e preserva cadastros.
+Execute `alembic upgrade head`: a migração atual é `0003` (fluxos acadêmicos). A `0002` encerra sessões antigas e preserva cadastros.
 A autenticação real e a validação no navegador ainda dependem da configuração institucional.
+
+## Fluxos acadêmicos desta branch
+
+- Atividades, materiais, avisos e eventos: público explícito, rascunho, publicação,
+  edição com controle de versão, busca e arquivamento/restauração.
+- Entregas privadas, prazo pelo servidor, avaliação e feedback. A média do hub não
+  representa boletim oficial.
+- Eventos: inscrição, cancelamento e vagas verificadas no PostgreSQL.
+- Grade: vigência, sala, turma e conflito de professor considerando os vínculos.
+- Matrículas em lote: até 100 e-mails, prévia e aplicação transacional.
+- Anexos privados limitados a texto UTF-8 `.txt`, 512 KiB e 10 arquivos por registro.
+
+Consulte o [relatório de revisão e pendências](docs/RELATORIO-REVISAO.md) e o
+[mapa das pastas](docs/ESTRUTURA.md). O pentest remoto aguarda a confirmação do
+responsável de que a homologação está publicada.

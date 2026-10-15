@@ -40,6 +40,6 @@ def test_upgrade_preserves_records_and_invalidates_old_sessions(tmp_path):
             assert conn.execute(text("SELECT count(*) FROM users")).scalar() == 1
             assert conn.execute(text("SELECT count(*) FROM audit_logs")).scalar() == 1
             assert conn.execute(text("SELECT count(*) FROM sessions")).scalar() == 0
-            assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0002"
+            assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0003"
     finally:
         engine.dispose()

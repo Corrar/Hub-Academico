@@ -145,3 +145,77 @@ A configuração no Git não altera automaticamente a branch do projeto na Verce
 Para usar a entrega Microsoft/admin, faça deploy da branch `feat/admin-microsoft`
 e siga primeiro `MICROSOFT-ADMIN.md` (migração 0002 e provisionamento inicial).
 A branch anterior de staging não recebe automaticamente as funcionalidades novas.
+
+
+## Erro de parsing do requirements.txt na raiz
+
+Se o build mostrar `Error parsing included file` para `-r backend/requirements.txt`,
+use a revisão que contém a lista completa de dependências no `requirements.txt`
+da raiz. O arquivo da raiz e o do backend devem listar as mesmas versões;
+um teste automatizado verifica essa correspondência e impede novas inclusões `-r`.
+Esta correção não exige trocar o framework nem remover as proteções de staging.
+
+## Render: serviço Python
+
+O projeto também contém `render.yaml` na raiz. Ele usa `runtime: python`,
+`rootDir: backend`, `pip install -r requirements.txt`, `alembic upgrade head` e
+`uvicorn app.main:create_app --factory --host 0.0.0.0 --port $PORT`.
+
+O serviço que aparece nos logs com `npm start` foi criado como Node. Ele não deve
+ser reutilizado para este backend: crie um novo Web Service Python a partir da
+branch `melhoria/revisao-e-fluxos-academicos` ou aplique o Blueprint. Runtime é
+uma propriedade estrutural do serviço; não tente corrigir instalando `package.json`.
+
+O Blueprint deixa `DATABASE_URL` e `WEB_ORIGINS` para preenchimento manual. Use um
+PostgreSQL isolado e uma URL no formato `postgresql+psycopg://...?...sslmode=require`.
+A URL do banco permanece somente no backend. Depois de salvar as variáveis, execute
+um novo deploy e confira `/health/live`.
+
+## Vercel: front-end separado
+
+Depois que o serviço Render estiver disponível, crie um **novo projeto Vercel**
+para o mesmo repositório e branch. Configure:
+
+| Campo | Valor |
+| --- | --- |
+| Root Directory | `frontend` |
+| Framework Preset | `Other` ou sem framework |
+| Build Command | vazio |
+| Output Directory | vazio |
+
+O diretório contém HTML/CSS/JavaScript estáticos e uma função Node em
+`frontend/api/[...path].js`. Essa função encaminha `/api/*` ao Render e envia a
+senha Basic apenas no servidor. Em **Preview** e/ou **Production**, conforme o
+ambiente que for testar, cadastre na Vercel:
+
+```env
+RENDER_BACKEND_URL=https://app-fatec.onrender.com
+STAGING_ACCESS_PASSWORD=mesmo-valor-secreto-usado-no-Render
+```
+
+As duas são variáveis do servidor; `STAGING_ACCESS_PASSWORD` deve ser do tipo
+Secret. Não coloque `DATABASE_URL` na Vercel e não crie `NEXT_PUBLIC_*` para esse
+segredo.
+
+No Render, amplie `WEB_ORIGINS` para conter o endereço estável da Vercel e o
+endereço do Render, por exemplo:
+
+```env
+WEB_ORIGINS=https://app-fatec.vercel.app,https://app-fatec.onrender.com
+WEB_APP_URL=https://app-fatec.vercel.app
+```
+
+Use o domínio real que a Vercel fornecer. Não use curingas, caminhos ou barra no
+final. O domínio da Vercel deve estar em `WEB_ORIGINS` porque o servidor valida a
+origem e o CSRF.
+
+Se o Microsoft Entra for ativado com o proxy, registre:
+
+```env
+MICROSOFT_REDIRECT_URI=https://app-fatec.vercel.app/api/v1/microsoft/callback
+```
+
+Esse endereço também precisa aparecer em `WEB_ORIGINS` pela origem, sem o caminho.
+Depois de alterar variáveis nos dois provedores, faça novo deploy em ambos. Abra o
+endereço da Vercel para usar o painel; o Render continua sendo a API e pode ser
+testado separadamente em `/health/live`.
