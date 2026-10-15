@@ -151,7 +151,12 @@ function learningDialog(title) {
       input.maxLength = 20000;
       input.rows = 6;
     }
-    fields.append(caption, input);
+    // Checkboxes sit beside their text; other fields stack under it.
+    if (type === "checkbox") {
+      caption.classList.add("check-field");
+      caption.prepend(input);
+      fields.append(caption);
+    } else fields.append(caption, input);
     controls[key] = input;
     return input;
   }
@@ -213,7 +218,7 @@ async function learningGroups(ui, value = "", locked = false) {
 }
 async function publicationEditor(kind, row = null) {
   const ui = learningDialog(
-    (row ? "Editar · " : "Criar · ") + academicPages[kind],
+    row ? "Editar " + kindLabel[kind].toLowerCase() : newLabels[kind],
   );
   ui.save.disabled = true;
   try {
@@ -300,30 +305,38 @@ async function publicationEditor(kind, row = null) {
       capacity.max = 100000;
     }
     const visible = row && row.state === "published";
+    // Scheduling is optional: keep it folded unless it is already in use.
+    const schedule = el("details", undefined, "field-group"),
+      summary = el("summary", "Agendar publicação");
+    schedule.open = Boolean(row?.publish_at || row?.expires_at);
+    schedule.append(summary);
     const publishAt = ui.field(
       "publish_at",
-      "Publicar em (opcional) — horário de Brasília",
+      "Publicar em",
       "datetime-local",
       dateInput(row?.publish_at),
     );
     publishAt.required = false;
     publishAt.disabled = Boolean(visible);
+    schedule.append(publishAt.labels[0], publishAt);
     if (kind === "notice") {
       const expiresAt = ui.field(
         "expires_at",
-        "Sai do ar em (opcional) — horário de Brasília",
+        "Tirar do ar em",
         "datetime-local",
         dateInput(row?.expires_at),
       );
       expiresAt.required = false;
+      schedule.append(expiresAt.labels[0], expiresAt);
     }
-    ui.fields.append(
+    schedule.append(
       el(
         "p",
-        "Sem data de publicação, o conteúdo aparece assim que deixar de ser rascunho.",
+        "Horário de Brasília. Sem data de publicação, o conteúdo aparece assim que deixar de ser rascunho.",
         "help",
       ),
     );
+    ui.fields.append(schedule);
     const draft = ui.field(
       "draft",
       "Manter como rascunho",
@@ -382,7 +395,7 @@ async function publicationEditor(kind, row = null) {
   }
 }
 async function scheduleEditor(row = null) {
-  const ui = learningDialog("Grade de horários");
+  const ui = learningDialog(row ? "Editar horário" : "Novo horário");
   ui.save.disabled = true;
   try {
     await learningGroups(ui, row?.group_id || "");

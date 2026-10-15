@@ -171,15 +171,22 @@ inline.
 | Início, perfil e lembretes genéricos | Saudação com a data, próximo prazo em destaque, "Em seguida"; perfil com resumo, atalhos e conta; lembretes agrupados por Hoje, Ontem, Nesta semana |
 | Entregas, avaliações e eventos em diálogos densos | Cartões de entrega com situação e nota em destaque, devolutiva em citação, materiais de apoio separados, vagas com barra de ocupação |
 | Login simples no computador | Tela dividida com a marca, a proposta do Hub e a ilustração do onboarding |
+| Histórico de chamadas apertado, com "1 ausentes" e "Arquivar" em cada linha | Linhas por mês com data, disciplina, barra de presença e "3/4 · 1 falta"; tocar abre a chamada, e arquivar fica dentro dela |
+| Aula encerrada esmaecida, inclusive o botão "Fazer chamada" | Aula encerrada em tom neutro, com contraste preservado e selo "Chamada pendente" |
+| Frequência do aluno em texto corrido | Indicador circular de presença geral; por disciplina, presença e faltas em destaque; aulas perdidas com data |
+| Introdução com ilustração cortada, contorno no título, cantos com "pontas" e imagens de até 0,9 MB | Ilustrações tratadas (mancha completa, sem os cantos embutidos, cerca de 70 KB cada), ancoradas na base e carregadas durante a abertura |
+| Campos de login com caixa de foco dentro do campo, zoom no iPhone e senha de exemplo em pontos | Campo inteiro destacado no foco, texto de 16 px, preenchimento automático com as cores do campo e exemplos claros; servidor fora do ar gera nova tentativa automática |
+| Formulários com títulos como "Criar · Avisos" e botões no fim da rolagem | Títulos por entidade ("Novo aviso", "Nova turma", "Editar horário"), botões fixos no rodapé do diálogo, agendamento recolhido e caixas de seleção ao lado do texto |
 
 O backend ganhou o filtro `status=todo|done` nas atividades do aluno, a contagem
 de inscritos nos eventos e a listagem de vínculos com nomes legíveis e busca.
 
 Verificação da terceira etapa: 117 testes de API em SQLite (3 ignorados) e 119
-em PostgreSQL 16 (1 ignorado); 20 testes de interface; auditoria axe-core
-WCAG 2.1 A/AA sem violações (um contraste do novo seletor de dias corrigido);
-roteiro ponta a ponta dos quatro perfis, PWA e exportação de dados no Chromium,
-sem erros de console.
+em PostgreSQL 16 (1 ignorado); 22 testes de interface; auditoria axe-core
+WCAG 2.1 A/AA sem violações, incluindo os diálogos de chamada, edição e cadastro
+(um contraste do novo seletor de dias corrigido); roteiro ponta a ponta dos
+quatro perfis (com arquivar e restaurar chamada), PWA e exportação de dados no
+Chromium, sem erros de console.
 
 ## O que depende de terceiros
 

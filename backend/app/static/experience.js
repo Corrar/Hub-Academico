@@ -39,6 +39,8 @@ const iconPaths = {
   lock: "M5 10h14v12H5ZM8 10V6a4 4 0 0 1 8 0v4",
   eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6",
   arrow: "M5 12h14M13 6l6 6-6 6",
+  chevron: "M9 6l6 6-6 6",
+  plus: "M12 5v14M5 12h14",
   search: "M21 21l-6-6M10 3a7 7 0 1 0 0 14 7 7 0 0 0 0-14",
   settings:
     "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2",
@@ -220,8 +222,8 @@ function updateHeading(key) {
   }
   if (key === "dashboard")
     for (const [kind, label] of [
-      ["event", "+ Novo evento"],
-      ["notice", "+ Novo aviso"],
+      ["event", "Novo evento"],
+      ["notice", "Novo aviso"],
     ])
       $("heading-actions").append(
         button(
@@ -316,6 +318,8 @@ function lessonCard(row, recorded = false, date = "", day = date) {
     );
     if (recorded === true)
       body.append(el("span", "Chamada registrada", "badge green"));
+    else if (recorded === false && phase === "past")
+      title.append(el("span", "Chamada pendente", "badge gold"));
     item.append(call);
   }
   return item;
@@ -1170,6 +1174,12 @@ function startApp() {
   $("login-view").inert = $("app-view").inert = true;
   // Authentication loads independently; an unavailable API must not trap the splash.
   void connectLogin();
+  try {
+    if (localStorage.getItem(onboardingStorageKey) !== "true")
+      onboardingImage(0);
+  } catch {
+    onboardingImage(0);
+  }
   const finish = () => {
     startup.hidden = true;
     startup.replaceChildren();
@@ -1204,6 +1214,22 @@ function startApp() {
     });
   }, 700);
 }
+// The three illustrations start loading with the splash and are reused, so
+// each step shows its picture at once instead of fetching it on demand.
+const onboardingArt = [];
+function onboardingImage(step) {
+  if (!onboardingArt.length)
+    for (let index = 1; index <= 3; index++) {
+      const img = el("img");
+      img.alt = "";
+      img.decoding = "async";
+      img.src = document
+        .querySelector("link[rel=stylesheet]")
+        .href.replace("panel.css", "onb" + index + ".png");
+      onboardingArt.push(img);
+    }
+  return onboardingArt[step];
+}
 function renderOnboarding(
   step = 0,
   target = $("view"),
@@ -1215,11 +1241,7 @@ function renderOnboarding(
     "Fique por dentro das novidades dentro da comunidade",
   ];
   const box = el("div", undefined, "onboarding"),
-    img = el("img");
-  img.src = document
-    .querySelector("link[rel=stylesheet]")
-    .href.replace("panel.css", "onb" + (step + 1) + ".png");
-  img.alt = "";
+    img = onboardingImage(step);
   box.dataset.step = String(step + 1);
   const sheet = el("div", undefined, "onboarding-sheet"),
     header = el("div", undefined, "onboarding-header"),

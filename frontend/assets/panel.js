@@ -12,6 +12,14 @@ const titles = {
   adminStatus: "Sistema e segurança",
   myGroups: "Minhas turmas",
 };
+// Create and edit labels for the structure records.
+const recordLabels = {
+  courses: ["Novo curso", "Editar curso"],
+  subjects: ["Nova disciplina", "Editar disciplina"],
+  groups: ["Nova turma", "Editar turma"],
+  users: ["Novo usuário", "Editar usuário"],
+  memberships: ["Vincular pessoa", "Editar vínculo"],
+};
 const descriptions = {
   dashboard: "Acompanhe a base acadêmica e organize os próximos cadastros.",
   courses: "Os cursos que compõem a estrutura da unidade.",
@@ -537,8 +545,7 @@ function navigate(key, { groupId = "" } = {}) {
   $("page-description").textContent = descriptions[key] || "";
   $("new-record").hidden =
     !resources[key] || (key === "users" && microsoftEnabled);
-  $("new-record").textContent =
-    key === "memberships" ? "Vincular pessoa" : "Novo cadastro";
+  $("new-record").textContent = recordLabels[key]?.[0] || "Novo cadastro";
   document.body.dataset.page = key;
   document.body.classList.remove("menu-open");
   $("menu-toggle").setAttribute("aria-expanded", "false");
@@ -926,7 +933,8 @@ async function archiveRow(resource, row) {
   }
 }
 function userEditor(row) {
-  const ui = learningDialog("Editar · " + row.name);
+  const ui = learningDialog("Editar usuário");
+  ui.fields.append(el("p", row.email, "muted"));
   ui.field("name", "Nome completo", "text", row.name);
   ui.field("role", "Perfil", "select", row.role, [
     ["student", roles.student],
@@ -1093,7 +1101,7 @@ function openEditor(row = null) {
   editorResource = page;
   const version = ++editorVersion;
   $("editor-title").textContent =
-    (row ? "Editar · " : "Novo cadastro · ") + titles[page];
+    recordLabels[page]?.[row ? 1 : 0] || titles[page];
   $("form-error").textContent = "";
   $("fields").replaceChildren();
   $("save-record").disabled = false;
@@ -1188,10 +1196,13 @@ $("record-form").addEventListener("submit", async (event) => {
     $("save-record").disabled = false;
   }
 });
-let checkingAccess = false;
+let checkingAccess = false,
+  accessRetry = 0,
+  accessAttempts = 0;
 async function connectLogin() {
   if (checkingAccess) return;
   checkingAccess = true;
+  clearTimeout(accessRetry);
   localLoginEnabled = microsoftEnabled = false;
   $("microsoft-login").disabled = true;
   $("login-submit").disabled = true;
@@ -1208,6 +1219,7 @@ async function connectLogin() {
       (!data.local && !data.microsoft)
     )
       throw new Error("Resposta de acesso inválida");
+    accessAttempts = 0;
     localLoginEnabled = data.local;
     microsoftEnabled = data.microsoft;
     $("login-submit").disabled = !data.local;
@@ -1228,13 +1240,18 @@ async function connectLogin() {
       }
     }
   } catch (error) {
+    // A sleeping server takes a few seconds to wake: retry quietly a few times.
+    const retrying = ++accessAttempts <= 5;
     $("login-error").textContent =
-      "O serviço de acesso está indisponível" +
-      (error.status ? " (HTTP " + error.status + ")" : "") +
-      ". Tente conectar novamente.";
+      "Não conseguimos conectar ao servidor agora" +
+      (error.status ? " (código " + error.status + ")" : "") +
+      (retrying
+        ? ". Tentando de novo automaticamente…"
+        : ". Verifique sua internet e tente novamente.");
     $("login-state").textContent =
       "Você pode preencher os campos. O botão Entrar será liberado quando o serviço confirmar o acesso por senha.";
     $("retry-login").hidden = false;
+    if (retrying) accessRetry = setTimeout(connectLogin, 4000 * accessAttempts);
   } finally {
     checkingAccess = false;
     $("login-form").setAttribute("aria-busy", "false");
@@ -1249,7 +1266,10 @@ if (microsoftCallbackFailed) {
     "Não foi possível autorizar o acesso Microsoft. Confira o vínculo institucional e a política MFA com o administrador.";
   history.replaceState(null, "", location.pathname);
 }
-$("retry-login").addEventListener("click", connectLogin);
+$("retry-login").addEventListener("click", () => {
+  accessAttempts = 0;
+  void connectLogin();
+});
 
 async function microsoftLogin() {
   if (!microsoftEnabled) return;

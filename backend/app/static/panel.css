@@ -384,9 +384,51 @@ small {
   flex-shrink: 0;
   width: 34px;
 }
+/* The whole field lights up on focus, never a box inside the box. */
+.input-wrap {
+  transition:
+    border-color 0.15s var(--ease, ease),
+    box-shadow 0.15s var(--ease, ease),
+    background-color 0.15s var(--ease, ease);
+}
+.input-wrap:hover {
+  border-color: #b7c0c9;
+}
+.input-wrap:focus-within {
+  background: white;
+  border-color: var(--slate);
+  box-shadow: 0 0 0 4px #2e475626;
+}
+.input-wrap input {
+  font-size: 16px;
+  color: var(--ink);
+}
+.input-wrap input:focus,
 .input-wrap input:focus-visible {
-  outline-offset: 0;
-  outline-width: 2px;
+  outline: none;
+}
+.input-wrap input::placeholder {
+  color: #6b7580;
+}
+.input-wrap > [data-icon],
+.input-wrap > svg.icon {
+  color: #6b7580;
+  transition: color 0.15s;
+}
+.input-wrap:focus-within > [data-icon],
+.input-wrap:focus-within > svg.icon {
+  color: var(--slate);
+}
+.input-wrap .icon-button:focus-visible {
+  outline-offset: -4px;
+}
+/* Browser autofill keeps the field's own colours. */
+.input-wrap input:-webkit-autofill {
+  -webkit-text-fill-color: var(--ink);
+  box-shadow: 0 0 0 40px var(--surface) inset;
+}
+.input-wrap:focus-within input:-webkit-autofill {
+  box-shadow: 0 0 0 40px white inset;
 }
 .login-help {
   display: block;
@@ -1666,6 +1708,7 @@ body[data-role][data-page="onboarding"] .workspace {
   width: 100%;
   height: 55%;
   object-fit: contain;
+  object-position: center bottom;
 }
 .onboarding[data-step="2"] .onboarding-title {
   bottom: 52%;
@@ -1789,20 +1832,51 @@ body[data-role="teacher"] .workspace {
 .frequency-overall {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 20px;
   padding: 20px;
   margin-bottom: 8px;
 }
-.frequency-overall strong {
-  font-size: 34px;
-  letter-spacing: -1px;
-  color: var(--slate);
-  flex-shrink: 0;
+.frequency-overall h2 {
+  margin: 0 0 4px;
+  font-size: 17px;
 }
 .frequency-overall p {
   margin: 0;
   font-size: 13px;
   color: var(--muted);
+}
+.frequency-overall .help {
+  margin-top: 6px;
+}
+/* Ring gauge: --value (0–100) is set from script through CSSOM. */
+.frequency-ring {
+  --value: 0;
+  --tone: var(--green);
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: conic-gradient(var(--tone) calc(var(--value) * 1%), #eef1f4 0);
+}
+.frequency-ring.low {
+  --tone: var(--red-dark);
+}
+.frequency-ring::before {
+  content: "";
+  grid-area: 1 / 1;
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  background: white;
+}
+.frequency-ring strong {
+  grid-area: 1 / 1;
+  position: relative;
+  font-size: 20px;
+  letter-spacing: -0.5px;
+  color: var(--ink);
 }
 .frequency-list {
   display: grid;
@@ -1834,7 +1908,26 @@ body[data-role="teacher"] .workspace {
 }
 .frequency-top h3 {
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
+}
+.frequency-top small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.frequency-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.frequency-stats strong {
+  font-size: 18px;
+  color: var(--ink);
+  letter-spacing: -0.3px;
 }
 .frequency-card p {
   margin: 8px 0 0;
@@ -1864,18 +1957,6 @@ body[data-role="teacher"] .workspace {
 .frequency-card.critical .frequency-bar span,
 .frequency-card.exceeded .frequency-bar span {
   background: var(--red);
-}
-.missed-item {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 2px 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid #f1f3f5;
-  font-size: 13px;
-}
-.missed-item small {
-  grid-column: 2;
-  color: var(--muted);
 }
 /* Roll call. */
 .wide-dialog {
@@ -1950,34 +2031,6 @@ body[data-role="teacher"] .workspace {
 }
 .lesson-action {
   flex-shrink: 0;
-}
-.roll-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid #f1f3f5;
-}
-.roll-item > div:first-of-type {
-  flex: 1;
-  min-width: 0;
-}
-.roll-item h3 {
-  font-size: 14px;
-  margin: 0;
-}
-.roll-item p {
-  font-size: 12px;
-  color: var(--muted);
-  margin: 3px 0 0;
-}
-.roll-item .row-actions {
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-.roll-item .row-actions button {
-  min-height: 40px;
-  padding: 8px 12px;
 }
 .group-options {
   display: grid;
@@ -2615,8 +2668,17 @@ body[data-role="teacher"] .day-pill[aria-pressed="true"] {
 .lesson.now .lesson-info {
   border-left-color: var(--green);
 }
+/* Finished lessons step back without losing contrast or their actions. */
 .lesson.past {
-  opacity: 0.6;
+  background: #fafbfc;
+  box-shadow: none;
+}
+.lesson.past .lesson-time,
+.lesson.past .lesson-info strong {
+  color: var(--muted);
+}
+.lesson.past .lesson-info {
+  border-left-color: #c9d0d6;
 }
 .badge.live::before {
   content: "";
@@ -3126,4 +3188,174 @@ body[data-role="teacher"] .segment {
 body[data-role="student"] .toolbar > .search-field,
 body[data-role="teacher"] .toolbar > .search-field {
   max-width: none;
+}
+
+/* Roll-call history: one tappable line per lesson, grouped by month. */
+.roll-history {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.roll-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 72px;
+  padding: 10px 14px 10px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: white;
+  box-shadow: var(--shadow-sm);
+  color: var(--ink);
+  text-align: left;
+  font-weight: 400;
+}
+button.roll-row:hover {
+  border-color: #c9d1d8;
+  box-shadow: var(--shadow);
+}
+.roll-row.archived {
+  background: #fafbfc;
+  box-shadow: none;
+}
+.roll-row.archived .date-block {
+  background: #8a96a0;
+}
+.roll-row .date-block {
+  width: 52px;
+}
+.roll-body {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.roll-body strong {
+  font-size: 15px;
+}
+.roll-body small {
+  font-size: 12px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.roll-meter {
+  height: 6px;
+  max-width: 220px;
+  margin-top: 6px;
+  border-radius: 99px;
+  background: var(--pink);
+  overflow: hidden;
+}
+.roll-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--green);
+}
+.roll-counts {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.roll-counts strong {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.roll-row > svg.icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .roll-row {
+    gap: 12px;
+  }
+  .roll-row > svg.icon {
+    display: none;
+  }
+  .roll-body strong {
+    font-size: 14px;
+  }
+}
+.roll-context {
+  display: grid;
+  gap: 2px;
+  margin: -6px 0 16px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.roll-context strong {
+  font-size: 15px;
+  color: var(--ink);
+}
+.roll-row.missed {
+  min-height: 64px;
+}
+/* Long forms keep their actions in reach; optional groups fold away. */
+dialog .dialog-actions {
+  position: sticky;
+  bottom: -26px;
+  z-index: 1;
+  margin: 24px -26px -26px;
+  padding: 14px 26px 22px;
+  background: white;
+  border-top: 1px solid var(--line);
+}
+.field-group {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 0 14px;
+}
+.field-group[open] {
+  padding-bottom: 12px;
+}
+.field-group summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--slate);
+}
+.field-group summary::after {
+  content: "opcional";
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.text-button.danger-link {
+  display: block;
+  margin-top: 12px;
+  color: var(--red-dark);
+  font-size: 13px;
+}
+@media (max-width: 720px) {
+  dialog .dialog-actions {
+    bottom: -20px;
+    margin: 20px -20px -20px;
+    padding: 12px 20px 18px;
+  }
+}
+label.check-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin: 14px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+body[data-role="teacher"] input[type="checkbox"],
+body[data-role="coordinator"] input[type="checkbox"] {
+  accent-color: var(--slate);
 }

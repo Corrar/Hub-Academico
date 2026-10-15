@@ -23,7 +23,11 @@ function adminField(key, label, type, value = "") {
     input.required = true;
     input.maxLength = key === "reason" ? 500 : 254;
   }
-  $("admin-fields").append(caption, input);
+  if (type === "checkbox") {
+    caption.classList.add("check-field");
+    caption.prepend(input);
+    $("admin-fields").append(caption);
+  } else $("admin-fields").append(caption, input);
   return input;
 }
 function openAdmin(action, row = null) {

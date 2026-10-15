@@ -3,14 +3,6 @@
 Object.assign(descriptions, {
   attendance: "Sua presença registrada pelos professores, por disciplina.",
 });
-function lessonDay(date) {
-  return new Date(date + "T12:00:00Z").toLocaleDateString("pt-BR", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    timeZone: "UTC",
-  });
-}
 function plural(count, one, many) {
   return count + " " + (count === 1 ? one : many);
 }
@@ -64,24 +56,53 @@ function frequencyView(data, target) {
     );
     target.append(hero);
   }
-  const overall = el("section", undefined, "section-card frequency-overall");
-  overall.append(
-    el("strong", percent(data.attendance_percent)),
+  const overall = el("section", undefined, "section-card frequency-overall"),
+    ring = el("div", undefined, "frequency-ring"),
+    value = data.attendance_percent,
+    healthy = value === null || value >= 100 - data.limit_percent;
+  ring.classList.toggle("low", !healthy);
+  ring.style.setProperty("--value", String(value ?? 0));
+  ring.setAttribute("aria-hidden", "true");
+  ring.append(el("strong", percent(value)));
+  const text = el("div");
+  text.append(
+    el("h2", "Presença geral"),
     el(
       "p",
       data.recorded_lessons
-        ? `de presença em ${plural(data.recorded_lessons, "aula registrada", "aulas registradas")}. O que reprova é a falta por disciplina — por isso a lista abaixo importa mais que este número.`
+        ? `${percent(value)} em ${plural(data.recorded_lessons, "aula registrada", "aulas registradas")}.`
         : "Nenhuma chamada registrada até agora.",
     ),
+    el(
+      "p",
+      `O limite de ${data.limit_percent}% de faltas vale para cada disciplina.`,
+      "help",
+    ),
   );
+  overall.append(ring, text);
   target.append(overall, sectionHeading("Por disciplina"));
   const list = el("div", undefined, "frequency-list");
   for (const item of data.groups) {
-    const card = el("article", undefined, "frequency-card " + item.state),
+    const parts = groupParts(item.group_label),
+      card = el("article", undefined, "frequency-card " + item.state),
       top = el("div", undefined, "frequency-top"),
+      title = el("div"),
+      stats = el("div", undefined, "frequency-stats"),
       bar = el("div", undefined, "frequency-bar"),
       fill = el("span");
-    top.append(el("h3", item.group_label), frequencyBadge(item));
+    title.append(el("h3", parts.subject), el("small", parts.rest));
+    top.append(title, frequencyBadge(item));
+    const presence = el("span"),
+      absences = el("span");
+    presence.append(
+      el("strong", percent(item.attendance_percent)),
+      " presença",
+    );
+    absences.append(
+      el("strong", String(item.absences)),
+      ` de ${plural(item.allowed_absences, "falta permitida", "faltas permitidas")}`,
+    );
+    stats.append(presence, absences);
     const used = item.allowed_absences
       ? Math.min(100, (item.absences / item.allowed_absences) * 100)
       : item.absences
@@ -92,10 +113,7 @@ function frequencyView(data, target) {
     bar.append(fill);
     card.append(
       top,
-      el(
-        "p",
-        `${percent(item.attendance_percent)} de presença · ${plural(item.absences, "falta", "faltas")} de ${item.allowed_absences} permitidas`,
-      ),
+      stats,
       bar,
       el("p", frequencyBalance(item), "frequency-balance"),
     );
@@ -115,17 +133,30 @@ function frequencyView(data, target) {
       item.missed.map((lesson) => ({ ...lesson, group: item.group_label })),
     )
     .sort((a, b) => b.lesson_date.localeCompare(a.lesson_date));
-  const box = el("div", undefined, "section-card");
+  const box = el("div", undefined, "roll-history");
   for (const lesson of missed) {
-    const line = el("div", undefined, "missed-item");
-    line.append(
-      el("strong", lessonDay(lesson.lesson_date)),
-      el("span", lesson.group.split(" · ")[0]),
+    const line = el("div", undefined, "roll-row missed"),
+      body = el("div", undefined, "roll-body");
+    body.append(
+      el("strong", groupParts(lesson.group).subject),
       el("small", lesson.topic || "Conteúdo não informado"),
+    );
+    line.append(dayBlock(lesson.lesson_date), body);
+    line.setAttribute("role", "group");
+    line.setAttribute(
+      "aria-label",
+      longDay(lesson.lesson_date) + " · " + groupParts(lesson.group).subject,
     );
     box.append(line);
   }
-  if (!missed.length) box.append(el("p", "Nenhuma falta até aqui.", "muted"));
+  if (!missed.length)
+    box.append(
+      emptyState(
+        "Nenhuma falta até aqui",
+        "As aulas em que você faltou aparecem nesta lista.",
+        "attendance",
+      ),
+    );
   target.append(
     box,
     el(
@@ -134,6 +165,22 @@ function frequencyView(data, target) {
       "help",
     ),
   );
+}
+// Day number over the short weekday, for lesson dates (YYYY-MM-DD).
+function dayBlock(key) {
+  const date = new Date(key + "T12:00:00Z"),
+    block = el("div", undefined, "date-block");
+  block.setAttribute("aria-hidden", "true");
+  block.append(
+    el("strong", String(date.getUTCDate()).padStart(2, "0")),
+    el(
+      "span",
+      new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC", weekday: "short" })
+        .format(date)
+        .replace(".", ""),
+    ),
+  );
+  return block;
 }
 async function studentFrequency(student) {
   const { dialog, body } = readDialog("Frequência · " + student.name);
@@ -154,13 +201,16 @@ async function rollCall(scheduleId, date) {
     absent = new Set(
       sheet.students.filter((item) => item.present === false).map((i) => i.id),
     );
-  ui.fields.append(
+  const parts = groupParts(sheet.group_label),
+    context = el("div", undefined, "roll-context");
+  context.append(
+    el("strong", [parts.subject, parts.name].filter(Boolean).join(" · ")),
     el(
-      "p",
-      `${sheet.group_label} · ${lessonDay(date)} · ${minuteTime(schedule.starts_minute)} · ${schedule.room}`,
-      "muted",
+      "span",
+      `${longDay(date)} · ${minuteTime(schedule.starts_minute)} · ${schedule.room}`,
     ),
   );
+  ui.fields.append(context);
   const counters = el("div", undefined, "roll-counters"),
     present = el("strong"),
     missing = el("strong"),
@@ -241,6 +291,28 @@ async function rollCall(scheduleId, date) {
       ),
     );
   ui.save.textContent = sheet.lesson ? "Salvar correção" : "Salvar chamada";
+  if (sheet.lesson)
+    ui.fields.append(
+      button(
+        "Arquivar chamada",
+        learningAction(async () => {
+          if (
+            !confirm(
+              "Arquivar esta chamada? Ela deixa de contar na frequência, mas o histórico é preservado.",
+            )
+          )
+            return;
+          await api(
+            "/learning/attendance/lessons/" + sheet.lesson.id + "/archive",
+            { method: "PATCH", body: JSON.stringify({ archived: true }) },
+          );
+          ui.dialog.close();
+          await render();
+          status("Chamada arquivada. Veja em “Mostrar arquivadas”.");
+        }),
+        "text-button danger-link",
+      ),
+    );
   ui.form.save = async () => {
     await api("/learning/attendance/sheet", {
       method: "PUT",
@@ -337,110 +409,134 @@ async function renderAttendance(ticket) {
   ]);
   await groupLabels([...overview.lessons_today, ...lessons]);
   if (ticket !== generation) return;
+  pageAction("Registrar outra data", pickLesson);
   const toolbar = el("div", undefined, "toolbar");
-  if (academicGroup)
-    toolbar.append(
-      el("span", reference("groups", academicGroup), "badge"),
-      button("Ver todas as turmas", () => {
-        academicGroup = "";
-        offset = 0;
-        render();
-      }),
-    );
-  const caption = el("label", "Mostrar arquivadas"),
-    check = el("input");
-  check.type = "checkbox";
-  check.checked = archived;
-  check.addEventListener("change", () => {
-    archived = check.checked;
-    offset = 0;
-    render();
-  });
-  caption.prepend(check);
-  toolbar.append(
-    button("Registrar outra data", learningAction(pickLesson), "primary"),
-    caption,
-  );
-  $("view").append(toolbar, sectionHeading("Aulas de hoje"));
+  groupFilterChip(toolbar);
+  toolbar.append(archivedToggle("Mostrar arquivadas"));
+  $("view").append(toolbar);
   const today = overview.lessons_today.filter(
     (row) => !academicGroup || row.group_id === academicGroup,
   );
-  today.forEach((row) =>
-    $("view").append(
-      lessonCard(row, overview.recorded_today.includes(row.id), overview.date),
-    ),
-  );
-  if (!today.length)
-    $("view").append(
-      emptyState(
-        "Nenhuma aula hoje",
-        "Use “Registrar outra data” para lançar uma aula anterior.",
-        "schedule",
+  if (!archived) {
+    $("view").append(sectionHeading("Aulas de hoje"));
+    today.forEach((row) =>
+      $("view").append(
+        lessonCard(
+          row,
+          overview.recorded_today.includes(row.id),
+          overview.date,
+        ),
       ),
     );
+    if (!today.length)
+      $("view").append(
+        emptyState(
+          "Nenhuma aula hoje",
+          "Use “Registrar outra data” para lançar uma aula anterior.",
+          "schedule",
+        ),
+      );
+  }
   $("view").append(
     sectionHeading(archived ? "Chamadas arquivadas" : "Chamadas registradas"),
   );
-  const box = el("div", undefined, "section-card");
+  let month = "",
+    box = null;
   for (const lesson of lessons) {
-    const line = el("div", undefined, "roll-item"),
-      body = el("div");
-    body.append(
-      el(
-        "h3",
-        lessonDay(lesson.lesson_date) +
-          " · " +
-          lesson.group_label.split(" · ")[0],
-      ),
-      el(
-        "p",
-        `${lesson.present_count} presentes · ${lesson.absent_count} ausentes` +
-          (lesson.topic ? " · " + lesson.topic : ""),
-      ),
-    );
-    const actions = el("div", undefined, "row-actions");
-    if (!lesson.archived)
-      actions.append(
-        button(
-          "Abrir",
-          learningAction(() =>
-            rollCall(lesson.schedule_id, lesson.lesson_date),
-          ),
-        ),
-      );
-    actions.append(
-      button(
-        lesson.archived ? "Restaurar" : "Arquivar",
-        learningAction(async () => {
-          if (
-            !confirm(
-              lesson.archived
-                ? "Restaurar esta chamada? Ela volta a contar na frequência."
-                : "Arquivar esta chamada? Ela deixa de contar na frequência, mas o histórico é preservado.",
-            )
-          )
-            return;
-          await api("/learning/attendance/lessons/" + lesson.id + "/archive", {
-            method: "PATCH",
-            body: JSON.stringify({ archived: !lesson.archived }),
-          });
-          await render();
-        }),
-        lesson.archived ? "secondary" : "secondary danger",
-      ),
-    );
-    line.append(icon("attendance"), body, actions);
-    box.append(line);
+    const label = monthLabel(lesson.lesson_date);
+    if (label !== month || !box) {
+      month = label;
+      box = el("div", undefined, "roll-history");
+      $("view").append(el("h3", label, "feed-group"), box);
+    }
+    box.append(rollRow(lesson));
   }
   if (!lessons.length)
-    box.append(
+    $("view").append(
       emptyState(
-        "Nenhuma chamada por aqui",
-        "As chamadas salvas aparecem nesta lista.",
+        archived ? "Nenhuma chamada arquivada" : "Nenhuma chamada por aqui",
+        archived
+          ? "Chamadas arquivadas deixam de contar na frequência e podem ser restauradas."
+          : "As chamadas salvas aparecem nesta lista.",
         "attendance",
       ),
     );
-  $("view").append(box, pager(lessons));
+  $("view").append(pager(lessons));
+}
+function monthLabel(key) {
+  const text = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "UTC",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(key + "T12:00:00Z"));
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+// One history line: date, class, presence meter and the way back in.
+function rollRow(lesson) {
+  const parts = groupParts(lesson.group_label),
+    total = lesson.present_count + lesson.absent_count,
+    summary = `${plural(lesson.present_count, "presente", "presentes")} · ${plural(lesson.absent_count, "ausente", "ausentes")}`,
+    day = dayBlock(lesson.lesson_date);
+  const body = el("div", undefined, "roll-body"),
+    meter = el("div", undefined, "roll-meter"),
+    fill = el("span");
+  fill.style.width = (total ? (lesson.present_count / total) * 100 : 0) + "%";
+  meter.setAttribute("aria-hidden", "true");
+  meter.append(fill);
+  body.append(
+    el("strong", parts.subject),
+    el(
+      "small",
+      [parts.name, lesson.topic].filter(Boolean).join(" · ") ||
+        "Conteúdo não informado",
+    ),
+    meter,
+  );
+  const counts = el("div", undefined, "roll-counts");
+  counts.append(
+    el("strong", total ? `${lesson.present_count}/${total}` : "—"),
+    el(
+      "span",
+      lesson.absent_count
+        ? plural(lesson.absent_count, "falta", "faltas")
+        : "sem faltas",
+      lesson.absent_count ? "badge red" : "badge green",
+    ),
+  );
+  const name = `${longDay(lesson.lesson_date)} · ${parts.subject} · ${summary}`;
+  if (!lesson.archived) {
+    const open = button(
+      "",
+      learningAction(() => rollCall(lesson.schedule_id, lesson.lesson_date)),
+      "roll-row",
+    );
+    open.setAttribute("aria-label", name + ". Abrir chamada");
+    open.append(day, body, counts, icon("chevron"));
+    return open;
+  }
+  const row = el("div", undefined, "roll-row archived");
+  row.setAttribute("aria-label", name);
+  row.setAttribute("role", "group");
+  row.append(
+    day,
+    body,
+    button(
+      "Restaurar",
+      learningAction(async () => {
+        if (
+          !confirm("Restaurar esta chamada? Ela volta a contar na frequência.")
+        )
+          return;
+        await api("/learning/attendance/lessons/" + lesson.id + "/archive", {
+          method: "PATCH",
+          body: JSON.stringify({ archived: false }),
+        });
+        await render();
+        status("Chamada restaurada.");
+      }),
+    ),
+  );
+  return row;
 }
 async function groupStudents(group) {
   const { dialog, body } = readDialog("Alunos · " + group.label);

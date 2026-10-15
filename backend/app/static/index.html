@@ -54,8 +54,8 @@
           class="login-art"
           src="/panel/assets/onb2.png"
           alt=""
-          width="3240"
-          height="2760"
+          width="1200"
+          height="906"
           loading="lazy"
           decoding="async"
         />
@@ -74,7 +74,10 @@
                 type="email"
                 autocomplete="username"
                 maxlength="254"
-                placeholder="aluno@fatec.sp.gov.br"
+                placeholder="nome.sobrenome@fatec.sp.gov.br"
+                inputmode="email"
+                autocapitalize="none"
+                spellcheck="false"
                 required
               />
             </div>
@@ -87,7 +90,7 @@
                 type="password"
                 autocomplete="current-password"
                 maxlength="128"
-                placeholder="••••••••"
+                placeholder="Digite sua senha"
                 required
               /><button
                 id="toggle-password"
@@ -132,7 +135,7 @@
         </button>
         <p id="login-error" role="alert"></p>
         <button id="retry-login" class="text-button" type="button" hidden>
-          Tentar conectar novamente
+          Tentar novamente
         </button>
         <p id="login-state" role="status">Conectando ao serviço de acesso…</p>
         <button

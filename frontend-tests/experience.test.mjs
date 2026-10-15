@@ -58,7 +58,7 @@ test("login preserves the original controls during failure and enables only auth
     await app.click("#login-help");
     assert.equal(doc.querySelector("#help-dialog").open, true);
     doc.querySelector("#help-dialog").close();
-    assert.match(doc.querySelector("#login-error").textContent, /HTTP 502/);
+    assert.match(doc.querySelector("#login-error").textContent, /código 502/);
     assert.equal(doc.querySelector("#retry-login").hidden, false);
     app.recover();
     await app.click("#retry-login");
@@ -304,7 +304,8 @@ async function boot(role = "student", options = {}) {
         notice: "Não substitui o diário oficial.",
       };
     else if (path === "/learning/attendance/sheet") data = options.sheet;
-    else if (path === "/learning/attendance/lessons") data = [];
+    else if (path === "/learning/attendance/lessons")
+      data = options.rollHistory || [];
     else if (path === "/learning/notifications")
       data = options.notifications || { read_at: null, unread: 0, items: [] };
     else if (path === "/learning/attachment-types")
@@ -794,6 +795,91 @@ test("confirmations appear as a toast that the next page clears", async () => {
     await app.navigate("material");
     assert.equal(doc.querySelector("#status").textContent, "");
     assert.equal(doc.querySelector("#view").hasAttribute("aria-busy"), false);
+  } finally {
+    app.dom.window.close();
+  }
+});
+test("roll-call history reads naturally and archives from the dialog", async () => {
+  const app = await boot("teacher", {
+    rollHistory: [
+      {
+        id: "lesson-1",
+        schedule_id: "schedule-1",
+        group_id: "group-1",
+        group_label: group.label,
+        lesson_date: "2026-09-02",
+        present_count: 3,
+        absent_count: 1,
+        topic: "Persona",
+        archived: false,
+      },
+    ],
+    sheet: {
+      schedule: lesson,
+      group_label: group.label,
+      lesson_date: "2026-09-02",
+      lesson: {
+        id: "lesson-1",
+        version: 2,
+        topic: "Persona",
+        recorded_at: "2026-09-02T22:00:00Z",
+      },
+      students: [{ id: "s1", name: "Ana Ribeiro", present: false }],
+    },
+  });
+  try {
+    const doc = app.w.document;
+    await app.navigate("attendance");
+    assert.match(
+      doc.querySelector("#heading-actions").textContent,
+      /Registrar outra data/,
+    );
+    assert.match(doc.querySelector("#view").textContent, /Setembro de 2026/);
+    const row = doc.querySelector("button.roll-row");
+    assert.match(row.getAttribute("aria-label"), /3 presentes · 1 ausente\./);
+    assert.match(row.textContent, /Ciência de Dados/);
+    assert.match(row.textContent, /3\/41 falta/);
+    assert.equal(doc.querySelectorAll(".roll-row button").length, 0);
+    row.click();
+    await settle();
+    const dialog = doc.querySelector(".academic-dialog");
+    assert.match(dialog.textContent, /Quarta-feira, 2 de setembro/);
+    const archive = [...dialog.querySelectorAll("button")].find(
+      (node) => node.textContent === "Arquivar chamada",
+    );
+    app.w.confirm = () => true;
+    archive.click();
+    await settle();
+    const request = app.requests.findLast(
+      (item) => item.init.method === "PATCH",
+    );
+    assert.ok(
+      request.url.pathname.endsWith("/attendance/lessons/lesson-1/archive"),
+    );
+    assert.deepEqual(JSON.parse(request.init.body), { archived: true });
+    assert.match(doc.querySelector("#status").textContent, /arquivada/);
+    assert.deepEqual(app.errors, []);
+  } finally {
+    app.dom.window.close();
+  }
+});
+test("editors name the record and fold optional scheduling", async () => {
+  const app = await boot("teacher");
+  try {
+    const doc = app.w.document;
+    await app.navigate("activity");
+    [...doc.querySelectorAll("#heading-actions button")]
+      .find((node) => node.textContent === "Nova atividade")
+      .click();
+    await settle();
+    const dialog = doc.querySelector(".academic-dialog");
+    assert.equal(dialog.querySelector("h2").textContent, "Nova atividade");
+    const folded = dialog.querySelector("details.field-group");
+    assert.equal(folded.open, false);
+    assert.ok(folded.contains(dialog.querySelector("#learning-publish_at")));
+    const draft = dialog.querySelector("#learning-draft");
+    assert.ok(draft.parentElement.classList.contains("check-field"));
+    assert.deepEqual(app.errors, []);
   } finally {
     app.dom.window.close();
   }
