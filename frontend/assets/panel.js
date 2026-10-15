@@ -177,6 +177,7 @@ function enter(data) {
   $("app-view").hidden = false;
   $("account-name").textContent = user.name;
   setupExperience();
+  void syncPush();
   document.querySelector(".sidebar-title").textContent = user.administrator
     ? "Administração"
     : roles[user.role];
@@ -219,6 +220,7 @@ $("login-form").addEventListener("submit", async (event) => {
 $("logout").addEventListener("click", async () => {
   $("logout").disabled = true;
   try {
+    await releasePush();
     await api("/auth/logout", { method: "POST" });
     resetSession();
     $("email").focus();

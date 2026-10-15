@@ -900,6 +900,7 @@ function renderProfile() {
     button("Sair da conta", () => $("logout").click(), "secondary danger"),
   );
   $("view").append(card, menu);
+  notificationPanel($("view")).catch((error) => status(error.message, true));
 }
 const onboardingStorageKey = "fatec:onboarding-completed:v1";
 document.addEventListener("DOMContentLoaded", startApp);

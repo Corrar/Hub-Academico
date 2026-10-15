@@ -139,6 +139,15 @@ def test_panel_assets_headers_and_auth_boundaries(system):
         assert client.get("/panel/assets/" + filename).status_code == 200
     for endpoint in ["/api/v1/dashboard", "/api/v1/lookup/users", "/api/v1/courses"]:
         assert client.get(endpoint).status_code == 401
+    # Installable app: manifest, icons and a worker scoped to the whole panel.
+    manifest = client.get("/panel/assets/manifest.webmanifest")
+    assert manifest.headers["content-type"].startswith("application/manifest+json")
+    for icon in manifest.json()["icons"]:
+        assert client.get("/panel/assets/" + icon["src"]).status_code == 200
+    worker = client.get("/panel/sw.js")
+    assert worker.status_code == 200 and "javascript" in worker.headers["content-type"]
+    policy = response.headers["content-security-policy"]
+    assert "manifest-src 'self'" in policy and "worker-src 'self'" in policy
     assert client.get("/panel/assets/../main.py").status_code == 404
 
 

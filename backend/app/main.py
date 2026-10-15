@@ -250,6 +250,7 @@ def create_app(url=None):
             response.headers["Content-Security-Policy"] = (
                 "default-src 'none'; script-src 'self'; style-src 'self'; "
                 "img-src 'self'; font-src 'self'; connect-src 'self'; "
+                "manifest-src 'self'; worker-src 'self'; "
                 "object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
             )
         return response
@@ -264,6 +265,7 @@ def create_app(url=None):
             "panel.js",
             "academic.js",
             "attendance.js",
+            "device.js",
             "admin.js",
             "experience.js",
             "plus-jakarta-sans-latin-wght-normal.woff2",
@@ -275,9 +277,22 @@ def create_app(url=None):
             "onb1.png",
             "onb2.png",
             "onb3.png",
+            "manifest.webmanifest",
+            "icon-192.png",
+            "icon-512.png",
+            "icon-maskable-512.png",
+            "apple-touch-icon.png",
+            "badge-96.png",
         }:
             raise HTTPException(404, "Arquivo não encontrado")
+        if filename.endswith(".webmanifest"):
+            return FileResponse(static / filename, media_type="application/manifest+json")
         return FileResponse(static / filename)
+
+    # The worker lives at the panel root so its scope covers the whole app.
+    @app.get("/panel/sw.js", include_in_schema=False)
+    def service_worker():
+        return FileResponse(static / "sw.js", media_type="text/javascript")
 
     @app.get("/", include_in_schema=False)
     def home():

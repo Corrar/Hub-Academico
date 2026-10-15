@@ -7,9 +7,14 @@ import { Script } from "node:vm";
 const staticRoot = new URL("../backend/app/static/", import.meta.url);
 const html = await readFile(new URL("index.html", staticRoot), "utf8");
 const scripts = await Promise.all(
-  ["panel.js", "admin.js", "academic.js", "attendance.js", "experience.js"].map(
-    (name) => readFile(new URL(name, staticRoot), "utf8"),
-  ),
+  [
+    "panel.js",
+    "admin.js",
+    "academic.js",
+    "attendance.js",
+    "device.js",
+    "experience.js",
+  ].map((name) => readFile(new URL(name, staticRoot), "utf8")),
 );
 const settle = async () => {
   for (let i = 0; i < 12; i++)
@@ -308,6 +313,17 @@ async function boot(role = "student", options = {}) {
         max_bytes: 4194304,
         text_max_bytes: 524288,
       };
+    else if (path === "/notifications/preferences")
+      data = {
+        notices: true,
+        activities: true,
+        materials: true,
+        events: true,
+        grades: true,
+        deadlines: true,
+      };
+    else if (path === "/notifications/config")
+      data = { web_push: true, public_key: "BA", expo: true };
     else if (
       path === "/me/password" ||
       path === "/learning/notifications/read"
@@ -681,6 +697,33 @@ test("profile changes the local password and clears the fields", async () => {
       new_password: "senha-nova-4567",
     });
     assert.equal(doc.querySelectorAll(".academic-dialog").length, 0);
+    assert.deepEqual(app.errors, []);
+  } finally {
+    app.dom.window.close();
+  }
+});
+
+test("profile explains push support and saves notification preferences", async () => {
+  const app = await boot("student");
+  try {
+    await app.navigate("profile");
+    const card = app.w.document.querySelector(".device-card");
+    assert.ok(card);
+    assert.match(
+      card.textContent,
+      /não recebe notificações push|Adicionar à Tela de Início/,
+    );
+    const boxes = card.querySelectorAll(".preference-list input");
+    assert.equal(boxes.length, 6);
+    boxes[0].click();
+    await settle();
+    const request = app.requests.findLast(
+      (item) =>
+        item.url.pathname.endsWith("/notifications/preferences") &&
+        item.init.method === "PUT",
+    );
+    assert.equal(JSON.parse(request.init.body).notices, false);
+    assert.equal(request.init.headers["X-CSRF-Token"], "synthetic-csrf");
     assert.deepEqual(app.errors, []);
   } finally {
     app.dom.window.close();
