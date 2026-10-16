@@ -90,4 +90,5 @@ node scripts/sync-frontend.mjs --check
 ```
 
 O workflow `.github/workflows/backend.yml` executa as mesmas verificações em
-SQLite e PostgreSQL.
+SQLite e PostgreSQL. Para mudanças de interface, os roteiros de navegador
+(ponta a ponta, acessibilidade, PWA e capturas) estão em [scripts/qa](scripts/qa/README.md).

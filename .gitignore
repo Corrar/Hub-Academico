@@ -39,3 +39,6 @@ __pycache__/
 backend/backups/
 backend/build/
 backend/dist/
+
+# Capturas dos roteiros de QA no navegador (scripts/qa).
+qa-output/
