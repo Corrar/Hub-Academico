@@ -7,6 +7,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Index,
     LargeBinary,
     String,
     Text,
@@ -151,6 +152,11 @@ class Publication(Record, Base):
     capacity: Mapped[int | None]
     version: Mapped[int] = mapped_column(default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    # Optional visibility window checked with the server clock on every read.
+    publish_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # When recipients were queued for push; set once the publication is visible.
+    fanout_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Submission(Record, Base):
@@ -167,6 +173,7 @@ class Submission(Record, Base):
     grade: Mapped[float | None]
     feedback: Mapped[str] = mapped_column(Text, default="")
     version: Mapped[int] = mapped_column(default=1)
+    graded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Enrollment(Record, Base):
@@ -203,3 +210,90 @@ class Attachment(Record, Base):
     owner_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
     name: Mapped[str] = mapped_column(String(100))
     content: Mapped[bytes] = mapped_column(LargeBinary)
+    media_type: Mapped[str] = mapped_column(
+        String(100), default="text/plain", server_default="text/plain"
+    )
+    size: Mapped[int] = mapped_column(default=0, server_default="0")
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class AttendanceLesson(Record, Base):
+    """One recorded class meeting; the roll call is the origin of attendance."""
+
+    __tablename__ = "attendance_lessons"
+    __table_args__ = (UniqueConstraint("schedule_id", "lesson_date"),)
+    group_id: Mapped[str] = mapped_column(ForeignKey("class_groups.id"), index=True)
+    schedule_id: Mapped[str] = mapped_column(ForeignKey("schedules.id"), index=True)
+    lesson_date: Mapped[date] = mapped_column(Date)
+    topic: Mapped[str] = mapped_column(String(200), default="")
+    recorded_by: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    version: Mapped[int] = mapped_column(default=1)
+
+
+class AttendanceRecord(Base):
+    __tablename__ = "attendance_records"
+    __table_args__ = (UniqueConstraint("lesson_id", "student_id"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
+    lesson_id: Mapped[str] = mapped_column(ForeignKey("attendance_lessons.id"), index=True)
+    student_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    present: Mapped[bool] = mapped_column(Boolean)
+
+
+class NotificationState(Base):
+    """Per-user read marker for the in-app reminders feed."""
+
+    __tablename__ = "notification_states"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    read_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class PushSubscription(Base):
+    """A device that accepted notifications: Web Push endpoint or Expo token."""
+
+    __tablename__ = "push_subscriptions"
+    __table_args__ = (CheckConstraint("channel IN ('web','expo')"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    channel: Mapped[str] = mapped_column(String(10))
+    endpoint: Mapped[str] = mapped_column(Text)
+    endpoint_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    p256dh: Mapped[str | None] = mapped_column(String(200))
+    auth: Mapped[str | None] = mapped_column(String(100))
+    label: Mapped[str] = mapped_column(String(120), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    last_success_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    failures: Mapped[int] = mapped_column(default=0)
+
+
+class NotificationPreference(Base):
+    __tablename__ = "notification_preferences"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    notices: Mapped[bool] = mapped_column(Boolean, default=True)
+    activities: Mapped[bool] = mapped_column(Boolean, default=True)
+    materials: Mapped[bool] = mapped_column(Boolean, default=True)
+    events: Mapped[bool] = mapped_column(Boolean, default=True)
+    grades: Mapped[bool] = mapped_column(Boolean, default=True)
+    deadlines: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class NotificationOutbox(Base):
+    """Deduplicated delivery queue; text is composed at send time from live data."""
+
+    __tablename__ = "notification_outbox"
+    __table_args__ = (
+        CheckConstraint("status IN ('pending','sent','failed','skipped')"),
+        Index("ix_notification_outbox_due", "status", "deliver_after"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    category: Mapped[str] = mapped_column(String(20))
+    publication_id: Mapped[str | None] = mapped_column(ForeignKey("publications.id"))
+    submission_id: Mapped[str | None] = mapped_column(ForeignKey("submissions.id"))
+    dedup_key: Mapped[str] = mapped_column(String(160), unique=True)
+    deliver_after: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(10), default="pending")
+    attempts: Mapped[int] = mapped_column(default=0)
+    last_error: Mapped[str] = mapped_column(String(300), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

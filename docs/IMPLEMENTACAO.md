@@ -1,40 +1,33 @@
-# Estado da implementação — 09/09/2026
+# Estado da implementação — 16/10/2026
 
-Consulte [o relatório de revisão](RELATORIO-REVISAO.md) para achados, validação,
-limitações e informações que o responsável precisa fornecer.
+Consulte [a análise de outubro/2026](RELATORIO-ANALISE-2026-10.md) e o
+[guia de operação](OPERACAO.md).
 
 | Entrega | Estado do código |
 | --- | --- |
 | Fundação | API FastAPI, cadastros, vínculos, sessões, auditoria e backup SQLite |
-| Painel | Interface web conectada, navegação e permissões por perfil |
-| Homologação | Entradas Vercel/FastAPI, bloqueio de produção, proteção do ambiente |
+| Aplicativo | Painel web responsivo e instalável (PWA), navegação e permissões por perfil |
+| Homologação | Entradas Vercel/Render, bloqueio de produção, proteção do ambiente, `seed-demo` |
 | Microsoft/admin | OIDC single tenant com PKCE, MFA administrativo, identidades e sessões |
-| Fluxos acadêmicos | Publicações, entregas, avaliações, eventos, grade, anexos `.txt` e lote |
-| Migração atual | `0003`; executar `alembic upgrade head` antes de iniciar a nova versão |
+| Fluxos acadêmicos | Publicações agendáveis, entregas, avaliação em fila, eventos com inscritos, grade, lote |
+| Chamada e frequência | Chamada pelo professor, correção auditada, frequência por disciplina, CSV para o diário |
+| Notificações | Web Push e canal Expo, preferências, fila deduplicada, retentativas, lembrete de prazo |
+| Contas | Troca e redefinição de senha local, edição de usuário, sessão por inatividade |
+| Anexos | PDF, Office, imagens, CSV, notebooks e texto; verificação de assinatura e ClamAV |
+| Privacidade | Cópia dos dados do titular, aviso de privacidade e retenção automática |
+| Operação | Backup e restauração verificada do PostgreSQL, limpeza de dados vencidos |
+| Acessibilidade | Auditoria WCAG 2.1 AA automatizada sem violações |
+| Migração atual | `0005`; executar `alembic upgrade head` antes de iniciar a nova versão |
 
-As entregas anteriores estão em PRs encadeados. A branch de revisão contém esse
-histórico e as novas alterações; a existência de código em uma branch não atualiza
-a `main` nem o serviço da nuvem automaticamente.
+## O que depende da instituição
 
-## Pendências de desenvolvimento
+- Chaves VAPID e contato de privacidade cadastrados na hospedagem.
+- Servidor ClamAV (exige plano com memória suficiente) antes de dados reais.
+- Registro no Entra, Object ID do administrador e política MFA.
+- Deploy desta versão, migração `0005` e ensaio de restauração no banco hospedado.
+- Confirmação da regra oficial de frequência e do texto de privacidade.
+- Contas de loja (Google/Apple) e conta Expo, se for publicar app nativo.
+- Pentest do ambiente publicado e testes com usuários e leitores de tela.
 
-- Aplicativo Expo Android/iOS, navegação móvel, estados offline e validação em dispositivos.
-- Calendário consolidado, agendamento automático de publicações e notificações push
-  com preferências, retentativas e deduplicação.
-- Anexos PDF/Office com armazenamento privado, verificação de malware e política de retenção.
-- Chamada/frequência, após confirmar o diário oficial e a regra de cálculo com a coordenação.
-- Administração operacional adicional: recuperação supervisionada, alertas,
-  revogação individual de sessão e configurações editáveis autorizadas.
-- Acessibilidade e QA visual completos; a sintaxe JavaScript não substitui essas verificações.
-
-## Pendências de ativação
-
-Registro no Entra, Object ID do administrador, política MFA, PostgreSQL isolado,
-segredos na hospedagem, migrações, URL de homologação e teste de restauração do
-banco hospedado. Não há conta real provisionada nem deploy realizado nesta execução.
-
-## Aceite de segurança
-
-Testes locais de regressão e revisão estática são parte da entrega. Pentest da
-nuvem está expressamente adiado até a confirmação do usuário e a definição do
-alvo autorizado. Produção permanece bloqueada até o aceite institucional e operacional.
+A existência de código em uma branch não atualiza a `main` nem os serviços da
+nuvem automaticamente. Produção permanece bloqueada até o aceite institucional.

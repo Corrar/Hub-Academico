@@ -9,6 +9,7 @@ const experiencePages = {
   profile: "Meu perfil",
   search: "Buscar",
   onboarding: "Conheça o aplicativo",
+  attendance: "Frequência",
 };
 Object.assign(titles, experiencePages);
 Object.assign(descriptions, {
@@ -38,11 +39,17 @@ const iconPaths = {
   lock: "M5 10h14v12H5ZM8 10V6a4 4 0 0 1 8 0v4",
   eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6",
   arrow: "M5 12h14M13 6l6 6-6 6",
+  chevron: "M9 6l6 6-6 6",
+  plus: "M12 5v14M5 12h14",
   search: "M21 21l-6-6M10 3a7 7 0 1 0 0 14 7 7 0 0 0 0-14",
   settings:
     "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2",
   help: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M9 9a3 3 0 0 1 6 0c0 2-3 2-3 5M12 17h.01",
   logout: "M9 4H3v16h6M9 12h12M17 8l4 4-4 4",
+  attendance:
+    "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8M16 11l2 2 4-4",
+  alert: "M12 3 2 21h20ZM12 10v5M12 18h.01",
+  shield: "M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6ZM9 12l2 2 4-4",
 };
 const pageIcons = {
   dashboard: "home",
@@ -58,6 +65,7 @@ const pageIcons = {
   event: "calendar",
   reminders: "bell",
   onboarding: "help",
+  attendance: "attendance",
 };
 function icon(name) {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -90,6 +98,7 @@ function allowedPages() {
     "notice",
     "event",
     "schedule",
+    "attendance",
     "calendar",
     "reminders",
     "profile",
@@ -118,7 +127,7 @@ function setupExperience() {
   const nav = $("navigation");
   nav.replaceChildren();
   const sections = [
-    ["Principal", ["dashboard", "event", "notice"]],
+    ["Principal", ["dashboard", "reminders", "event", "notice"]],
     [
       "Acadêmico",
       [
@@ -126,6 +135,7 @@ function setupExperience() {
         "subjects",
         "groups",
         "schedule",
+        "attendance",
         "memberships",
         "users",
         "activity",
@@ -151,6 +161,35 @@ function setupExperience() {
     ].map(([key, label]) => navButton(key, label)),
   );
 }
+let unreadReminders = 0;
+async function refreshReminders() {
+  const session = user;
+  try {
+    const data = await api("/learning/notifications?limit=1");
+    if (session !== user) return;
+    unreadReminders = data.unread;
+  } catch {
+    return;
+  }
+  const label = unreadReminders
+    ? `Abrir lembretes, ${unreadReminders} não ${unreadReminders === 1 ? "lido" : "lidos"}`
+    : "Abrir lembretes";
+  $("open-reminders").setAttribute("aria-label", label);
+  for (const target of [
+    $("open-reminders"),
+    ...document.querySelectorAll('#navigation [data-page="reminders"]'),
+  ]) {
+    target.querySelector(".count-badge")?.remove();
+    if (unreadReminders)
+      target.append(
+        el(
+          "span",
+          unreadReminders > 9 ? "9+" : String(unreadReminders),
+          "count-badge",
+        ),
+      );
+  }
+}
 function initials(name) {
   return name
     .trim()
@@ -164,13 +203,27 @@ function updateHeading(key) {
   for (const node of [...$("heading-actions").children])
     if (node.id !== "new-record") node.remove();
   if (key === "home") {
-    $("page-title").textContent = user.name;
-    $("page-description").textContent = user.email + " · " + roles[user.role];
+    $("page-title").textContent = greeting(user.name);
+    $("page-description").textContent =
+      longDay(brDate(Date.now())) + " · " + roles[user.role];
+  }
+  if (key === "schedule") {
+    $("page-title").textContent =
+      user.role === "coordinator" ? "Grade de horários" : "Agenda";
+    $("page-description").textContent =
+      user.role === "coordinator"
+        ? "Horários das turmas em cada dia da semana."
+        : "Suas aulas, dia a dia.";
+  }
+  if (key === "attendance" && user.role !== "student") {
+    $("page-title").textContent = "Chamadas e frequência";
+    $("page-description").textContent =
+      "Registre a chamada das aulas e corrija lançamentos com histórico auditado.";
   }
   if (key === "dashboard")
     for (const [kind, label] of [
-      ["event", "+ Novo evento"],
-      ["notice", "+ Novo aviso"],
+      ["event", "Novo evento"],
+      ["notice", "Novo aviso"],
     ])
       $("heading-actions").append(
         button(
@@ -192,6 +245,8 @@ function sectionHeading(title, key, label = "Ver todos") {
   return heading;
 }
 function pager(rows) {
+  // A single short page needs no pagination controls.
+  if (!offset && rows.length < 25) return document.createDocumentFragment();
   const box = el("div", undefined, "pagination"),
     prev = button("Anterior", () => {
       offset = Math.max(0, offset - 25);
@@ -210,31 +265,63 @@ function recentItem(row) {
   const item = button(
       "",
       learningAction(() => openPublication(row)),
-      "recent-item",
+      "recent-item " + row.kind,
     ),
     body = el("div");
+  const moment =
+    row.kind === "activity"
+      ? deadline(row.due_at).text
+      : row.kind === "event"
+        ? when(row.starts_at)
+        : when(row.publish_at || row.created_at);
   body.append(
     el("strong", row.title),
-    el(
-      "small",
-      academicPages[row.kind] +
-        " · " +
-        academicTime(row.starts_at || row.due_at || row.created_at),
-    ),
+    el("small", kindLabel[row.kind] + " · " + moment),
   );
   item.append(el("span", undefined, "recent-dot"), body, icon("arrow"));
   return item;
 }
-function lessonCard(row) {
-  const item = el("article", undefined, "lesson"),
+// Minutes since midnight in Brasília, to place today's lessons in time.
+function nowMinute() {
+  const [hour, minute] = clock(new Date()).split(":").map(Number);
+  return hour * 60 + minute;
+}
+function lessonCard(row, recorded = false, date = "", day = date) {
+  const parts = groupParts(reference("groups", row.group_id)),
+    today = brDate(Date.now()),
+    minute = nowMinute();
+  let phase = "";
+  if ((day || today) === today) {
+    if (minute >= row.ends_minute) phase = "past";
+    else if (minute >= row.starts_minute) phase = "now";
+  }
+  const item = el("article", undefined, "lesson" + (phase ? " " + phase : "")),
     time = el("div", minuteTime(row.starts_minute), "lesson-time"),
     body = el("div", undefined, "lesson-info");
   time.append(el("small", minuteTime(row.ends_minute)));
+  const title = el("strong", parts.subject);
   body.append(
-    el("strong", reference("groups", row.group_id)),
-    el("p", row.room),
+    title,
+    el("p", [parts.name, row.room].filter(Boolean).join(" · ")),
   );
+  if (phase === "now") title.append(el("span", "Agora", "badge green live"));
   item.append(time, body);
+  if (date && user && user.role !== "student") {
+    const call = button(
+      recorded === true
+        ? "Corrigir chamada"
+        : recorded === false
+          ? "Fazer chamada"
+          : "Chamada",
+      learningAction(() => rollCall(row.id, date)),
+      recorded === false ? "primary lesson-action" : "secondary lesson-action",
+    );
+    if (recorded === true)
+      body.append(el("span", "Chamada registrada", "badge green"));
+    else if (recorded === false && phase === "past")
+      title.append(el("span", "Chamada pendente", "badge gold"));
+    item.append(call);
+  }
   return item;
 }
 async function groupLabels(rows) {
@@ -267,57 +354,55 @@ function searchBar(value, submit) {
 }
 let globalSearch = "";
 async function renderExperience(key, ticket) {
+  if (["home", "dashboard", "reminders"].includes(key)) void refreshReminders();
   if (key === "home" || key === "dashboard" || key === "reminders") {
     const data = await api("/learning/overview");
     await groupLabels([...data.lessons_today, ...data.upcoming]);
     if (ticket !== generation) return;
     if (key === "home") {
-      const groups =
-        user.role === "teacher" ? await api("/learning/groups?limit=4") : [];
+      const [groups, frequency] = await Promise.all([
+        user.role === "teacher" ? api("/learning/groups?limit=4") : [],
+        user.role === "student"
+          ? api("/learning/attendance/summary").catch(() => null)
+          : null,
+      ]);
       if (ticket !== generation) return;
-      renderHome(data, groups);
+      renderHome(data, groups, frequency);
     }
-    if (key === "reminders") {
-      const box = el("div", undefined, "section-card");
-      box.append(sectionHeading("Próximos prazos", "activity"));
-      data.upcoming.forEach((row) => box.append(recentItem(row)));
-      if (!data.upcoming.length)
-        box.append(
-          emptyState(
-            "Nenhum prazo próximo",
-            "As atividades publicadas aparecerão aqui.",
-            "schedule",
-          ),
-        );
-      box.append(sectionHeading("Comunicados recentes", "notice"));
-      data.recent.forEach((row) => box.append(recentItem(row)));
-      $("view").append(
-        box,
-        el(
-          "p",
-          "Lembretes consultados no aplicativo. Não enviamos notificações push.",
-          "help",
-        ),
-      );
-    }
+    if (key === "reminders") await renderReminders(data, ticket);
     if (key === "dashboard") {
       const counts = await api("/dashboard");
       if (ticket !== generation) return;
       renderDashboard(counts, data);
     }
   } else if (key === "myGroups") {
-    const rows = await api("/learning/groups?limit=25&offset=" + offset);
+    const [rows, timetable] = await Promise.all([
+      api("/learning/groups?limit=25&offset=" + offset),
+      api("/learning/schedule?limit=100"),
+    ]);
     if (ticket !== generation) return;
+    const box = el("div", undefined, "group-grid");
     rows.forEach((row) => {
       labels.set("groups:" + row.id, row.label);
-      const card = button("", () => openGroup(row), "group-card");
-      card.append(
-        el("h2", row.label),
-        el("p", "Acesse os conteúdos desta turma"),
-        el("div", "Atividades · Materiais · Horários", "card-meta"),
+      const lesson = nextLesson(
+        timetable.filter((item) => item.group_id === row.id),
       );
-      $("view").append(card);
+      box.append(
+        groupCard(
+          row,
+          user.role === "student"
+            ? "Atividades, materiais e frequência"
+            : "Conteúdos, entregas, chamada e alunos",
+          infoLine(
+            lesson
+              ? `Próxima aula: ${lesson.label} · ${lesson.row.room}`
+              : "Sem aulas nas próximas duas semanas",
+            "schedule",
+          ),
+        ),
+      );
     });
+    $("view").append(box);
     if (!rows.length)
       $("view").append(
         emptyState(
@@ -327,13 +412,112 @@ async function renderExperience(key, ticket) {
         ),
       );
     $("view").append(pager(rows));
-  } else if (key === "profile") renderProfile();
+  } else if (key === "profile") await renderProfile(ticket);
   else if (key === "onboarding") renderOnboarding();
   else if (key === "calendar") await renderCalendar(ticket);
+  else if (key === "attendance") await renderAttendance(ticket);
   else if (key === "search") await renderSearch(ticket);
   if (ticket === generation) status("");
 }
-function renderHome(data, groups = []) {
+function feedGroup(value) {
+  const days = Math.round(
+    (Date.parse(dayKey(new Date())) - Date.parse(dayKey(instant(value)))) /
+      86400000,
+  );
+  return days <= 0
+    ? "Hoje"
+    : days === 1
+      ? "Ontem"
+      : days < 7
+        ? "Nesta semana"
+        : "Anteriores";
+}
+async function renderReminders(data, ticket) {
+  const feed = await api("/learning/notifications");
+  await groupLabels(feed.items);
+  if (ticket !== generation) return;
+  const toolbar = el("div", undefined, "toolbar");
+  toolbar.append(
+    el(
+      "span",
+      feed.unread
+        ? plural(feed.unread, "novidade não lida", "novidades não lidas")
+        : "Você está em dia",
+      "feed-count",
+    ),
+  );
+  if (feed.unread)
+    toolbar.append(
+      button(
+        "Marcar todas como lidas",
+        learningAction(async () => {
+          await api("/learning/notifications/read", { method: "POST" });
+          await refreshReminders();
+          await render();
+        }),
+      ),
+    );
+  $("view").append(toolbar);
+  if (data.upcoming.length) {
+    $("view").append(sectionHeading("Próximos prazos", "activity"));
+    const due = el("div", undefined, "section-card");
+    data.upcoming.forEach((row) => due.append(recentItem(row)));
+    $("view").append(due);
+  }
+  const box = el("div", undefined, "section-card reminder-feed");
+  let current = "";
+  for (const item of feed.items) {
+    const group = feedGroup(item.at);
+    if (group !== current) {
+      current = group;
+      box.append(el("h3", group, "feed-group"));
+    }
+    const row = button(
+        "",
+        learningAction(() => openPublication(item.publication)),
+        "recent-item " + item.kind + (item.unread ? " unread" : ""),
+      ),
+      body = el("div");
+    const kind =
+      item.type === "grade"
+        ? "Nota " + String(item.grade).replace(".", ",") + " recebida"
+        : kindLabel[item.kind];
+    body.append(
+      el("strong", item.title),
+      el(
+        "small",
+        kind +
+          (item.group_id
+            ? " · " + groupParts(reference("groups", item.group_id)).subject
+            : "") +
+          " · " +
+          when(item.at),
+      ),
+    );
+    row.append(el("span", undefined, "recent-dot"), body, icon("arrow"));
+    if (item.unread) row.setAttribute("aria-label", "Não lido: " + item.title);
+    box.append(row);
+  }
+  if (!feed.items.length)
+    box.append(
+      emptyState(
+        "Nenhuma novidade",
+        "Avisos, materiais, atividades e notas aparecerão aqui.",
+        "bell",
+      ),
+    );
+  $("view").append(sectionHeading("Novidades"), box);
+  const hint = el("p", "Receba estas novidades no celular: ", "help");
+  hint.append(
+    button(
+      "ativar notificações no perfil",
+      () => navigate("profile"),
+      "text-button inline",
+    ),
+  );
+  $("view").append(hint);
+}
+function renderHome(data, groups = [], frequency = null) {
   const target = data.upcoming[0],
     teacher = user.role === "teacher";
   const hero = button(
@@ -357,7 +541,13 @@ function renderHome(data, groups = []) {
     el(
       "h2",
       teacher
-        ? data.pending_count + " avaliações pendentes"
+        ? data.pending_count
+          ? plural(
+              data.pending_count,
+              "avaliação pendente",
+              "avaliações pendentes",
+            )
+          : "Nenhuma avaliação pendente"
         : target?.title ||
             (data.pending_count
               ? "Confira suas entregas"
@@ -366,19 +556,23 @@ function renderHome(data, groups = []) {
     el(
       "p",
       teacher
-        ? "Acompanhe as entregas e dê o próximo feedback."
+        ? data.pending_count
+          ? "Acompanhe as entregas e dê o próximo feedback."
+          : "Todas as entregas recebidas já foram avaliadas."
         : target
-          ? "Prazo: " + academicTime(target.due_at)
+          ? (target.group_id
+              ? groupParts(reference("groups", target.group_id)).subject + " · "
+              : "") + deadline(target.due_at).text
           : "Consulte suas atividades e acompanhe os novos conteúdos.",
     ),
   );
   const link = el(
     "span",
-    teacher ? "Ver entregas" : "Ver atividades",
+    teacher ? "Ver entregas" : target ? "Abrir atividade" : "Ver atividades",
     "hero-link",
   );
   link.append(icon("arrow"));
-  if (teacher) hero.append(link);
+  hero.append(link);
   $("view").append(
     hero,
     searchBar("", (value) => {
@@ -396,7 +590,9 @@ function renderHome(data, groups = []) {
   const stats = el("div", undefined, "stats-grid");
   for (const [count, label, key] of [
     [data.pending_count, teacher ? "Para avaliar" : "Sem entrega", "activity"],
-    [data.groups_count, "Turmas", "myGroups"],
+    frequency
+      ? [percent(frequency.attendance_percent), "Frequência", "attendance"]
+      : [data.groups_count, "Turmas", "myGroups"],
     [data.material_count, "Materiais", "material"],
   ]) {
     const item = button("", () => navigate(key), "stat");
@@ -408,13 +604,9 @@ function renderHome(data, groups = []) {
     $("view").append(sectionHeading("Minhas turmas", "myGroups"));
     groups.forEach((row) => {
       labels.set("groups:" + row.id, row.label);
-      const card = button("", () => openGroup(row), "group-card");
-      card.append(
-        el("h2", row.label),
-        el("p", "Conteúdos, entregas e avaliações"),
-        el("span", "Acessar turma →", "card-meta"),
+      $("view").append(
+        groupCard(row, "Conteúdos, entregas, chamada e avaliações"),
       );
-      $("view").append(card);
     });
     if (!groups.length)
       $("view").append(
@@ -425,13 +617,41 @@ function renderHome(data, groups = []) {
         ),
       );
   }
+  const warning = frequency?.groups.find((item) =>
+    ["exceeded", "critical"].includes(item.state),
+  );
+  if (warning) {
+    const alert = button("", () => navigate("attendance"), "alert-banner");
+    alert.append(
+      icon("alert"),
+      el(
+        "span",
+        `Atenção à frequência em ${warning.group_label.split(" · ")[0]}: ${frequencyBalance(warning).toLowerCase()}.`,
+      ),
+    );
+    $("view").append(alert);
+  }
   $("view").append(sectionHeading("Aulas de hoje", "schedule", "Ver semana"));
-  data.lessons_today.forEach((row) => $("view").append(lessonCard(row)));
+  const upcoming = data.lessons_today.find(
+    (row) => row.starts_minute > nowMinute(),
+  );
+  data.lessons_today.forEach((row) => {
+    const card = lessonCard(
+      row,
+      data.recorded_today?.includes(row.id),
+      data.date,
+    );
+    if (row === upcoming && !card.classList.contains("now"))
+      card
+        .querySelector(".lesson-info strong")
+        .append(el("span", "Em seguida", "badge"));
+    $("view").append(card);
+  });
   if (!data.lessons_today.length)
     $("view").append(
       emptyState(
-        "Hoje sem aulas cadastradas",
-        "Confira a grade completa nos horários.",
+        "Sem aulas hoje",
+        "Aproveite para revisar os materiais. A semana completa está na Agenda.",
         "schedule",
       ),
     );
@@ -444,11 +664,9 @@ function renderHome(data, groups = []) {
       learningAction(() => openPublication(row)),
       "event-tile",
     );
-    tile.append(
-      el("span", "EVENTO", "badge"),
-      el("h3", row.title),
-      el("p", academicTime(row.starts_at)),
-    );
+    const text = el("div");
+    text.append(el("h3", row.title), el("p", eventWhen(row)));
+    tile.append(dateBlock(row.starts_at), text);
     carousel.append(tile);
   });
   if (events.length) $("view").append(carousel);
@@ -502,9 +720,44 @@ function renderDashboard(counts, data) {
       "Os vínculos definem o acesso às turmas.",
       "memberships",
     ]);
+  const alerts = counts.alerts || {};
+  const describe = (info) =>
+    info.items.map((item) => item.label.split(" · ")[0]).join(", ") +
+    (info.count > info.items.length ? " e outras" : "");
+  if (alerts.groups_without_teacher?.count)
+    actions.push([
+      plural(
+        alerts.groups_without_teacher.count,
+        "turma sem professor",
+        "turmas sem professor",
+      ),
+      describe(alerts.groups_without_teacher) +
+        ". Vincule um professor vigente.",
+      "memberships",
+    ]);
+  if (alerts.groups_without_schedule?.count)
+    actions.push([
+      plural(
+        alerts.groups_without_schedule.count,
+        "turma sem grade",
+        "turmas sem grade",
+      ),
+      describe(alerts.groups_without_schedule) + ". Cadastre os horários.",
+      "schedule",
+    ]);
+  if (alerts.teacher_memberships_ending)
+    actions.push([
+      plural(
+        alerts.teacher_memberships_ending,
+        "vínculo de professor vence",
+        "vínculos de professor vencem",
+      ) + " em 30 dias",
+      "Renove a vigência para não interromper o acesso.",
+      "memberships",
+    ]);
   if (data.pending_count)
     actions.push([
-      data.pending_count + " avaliações pendentes",
+      plural(data.pending_count, "avaliação pendente", "avaliações pendentes"),
       "Acompanhe as entregas recebidas.",
       "activity",
     ]);
@@ -559,33 +812,104 @@ function readDialog(title) {
 }
 async function openPublication(row) {
   const { dialog, body } = readDialog(row.title);
+  dialog.classList.add("wide-dialog", "detail-dialog");
+  dialog
+    .querySelector("h2")
+    .before(
+      el(
+        "p",
+        kindLabel[row.kind] +
+          " · " +
+          (row.group_id
+            ? groupParts(reference("groups", row.group_id)).subject
+            : "Toda a instituição"),
+        "detail-eyebrow",
+      ),
+    );
+  const meta = el("div", undefined, "detail-meta"),
+    badge = stateBadge(row);
+  if (badge) meta.append(badge);
+  if (row.due_at) meta.append(deadlineChip(row.due_at));
+  if (row.starts_at) meta.append(infoLine(eventWhen(row), "calendar"));
+  if (row.kind === "notice" || row.kind === "material")
+    meta.append(
+      el(
+        "span",
+        "Publicado " + when(row.publish_at || row.created_at),
+        "card-meta",
+      ),
+    );
   body.append(
-    el("span", row.draft ? "Rascunho" : academicPages[row.kind], "badge"),
+    meta,
+    el(
+      "h3",
+      row.kind === "activity" ? "Instruções" : "Conteúdo",
+      "detail-section",
+    ),
     el("p", row.body, "academic-body"),
   );
-  if (row.due_at) body.append(el("p", "Prazo: " + academicTime(row.due_at)));
-  if (row.starts_at)
-    body.append(
-      el("p", academicTime(row.starts_at) + " a " + academicTime(row.ends_at)),
-    );
   const error = el("p", undefined, "error");
   error.setAttribute("role", "alert");
   body.append(error);
   try {
-    await attachmentPanel("publication", row.id, body, canManage(row));
+    await attachmentPanel(
+      "publication",
+      row.id,
+      body,
+      canManage(row),
+      row.kind === "activity" ? "Material de apoio" : "Arquivos",
+    );
     if (!dialog.isConnected) return;
     if (row.kind === "activity" && !row.draft) await activityDetails(row, body);
     if (row.kind === "event" && !row.draft && dialog.isConnected) {
       const info = await api("/learning/events/" + row.id + "/enrollment");
       if (!dialog.isConnected) return;
-      body.append(
+      const seats = el("div", undefined, "seats");
+      seats.append(
         el(
-          "p",
-          `${info.count} inscritos · ${info.capacity ?? "sem limite de"} vagas`,
+          "strong",
+          info.capacity
+            ? `${info.count} de ${info.capacity} vagas preenchidas`
+            : plural(info.count, "pessoa inscrita", "pessoas inscritas"),
         ),
       );
+      if (info.capacity) {
+        const bar = el("div", undefined, "progress"),
+          fill = el("span");
+        fill.style.width =
+          Math.min(100, (info.count / info.capacity) * 100) + "%";
+        bar.append(fill);
+        bar.setAttribute("aria-hidden", "true");
+        seats.append(bar);
+      }
+      if (info.enrolled)
+        seats.append(el("span", "Você está inscrito", "badge green"));
+      body.append(seats);
+      if (canManage(row)) {
+        const people = await api(
+          "/learning/events/" + row.id + "/enrollments?limit=100",
+        );
+        if (!dialog.isConnected) return;
+        const list = el("details", undefined, "enrollment-list");
+        list.append(el("summary", "Ver inscritos (" + people.length + ")"));
+        for (const person of people)
+          list.append(
+            el(
+              "p",
+              `${person.name} · ${person.email} · ${academicTime(person.created_at)}`,
+            ),
+          );
+        if (!people.length) list.append(el("p", "Nenhuma inscrição ainda."));
+        body.append(list);
+      }
+      const full =
+        info.capacity && info.count >= info.capacity && !info.enrolled;
       const action = button(
-        info.enrolled ? "Cancelar inscrição" : "Inscrever-me",
+        info.enrolled
+          ? "Cancelar inscrição"
+          : full
+            ? "Vagas esgotadas"
+            : "Inscrever-me",
         async () => {
           action.disabled = true;
           error.textContent = "";
@@ -601,26 +925,170 @@ async function openPublication(row) {
             action.disabled = false;
           }
         },
-        "primary",
+        info.enrolled ? "secondary danger wide-action" : "primary wide-action",
       );
+      action.disabled = Boolean(full);
       body.append(action);
     }
   } catch (e) {
     error.textContent = e.message;
   }
 }
+// First class meeting from now on, within two weeks, for one group's timetable.
+function nextLesson(rows) {
+  const start = new Date(brDate(Date.now()) + "T12:00:00Z");
+  for (let offsetDays = 0; offsetDays < 14; offsetDays++) {
+    const date = new Date(start);
+    date.setUTCDate(start.getUTCDate() + offsetDays);
+    const key = date.toISOString().slice(0, 10);
+    const found = lessonsOn(rows, key).find(
+      (row) => offsetDays > 0 || row.starts_minute > nowMinute(),
+    );
+    if (found) {
+      const day =
+        offsetDays === 0
+          ? "hoje"
+          : offsetDays === 1
+            ? "amanhã"
+            : new Intl.DateTimeFormat("pt-BR", {
+                timeZone: "UTC",
+                weekday: "short",
+                day: "numeric",
+                month: "short",
+              }).format(date);
+      return {
+        row: found,
+        label: `${day}, ${minuteTime(found.starts_minute)}`,
+      };
+    }
+  }
+  return null;
+}
+function groupCard(row, detail, extra = null) {
+  const parts = groupParts(row.label),
+    card = button("", () => openGroup(row), "group-card");
+  card.append(el("h2", parts.subject), el("p", parts.rest, "group-meta"));
+  if (extra) card.append(extra);
+  const footer = el("span", detail, "card-meta");
+  footer.append(icon("arrow"));
+  card.append(footer);
+  return card;
+}
 function openGroup(row) {
   const { dialog, body } = readDialog(row.label);
   body.append(el("p", "Escolha o conteúdo que deseja consultar."));
-  for (const key of ["activity", "material", "schedule"])
-    body.append(
-      button(titles[key], () => {
-        dialog.close();
-        navigate(key, { groupId: row.id });
-      }),
+  const options = el("div", undefined, "group-options");
+  for (const key of ["activity", "material", "schedule", "attendance"])
+    options.append(
+      button(
+        key === "attendance" && user.role !== "student"
+          ? "Chamadas"
+          : titles[key],
+        () => {
+          dialog.close();
+          navigate(key, { groupId: row.id });
+        },
+      ),
     );
+  if (user.role !== "student")
+    options.append(
+      button(
+        "Alunos e desempenho",
+        learningAction(async () => {
+          dialog.close();
+          await groupStudents(row);
+        }),
+      ),
+    );
+  body.append(options);
 }
-function renderProfile() {
+function passwordDialog() {
+  const ui = learningDialog("Alterar senha");
+  const current = ui.field("current_password", "Senha atual", "password");
+  current.autocomplete = "current-password";
+  const fresh = ui.field("new_password", "Nova senha", "password");
+  const again = ui.field("confirm_password", "Repita a nova senha", "password");
+  for (const input of [fresh, again]) {
+    input.autocomplete = "new-password";
+    input.minLength = 12;
+    input.maxLength = 128;
+  }
+  ui.fields.append(
+    el(
+      "p",
+      "Mínimo de 12 caracteres. As outras sessões abertas desta conta serão encerradas.",
+      "help",
+    ),
+  );
+  ui.save.textContent = "Alterar senha";
+  ui.form.save = async () => {
+    if (fresh.value !== again.value)
+      throw new Error("A confirmação não corresponde à nova senha.");
+    try {
+      await api("/me/password", {
+        method: "POST",
+        body: JSON.stringify({
+          current_password: current.value,
+          new_password: fresh.value,
+        }),
+      });
+    } finally {
+      current.value = fresh.value = again.value = "";
+    }
+    return "Senha alterada. As outras sessões foram encerradas.";
+  };
+}
+async function privacyDialog() {
+  const { dialog, body } = readDialog("Privacidade e seus dados");
+  dialog.classList.add("wide-dialog");
+  let info = {};
+  try {
+    info = await api("/privacy");
+  } catch {
+    /* The notice is still shown without the configured contact. */
+  }
+  if (!dialog.isConnected) return;
+  const sections = [
+    [
+      "Quem trata os dados",
+      "A Fatec Adamantina, unidade do Centro Paula Souza, por meio do Hub Acadêmico.",
+    ],
+    [
+      "Quais dados",
+      "Nome, e-mail institucional, perfil, vínculos com turmas, entregas e anexos, avaliações e devolutivas, frequência registrada em aula, inscrições em eventos, preferências e dispositivos de notificação, registros de acesso e de auditoria.",
+    ],
+    [
+      "Para quê",
+      "Organizar a rotina acadêmica (aulas, prazos, materiais, avisos e eventos), registrar entregas, avaliações e frequência, enviar as notificações que você ativar e manter a segurança e a rastreabilidade das alterações.",
+    ],
+    [
+      "Quem acessa",
+      "Você; os professores das suas turmas, para entregas, notas e frequência; a coordenação; e o responsável técnico, para suporte e segurança. Os dados não são vendidos nem usados para publicidade.",
+    ],
+    [
+      "Por quanto tempo",
+      `Registros acadêmicos e a auditoria seguem as regras de guarda da instituição. Sessões terminam após ${info.session_idle_minutes || 30} minutos sem uso e em até ${info.session_max_hours || 8} horas; o histórico de notificações enviadas é apagado após ${info.notification_retention_days || 90} dias.`,
+    ],
+    [
+      "Seus direitos",
+      "Você pode baixar uma cópia dos seus dados, pedir correções à coordenação, desativar notificações a qualquer momento e solicitar informações sobre o tratamento.",
+    ],
+    [
+      "Contato",
+      info.contact ||
+        "O canal do encarregado de dados será informado pela instituição.",
+    ],
+  ];
+  for (const [title, text] of sections)
+    body.append(el("h3", title), el("p", text, "privacy-text"));
+  if (user) {
+    const download = el("a", "Baixar meus dados (JSON)", "primary button-link");
+    download.href = "/api/v1/me/export";
+    download.download = "meus-dados-hub.json";
+    body.append(download);
+  }
+}
+async function renderProfile(ticket) {
   const card = el("div", undefined, "section-card profile-card");
   card.append(
     el("span", initials(user.name), "avatar"),
@@ -634,28 +1102,70 @@ function renderProfile() {
       "badge",
     ),
   );
-  const menu = el("div", undefined, "profile-menu");
+  if (user.role === "student") {
+    const [frequency, averages] = await Promise.all([
+      api("/learning/attendance/summary").catch(() => null),
+      api("/learning/averages").catch(() => []),
+    ]);
+    if (ticket !== generation) return;
+    const graded = averages.reduce((total, item) => total + item.count, 0),
+      mean = graded
+        ? averages.reduce(
+            (total, item) => total + item.average * item.count,
+            0,
+          ) / graded
+        : null;
+    const stats = el("div", undefined, "profile-stats");
+    for (const [value, label, key] of [
+      [
+        mean === null ? "—" : mean.toFixed(1).replace(".", ","),
+        "Média do hub",
+        "activity",
+      ],
+      [percent(frequency?.attendance_percent), "Frequência", "attendance"],
+      [String(graded), "Avaliações", "activity"],
+    ]) {
+      const item = button("", () => navigate(key), "profile-stat");
+      item.append(el("strong", value), el("span", label));
+      stats.append(item);
+    }
+    card.append(stats);
+  }
+  const menu = el("div", undefined, "profile-menu quick-grid");
   for (const key of [
     "myGroups",
-    "activity",
-    "material",
-    "notice",
-    "event",
+    "attendance",
     "calendar",
     "reminders",
+    "notice",
+    "event",
     "onboarding",
     ...(user.administrator ? ["adminUsers", "adminStatus"] : []),
   ])
-    if (allowedPages().includes(key)) {
-      const item = navButton(key);
-      item.append(icon("arrow"));
-      menu.append(item);
-    }
-  menu.append(
-    button("Ajuda com o acesso", () => $("help-dialog").showModal()),
-    button("Sair da conta", () => $("logout").click(), "secondary danger"),
+    if (allowedPages().includes(key)) menu.append(navButton(key));
+  const account = el("div", undefined, "profile-menu account-list");
+  const entry = (label, name, handler, tone = "") => {
+    const item = button("", handler, "account-item " + tone);
+    item.append(icon(name), el("span", label), icon("arrow"));
+    return item;
+  };
+  if (localLoginEnabled && !user.administrator)
+    account.append(
+      entry("Alterar senha", "lock", learningAction(passwordDialog)),
+    );
+  account.append(
+    entry("Privacidade e meus dados", "shield", learningAction(privacyDialog)),
+    entry("Ajuda com o acesso", "help", () => $("help-dialog").showModal()),
+    entry("Sair da conta", "logout", () => $("logout").click(), "danger"),
   );
-  $("view").append(card, menu);
+  $("view").append(
+    card,
+    sectionHeading("Acessos"),
+    menu,
+    sectionHeading("Conta"),
+    account,
+  );
+  notificationPanel($("view")).catch((error) => status(error.message, true));
 }
 const onboardingStorageKey = "fatec:onboarding-completed:v1";
 document.addEventListener("DOMContentLoaded", startApp);
@@ -664,6 +1174,12 @@ function startApp() {
   $("login-view").inert = $("app-view").inert = true;
   // Authentication loads independently; an unavailable API must not trap the splash.
   void connectLogin();
+  try {
+    if (localStorage.getItem(onboardingStorageKey) !== "true")
+      onboardingImage(0);
+  } catch {
+    onboardingImage(0);
+  }
   const finish = () => {
     startup.hidden = true;
     startup.replaceChildren();
@@ -698,51 +1214,78 @@ function startApp() {
     });
   }, 700);
 }
+// The three illustrations start loading with the splash and are reused, so
+// each step shows its picture at once instead of fetching it on demand.
+const onboardingArt = [];
+function onboardingImage(step) {
+  if (!onboardingArt.length)
+    for (let index = 1; index <= 3; index++) {
+      const img = el("img");
+      img.alt = "";
+      img.decoding = "async";
+      img.src = document
+        .querySelector("link[rel=stylesheet]")
+        .href.replace("panel.css", "onb" + index + ".png");
+      onboardingArt.push(img);
+    }
+  return onboardingArt[step];
+}
 function renderOnboarding(
   step = 0,
   target = $("view"),
   onComplete = () => navigate("home"),
 ) {
   const slides = [
-    "Centralize suas atividades",
-    "Tenha controle total sobre seu ambiente",
-    "Fique por dentro das novidades dentro da comunidade",
+    [
+      "Centralize suas atividades",
+      "Aulas, prazos, entregas e materiais das suas disciplinas reunidos em um só lugar.",
+    ],
+    [
+      "Tenha controle total sobre seu ambiente",
+      "Acompanhe sua frequência, escolha suas notificações e veja primeiro o que importa.",
+    ],
+    [
+      "Fique por dentro das novidades da comunidade",
+      "Avisos, eventos e lembretes da Fatec chegam até você, inclusive no celular.",
+    ],
   ];
-  const box = el("div", undefined, "onboarding"),
-    img = el("img");
-  img.src = document
-    .querySelector("link[rel=stylesheet]")
-    .href.replace("panel.css", "onb" + (step + 1) + ".png");
-  img.alt = "";
-  box.dataset.step = String(step + 1);
-  const sheet = el("div", undefined, "onboarding-sheet"),
+  const [heading, text] = slides[step],
+    box = el("div", undefined, "onboarding"),
+    sheet = el("div", undefined, "onboarding-sheet"),
     header = el("div", undefined, "onboarding-header"),
-    brand = el("div", undefined, "onboarding-brand");
+    brand = el("div", undefined, "onboarding-brand"),
+    art = el("div", undefined, "onboarding-art"),
+    copy = el("div", undefined, "onboarding-copy"),
+    title = el("h2", heading),
+    dots = el("div", undefined, "onboarding-dots");
+  box.dataset.step = String(step + 1);
+  box.setAttribute("aria-label", `Apresentação: passo ${step + 1} de 3`);
   brand.append(
     el("div", "Fatec", "wordmark-name"),
     el("div", "Adamantina", "wordmark-city"),
   );
-  const skip = button("Pular", onComplete, "onboarding-skip");
-  header.append(brand, skip);
-  const title = el("div", undefined, "onboarding-title");
-  title.append(el("h2", slides[step]));
-  title.firstChild.tabIndex = -1;
-  sheet.append(header, title, img);
-  const actions = el("div", undefined, "onboarding-actions");
-  box.setAttribute("aria-label", `Apresentação: passo ${step + 1} de 3`);
-  const next = button(
-    "Avançar",
-    () =>
-      step === 2
-        ? onComplete()
-        : renderOnboarding(step + 1, target, onComplete),
-    "onboarding-next",
-  );
+  header.append(brand, button("Pular", onComplete, "onboarding-skip"));
+  art.append(onboardingImage(step));
+  title.tabIndex = -1;
+  copy.append(title, el("p", text));
+  dots.setAttribute("aria-hidden", "true");
+  for (let index = 0; index < slides.length; index++)
+    dots.append(el("span", undefined, index === step ? "active" : ""));
+  sheet.append(header, art, copy, dots);
+  const actions = el("div", undefined, "onboarding-actions"),
+    next = button(
+      step === 2 ? "Começar" : "Avançar",
+      () =>
+        step === 2
+          ? onComplete()
+          : renderOnboarding(step + 1, target, onComplete),
+      "onboarding-next",
+    );
   next.append(icon("arrow"));
   actions.append(next);
   box.append(sheet, actions);
   target.replaceChildren(box);
-  title.firstChild.focus();
+  title.focus();
 }
 async function renderSearch(ticket) {
   $("view").append(
@@ -840,11 +1383,14 @@ async function renderCalendar(ticket) {
     prev,
     el(
       "h2",
-      first.toLocaleDateString("pt-BR", {
-        month: "long",
-        year: "numeric",
-        timeZone: "UTC",
-      }),
+      (() => {
+        const text = first.toLocaleDateString("pt-BR", {
+          month: "long",
+          year: "numeric",
+          timeZone: "UTC",
+        });
+        return text.charAt(0).toUpperCase() + text.slice(1);
+      })(),
     ),
     next,
   );
@@ -901,9 +1447,11 @@ async function renderCalendar(ticket) {
     grid.append(item);
   }
   box.append(grid);
-  $("view").append(box, sectionHeading(formatDate(calendarSelected)));
+  $("view").append(box, sectionHeading(longDay(calendarSelected)));
   const entries = entriesFor(calendarSelected);
-  entries.lessons.forEach((row) => $("view").append(lessonCard(row)));
+  entries.lessons.forEach((row) =>
+    $("view").append(lessonCard(row, false, "", calendarSelected)),
+  );
   entries.publications.forEach((row) => $("view").append(recentItem(row)));
   if (!entries.lessons.length && !entries.publications.length)
     $("view").append(
@@ -935,6 +1483,11 @@ $("toggle-password").addEventListener("click", () => {
   );
 });
 $("login-help").addEventListener("click", () => $("help-dialog").showModal());
+$("privacy-link").addEventListener("click", () =>
+  privacyDialog().catch((error) => {
+    $("login-error").textContent = error.message;
+  }),
+);
 $("menu-toggle").addEventListener("click", () => {
   $("menu-toggle").setAttribute(
     "aria-expanded",

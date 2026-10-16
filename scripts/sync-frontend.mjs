@@ -11,6 +11,8 @@ const files = [
   "panel.css",
   "panel.js",
   "academic.js",
+  "attendance.js",
+  "device.js",
   "admin.js",
   "experience.js",
   "logo-fatec.png",
@@ -21,7 +23,16 @@ const files = [
   "onb3.png",
   "plus-jakarta-sans-latin-wght-normal.woff2",
   "PLUS-JAKARTA-SANS-LICENSE.txt",
+  "manifest.webmanifest",
+  "icon-192.png",
+  "icon-512.png",
+  "icon-maskable-512.png",
+  "apple-touch-icon.png",
+  "badge-96.png",
+  "sw.js",
 ];
+// Pages and the service worker live at the site root; the rest under assets/.
+const rootFiles = new Set(["index.html", "sw.js"]);
 if (!check) await mkdir(path.join(target, "assets"), { recursive: true });
 let failures = 0;
 for (const name of files) {
@@ -32,7 +43,7 @@ for (const name of files) {
     );
   const destination = path.join(
     target,
-    name === "index.html" ? name : "assets/" + name,
+    rootFiles.has(name) ? name : "assets/" + name,
   );
   if (check) {
     const actual = await readFile(destination).catch(() => Buffer.alloc(0));

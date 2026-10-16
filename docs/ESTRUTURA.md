@@ -1,7 +1,7 @@
 # Estrutura do repositório
 
-A branch de revisão se chama `melhoria/revisao-e-fluxos-academicos` (pt-BR, sem
-acentos para facilitar o uso no Git e na hospedagem).
+Os nomes de branch usam pt-BR sem acentos ou o prefixo gerado pela ferramenta,
+para facilitar o uso no Git e na hospedagem.
 
 | Caminho | Responsabilidade |
 | --- | --- |
@@ -15,17 +15,32 @@ acentos para facilitar o uso no Git e na hospedagem).
 | `backend/app/academic/routes.py` | Rotas acadêmicas e autorização por turma/aluno |
 | `backend/app/academic/scheduling.py` | Regras de conflito e serialização da grade |
 | `backend/app/academic/enrollment.py` | Prévia e aplicação de matrículas em lote |
+| `backend/app/academic/attendance.py` | Chamada, correção auditada, frequência e alunos da turma |
+| `backend/app/academic/files.py` | Formatos de anexo, verificação de assinatura e nome de download |
+| `backend/app/academic/clock.py` | Data acadêmica de São Paulo e contagem de aulas previstas |
+| `backend/app/limits.py` | Limite global do corpo das requisições |
+| `backend/app/notifications/` | Web Push (RFC 8291/8292), canal Expo, fila, preferências e despacho |
+| `backend/app/academic/scanner.py` | Cliente ClamAV (`clamd` INSTREAM) para os anexos |
+| `backend/app/academic/exports.py` | CSV de frequência e notas por turma |
+| `backend/app/privacy.py` | Exportação dos dados do titular e retenção de dados operacionais |
+| `backend/app/pgbackup.py` | Backup `pg_dump` e ensaio de restauração verificado |
+| `backend/app/demo.py` | Dados fictícios do comando `seed-demo` |
 | `backend/app/models.py`, `db.py` | Modelo relacional e conexão |
 | `backend/app/staging.py` | Configuração que bloqueia homologação incompleta |
-| `backend/app/cli.py`, `bootstrap_admin.py` | Operações locais explícitas; sem bootstrap público |
+| `backend/app/cli.py`, `bootstrap_admin.py` | Operações locais explícitas (`bootstrap`, `seed-demo`, backup); sem bootstrap público |
 | `backend/app/static/panel.js` | Sessão, navegação e cadastros comuns |
 | `backend/app/static/admin.js` | Interface administrativa, extraída do painel comum |
 | `backend/app/static/academic.js` | Publicações, entregas, notas, eventos, grade e lote |
+| `backend/app/static/attendance.js` | Chamada, frequência do aluno e alunos da turma |
+| `backend/app/static/device.js` | Service worker, instalação, offline e notificações no dispositivo |
+| `backend/app/static/sw.js`, `manifest.webmanifest`, ícones | Aplicativo instalável (PWA) |
 | `backend/app/static/experience.js` | Inícios por perfil, calendário, busca, perfil e componentes visuais |
 | `backend/app/static/index.html`, `panel.css` | Estrutura e estilo compartilhados |
-| `backend/migrations/versions/` | Migrações históricas congeladas; versão atual `0003` |
+| `backend/migrations/versions/` | Migrações históricas congeladas; versão atual `0005` |
 | `backend/tests/` | Regressões de API, sessão, identidade, dados e fluxos acadêmicos |
 | `.github/workflows/backend.yml` | Verificação em SQLite e PostgreSQL |
+| `.github/workflows/notifications.yml` | Disparo opcional do envio de notificações a cada 15 min |
+| `docs/OPERACAO.md` | Operação de push, antivírus, backups, privacidade e exportações |
 | `frontend/` | Painel estático para Vercel e proxy server-side para o Render |
 | `scripts/sync-frontend.mjs` | Sincronização determinística dos assets da interface |
 | `frontend-tests/` | Testes de componentes e navegação em DOM simulado |

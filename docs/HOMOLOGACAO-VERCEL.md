@@ -77,6 +77,10 @@ alembic check
 python -m app.cli bootstrap --email coordenacao.teste@fatec.sp.gov.br --name "Coordenação de homologação"
 ```
 
+Opcionalmente, para testar todos os fluxos com dados fictícios, execute em seguida
+`python -m app.cli seed-demo` (somente em base sem cursos; pede uma senha comum
+às contas fictícias e lista os e-mails criados).
+
 O e-mail acima é uma identificação fictícia; não há envio nem autenticação Microsoft.
 A senha da conta é escolhida no terminal, sem eco. Use senha exclusiva de teste.
 O bootstrap recusa criar outro coordenador quando já existe um. Execute esse

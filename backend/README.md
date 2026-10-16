@@ -18,6 +18,22 @@ Copy-Item .env.example .env
 O endereço acima é fictício e serve como identificação do teste; nenhum e-mail é
 enviado. A senha local é solicitada no terminal, sem eco e sem valor padrão.
 
+## Dados de demonstração
+
+Depois do `bootstrap`, numa base **sem cursos**, o comando abaixo cria cursos,
+turmas, dois professores, sete alunos, grade, chamadas das últimas semanas,
+atividades, materiais, avisos, eventos, entregas e avaliações fictícios:
+
+```bash
+python -m app.cli seed-demo
+# ou, em scripts: HUB_DEMO_PASSWORD=... python -m app.cli seed-demo --password-env HUB_DEMO_PASSWORD
+```
+
+A senha informada vale para todas as contas fictícias, listadas ao final
+(ex.: `lucas.silveira.demo@fatec.sp.gov.br`, `marcelo.dias.demo@fatec.sp.gov.br`).
+A disciplina Estatística Aplicada fica sem professor de propósito, para exibir o
+alerta da coordenação. O comando recusa bases com cursos e o modo Microsoft.
+
 ## Instalar no Linux/macOS
 
 ```bash
@@ -36,10 +52,32 @@ provisionados pelo bootstrap. Copie o `.env.example` atualizado: para o HTTP
 local, `WEB_SECURE_COOKIE=false` permite enviar o cookie. Fora desse caso,
 o padrão é `Secure=true`. `WEB_ORIGINS` deve conter a origem exata do painel.
 
+Variáveis opcionais desta versão:
+
+| Variável | Padrão | Uso |
+| --- | --- | --- |
+| `ATTACHMENT_MAX_MB` | `4` | Tamanho máximo por anexo (1 a 25). Mantenha até 4 com o proxy da Vercel, que limita o corpo das funções a 4,5 MB |
+| `ATTENDANCE_ABSENCE_LIMIT_PERCENT` | `25` | Percentual de faltas permitido por disciplina, calculado sobre as aulas previstas na grade |
+
+Push, antivírus, privacidade e retenção têm variáveis próprias, descritas em
+[OPERACAO.md](../docs/OPERACAO.md).
+
+## Comandos de operação
+
+| Comando | Uso |
+| --- | --- |
+| `python -m app.cli vapid-keys` | Gera as chaves VAPID das notificações push |
+| `python -m app.cli dispatch-notifications [--loop 60]` | Envia notificações pendentes |
+| `python -m app.cli purge-expired` | Remove sessões, tentativas e notificações vencidas |
+| `python -m app.cli pg-backup ARQUIVO.dump` | Backup PostgreSQL verificado |
+| `python -m app.cli pg-restore-check ARQUIVO.dump --target-env VAR` | Ensaio de restauração em banco vazio |
+| `python -m app.cli backup` / `restore-check` | Equivalentes para SQLite local |
+
 Para explorar a API, `/docs` continua disponível. Em `POST /api/v1/auth/login`, use o e-mail e a
 senha criados no terminal. Copie **somente o valor de `access_token`** e cole em
 **Authorize**. Saia do painel antes de usar o explorador Bearer: quando há cookie,
-ele tem precedência e exige CSRF nas alterações. A sessão dura 30 minutos;
+ele tem precedência e exige CSRF nas alterações. A sessão expira após 30 minutos
+sem atividade, é renovada pelo uso e termina em até 8 horas da autenticação;
 o logout a revoga no servidor.
 
 Os arquivos `.env` e `hub.db` ficam fora do Git. Variáveis de ambiente existentes
@@ -55,17 +93,18 @@ sem interpretação de HTML. Os logotipos originais foram preservados.
 
 - Visão geral: contagens reais de registros não arquivados, não de vínculos vigentes.
 - Cursos, disciplinas e turmas: cadastro, edição, arquivamento e restauração.
-- Usuários: criação e arquivamento/restauração de alunos e professores. Contas
-  de coordenação não podem ser arquivadas por esse fluxo. A criação local de
-  coordenação já existente na API permanece restrita à coordenação; não cria admin.
+- Usuários: criação, edição de nome/perfil, redefinição de senha local e
+  arquivamento/restauração de alunos e professores, com busca por nome/e-mail e
+  filtro por perfil. Contas de coordenação não são alteradas por esse fluxo.
+  Cada pessoa altera a própria senha em **Meu perfil**.
 - Matrículas: seleção de pessoa/turma por nome, datas e atualização de vigência.
 - Listagens: páginas de 25 registros. Seletores têm busca e carregamento de mais
   opções; cadastros além da primeira página continuam acessíveis.
 - Auditoria: autor, instante em São Paulo, operação e valores antes/depois.
 
 `POST /api/v1/web/login` exige Origin explicitamente permitido e aceita contas locais provisionadas dos três perfis enquanto Microsoft não está configurado. Retorna perfil e token CSRF; a credencial de sessão fica no cookie
-HttpOnly com SameSite=Strict e 30 minutos de validade. Login bem-sucedido gira a
-sessão do navegador. `GET /api/v1/web/session` recupera perfil e proteção CSRF.
+HttpOnly com SameSite=Strict. A validade é conferida no servidor (30 minutos sem
+atividade, máximo de 8 horas). Login bem-sucedido gira a sessão do navegador. `GET /api/v1/web/session` recupera perfil e proteção CSRF.
 Mutações autenticadas por cookie exigem Origin permitido e `X-CSRF-Token`, mesmo
 se também houver Authorization. `POST /api/v1/auth/logout` revoga a sessão atual
 e remove o cookie. A API Bearer continua disponível para clientes não web.
@@ -105,6 +144,17 @@ coorte com matrícula em lote e uma entidade própria de período letivo são pr
 | `PUT/GET /api/v1/memberships` | Coordenação atribui/lista vínculos; PUT atualiza ou restaura vínculo existente |
 | `PATCH /api/v1/{resource}/{id}/archive` | `{"archived":true}` arquiva; `false` restaura |
 | `GET /api/v1/audit` | Histórico acessível somente à coordenação |
+| `POST /api/v1/me/password` | Troca a própria senha local, com limite de tentativas; encerra as outras sessões |
+| `PUT /api/v1/users/{id}`, `POST /api/v1/users/{id}/password` | Coordenação edita nome/perfil e redefine a senha local de alunos e professores |
+| `GET /api/v1/learning/attendance/sheet`, `PUT` | Folha de chamada de um horário em uma data; correção exige a versão atual |
+| `GET /api/v1/learning/attendance/summary` | Frequência por disciplina; aluno vê a própria, equipe informa `student_id` |
+| `GET /api/v1/learning/groups/{id}/students` | Alunos da turma com entregas, média do hub e faltas (equipe) |
+| `GET /api/v1/learning/notifications`, `POST .../read` | Lembretes com não lidos e marcação de leitura |
+| `GET /api/v1/learning/reach` | Alcance de uma publicação antes de confirmar |
+| `GET /api/v1/learning/activities/{id}/summary` | Quem entregou, quem falta e quantas aguardam avaliação |
+| `GET/PUT /api/v1/notifications/preferences`, `POST .../subscriptions` | Preferências e dispositivos de notificação (Web Push ou Expo) |
+| `GET /api/v1/learning/groups/{id}/export/attendance`, `.../export/grades` | CSV para o diário oficial (equipe da turma) |
+| `GET /api/v1/me/export` | Cópia dos dados da própria pessoa (LGPD) |
 | `GET /health/live`, `/health/ready` | Processo ativo e revisão do banco pronta |
 
 Listagens usam `offset` e `limit` (1–100). Listagens administrativas aceitam
@@ -159,17 +209,18 @@ persistência e recuperação. O workflow roda também em PostgreSQL descartáve
   O fluxo Microsoft/Entra está implementado; sua ativação e política MFA dependem
   do tenant institucional. Veja [MICROSOFT-ADMIN.md](../docs/MICROSOFT-ADMIN.md).
 - O painel web está conectado; o app Expo ainda não foi implementado.
-- Não houve validação visual em navegador nesta entrega. A responsividade e os
-  fluxos de teclado precisam de revisão antes do piloto.
-- Ainda faltam grade horária, importação em lote, atividades, uploads, notas, avisos,
-  eventos, push e chamada. A chamada depende da definição do registro usado pela faculdade.
+- Fluxos verificados em Chromium a 420 px e 1280 px; leitor de tela e testes com
+  usuários continuam pendentes antes do piloto.
+- Notificações push funcionam com as chaves VAPID da instituição; o app nativo
+  Expo depende de contas de loja. A chamada do hub não substitui o diário oficial;
+  a regra institucional ainda precisa ser confirmada.
 - No PostgreSQL, tentativas de login usam locks transacionais para serializar
   os limites entre instâncias. SQLite continua exclusivo do desenvolvimento local.
 - Hospedagem de teste exige `APP_ENV=staging` e todas as proteções descritas em
   [HOMOLOGACAO-VERCEL.md](../docs/HOMOLOGACAO-VERCEL.md). Produção segue bloqueada.
 - O console admin altera papéis, bloqueia contas, vincula identidades e revoga
-  todas as sessões de uma conta. Recuperação de identidade é feita pelo Entra.
-  Não há renovação silenciosa, revogação individual por dispositivo ou backup automático.
+  sessões individualmente ou todas de uma conta. Recuperação de identidade é feita
+  pelo Entra. Não há backup automático: use o do provedor do PostgreSQL.
 
 ## Referências técnicas
 
@@ -189,14 +240,24 @@ Alunos e professores podem testar com contas locais provisionadas enquanto o
 Microsoft não está configurado. Configurar o Entra desativa o login local.
 O console administrativo continua exigindo identidade Microsoft com MFA.
 
-Execute `alembic upgrade head` para instalar a revisão `0003`. A migração preserva
-cadastros e auditoria; downgrade é bloqueado para impedir perda silenciosa de
-entregas e avaliações. Use backup verificado para recuperação.
+Execute `alembic upgrade head` para instalar a revisão `0005` (chamada, agenda de
+publicações, anexos tipados, lembretes e notificações push). As migrações preservam cadastros e
+auditoria; downgrade é bloqueado para impedir perda silenciosa de entregas,
+avaliações e presenças. Use backup verificado para recuperação.
 
-Anexos nesta versão são texto UTF-8 `.txt` de até 512 KiB, com máximo de dez por
-registro (incluindo arquivados). São privados e ficam no banco, sem URL pública.
-PDF, Office e imagens ainda não são aceitos. O upload deve ocorrer no rascunho da
-entrega; o envio e a avaliação bloqueiam alterações nos anexos do aluno.
+Anexos aceitos: PDF, PNG, JPG, DOCX, XLSX, PPTX, CSV, IPYNB e TXT, até
+`ATTACHMENT_MAX_MB` (4 MiB por padrão; textos até 512 KiB), no máximo dez por
+registro (incluindo arquivados). Extensão, tipo declarado e assinatura do arquivo
+precisam coincidir; documentos com macro são recusados. São privados, ficam no
+banco e são sempre baixados como anexo. Com `CLAMAV_HOST` configurado, cada arquivo
+passa pelo antivírus antes de ser gravado (ver [OPERACAO.md](../docs/OPERACAO.md)); sem
+ele, não há varredura. O upload do aluno ocorre no rascunho da entrega; o envio e a
+avaliação bloqueiam alterações nos anexos.
 
-Ver [relatório completo](../docs/RELATORIO-REVISAO.md) e
+Avisos, materiais, atividades e eventos podem ter `publish_at` (só aparecem a partir
+dessa data); avisos podem ter `expires_at` (saem do ar). As datas são conferidas
+com o relógio do servidor e gravadas em UTC.
+
+Ver [relatório de análise de outubro/2026](../docs/RELATORIO-ANALISE-2026-10.md),
+[relatório de revisão anterior](../docs/RELATORIO-REVISAO.md) e
 [organização de arquivos](../docs/ESTRUTURA.md).

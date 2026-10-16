@@ -1,4 +1,4 @@
-"""Run from backend/: python -m app.cli bootstrap|backup|restore-check."""
+"""Run from backend/: python -m app.cli <comando>; use --help para a lista."""
 
 import argparse
 import getpass
@@ -10,7 +10,7 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.engine import make_url
 
-from .db import database_url, make_engine, make_sessions
+from .db import SCHEMA_REVISION, database_url, make_engine, make_sessions
 from .main import audit
 from .models import User
 from .schemas import UserCreate
@@ -33,6 +33,40 @@ def bootstrap(email, name, password):
             db.flush()
             audit(db, user, "bootstrap", user)
             db.commit()
+    finally:
+        engine.dispose()
+
+
+def seed_demo(password):
+    from .demo import seed
+    from .microsoft import MicrosoftSettings
+
+    if MicrosoftSettings.from_env():
+        raise ValueError("Dados de demonstração usam contas locais; o login Microsoft está ativo.")
+    if len(password) < 12:
+        raise ValueError("A senha de demonstração precisa ter ao menos 12 caracteres.")
+    engine = make_engine(database_url())
+    try:
+        return seed(make_sessions(engine), password)
+    finally:
+        engine.dispose()
+
+
+def dispatch_notifications(loop_seconds=0):
+    import time
+
+    from .notifications.channels import PushSettings, Sender
+    from .notifications.queue import dispatch
+
+    sender = Sender(PushSettings.from_env())
+    engine = make_engine(database_url())
+    try:
+        while True:
+            with make_sessions(engine)() as db:
+                print(dispatch(db, sender), flush=True)
+            if not loop_seconds:
+                return
+            time.sleep(loop_seconds)
     finally:
         engine.dispose()
 
@@ -76,7 +110,7 @@ def restore_check(source, destination):
     with closing(
         sqlite3.connect(Path(destination).resolve().as_uri() + "?mode=ro", uri=True)
     ) as db:
-        if db.execute("SELECT version_num FROM alembic_version").fetchone() != ("0003",):
+        if db.execute("SELECT version_num FROM alembic_version").fetchone() != (SCHEMA_REVISION,):
             raise ValueError("Versão do banco incompatível")
         if db.execute("PRAGMA foreign_key_check").fetchall():
             raise ValueError("Existem vínculos inválidos")
@@ -89,6 +123,30 @@ def main():
     first = commands.add_parser("bootstrap")
     first.add_argument("--email", required=True)
     first.add_argument("--name", required=True)
+    demo = commands.add_parser("seed-demo", help="Popula base vazia com dados fictícios")
+    demo.add_argument(
+        "--password-env",
+        metavar="VARIAVEL",
+        help="Lê a senha comum das contas fictícias desta variável de ambiente",
+    )
+    commands.add_parser("vapid-keys", help="Gera o par de chaves VAPID para Web Push")
+    push = commands.add_parser("dispatch-notifications", help="Envia notificações pendentes")
+    push.add_argument(
+        "--loop", type=int, default=0, metavar="SEGUNDOS", help="Repete a cada N segundos"
+    )
+    commands.add_parser("purge-expired", help="Remove dados operacionais vencidos")
+    dump = commands.add_parser("pg-backup", help="Backup verificado do PostgreSQL (pg_dump)")
+    dump.add_argument("destination")
+    check = commands.add_parser(
+        "pg-restore-check", help="Restaura um backup em banco vazio e verifica"
+    )
+    check.add_argument("source")
+    check.add_argument(
+        "--target-env",
+        required=True,
+        metavar="VARIAVEL",
+        help="Variável de ambiente com a URL do banco vazio de destino",
+    )
     b = commands.add_parser("backup")
     b.add_argument("destination")
     r = commands.add_parser("restore-check")
@@ -101,6 +159,48 @@ def main():
             parser.error("As senhas não coincidem")
         bootstrap(args.email, args.name, password)
         print("Coordenação criada. Faça login pela API local.")
+    elif args.command == "seed-demo":
+        if args.password_env:
+            password = os.environ.get(args.password_env, "")
+        else:
+            password = getpass.getpass("Senha comum das contas fictícias (mínimo 12): ")
+            if password != getpass.getpass("Repita a senha: "):
+                parser.error("As senhas não coincidem")
+        accounts = seed_demo(password)
+        print("Dados fictícios criados. Contas locais (mesma senha informada):")
+        for address in accounts.values():
+            print("  " + address)
+    elif args.command == "vapid-keys":
+        from .notifications.webpush import generate_vapid_keys
+
+        private, public = generate_vapid_keys()
+        print("Guarde a chave privada como segredo da hospedagem; nunca a publique.")
+        print("VAPID_PUBLIC_KEY=" + public)
+        print("VAPID_PRIVATE_KEY=" + private)
+    elif args.command == "dispatch-notifications":
+        dispatch_notifications(args.loop)
+    elif args.command == "purge-expired":
+        from .privacy import purge
+
+        engine = make_engine(database_url())
+        try:
+            with make_sessions(engine)() as db:
+                print(purge(db))
+        finally:
+            engine.dispose()
+    elif args.command == "pg-backup":
+        from .pgbackup import backup as pg_backup
+
+        target = pg_backup(database_url(), args.destination)
+        print(f"Backup criado e listado com sucesso: {target}")
+    elif args.command == "pg-restore-check":
+        from .pgbackup import restore_check as pg_restore_check
+
+        target_url = os.environ.get(args.target_env, "")
+        if not target_url:
+            parser.error("Defina a URL do banco vazio na variável informada")
+        result = pg_restore_check(args.source, target_url, database_url())
+        print(f"Restauração verificada (revisão {result['revision']}): {result['counts']}")
     elif args.command == "backup":
         backup(args.destination)
         print("Backup criado e integridade verificada.")

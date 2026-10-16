@@ -9,10 +9,19 @@
     <meta name="theme-color" content="#2E4756" />
     <meta name="robots" content="noindex,nofollow" />
     <title>Fatec Adamantina · Hub Acadêmico</title>
+    <link rel="icon" type="image/png" href="/panel/assets/icon-192.png" />
+    <link rel="manifest" href="/panel/assets/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/panel/assets/apple-touch-icon.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Fatec Hub" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="stylesheet" href="/panel/assets/panel.css" />
     <script src="/panel/assets/panel.js" defer></script>
     <script src="/panel/assets/admin.js" defer></script>
     <script src="/panel/assets/academic.js" defer></script>
+    <script src="/panel/assets/attendance.js" defer></script>
+    <script src="/panel/assets/device.js" defer></script>
     <script src="/panel/assets/experience.js" defer></script>
   </head>
   <body class="starting-app">
@@ -38,6 +47,18 @@
       <div class="login-brand">
         <div class="wordmark-name">Fatec</div>
         <div class="wordmark-city">Adamantina</div>
+        <p class="login-tagline">
+          Aulas, prazos, frequência, materiais e avisos da Fatec em um só lugar.
+        </p>
+        <img
+          class="login-art"
+          src="/panel/assets/onb1.png"
+          alt=""
+          width="1200"
+          height="1190"
+          loading="lazy"
+          decoding="async"
+        />
       </div>
       <div class="login-card">
         <h1>Bem-vindo de volta</h1>
@@ -53,7 +74,10 @@
                 type="email"
                 autocomplete="username"
                 maxlength="254"
-                placeholder="aluno@fatec.sp.gov.br"
+                placeholder="nome.sobrenome@fatec.sp.gov.br"
+                inputmode="email"
+                autocapitalize="none"
+                spellcheck="false"
                 required
               />
             </div>
@@ -66,7 +90,7 @@
                 type="password"
                 autocomplete="current-password"
                 maxlength="128"
-                placeholder="••••••••"
+                placeholder="Digite sua senha"
                 required
               /><button
                 id="toggle-password"
@@ -111,9 +135,16 @@
         </button>
         <p id="login-error" role="alert"></p>
         <button id="retry-login" class="text-button" type="button" hidden>
-          Tentar conectar novamente
+          Tentar novamente
         </button>
         <p id="login-state" role="status">Conectando ao serviço de acesso…</p>
+        <button
+          id="privacy-link"
+          class="text-button privacy-link"
+          type="button"
+        >
+          Aviso de privacidade
+        </button>
         <div class="login-spacer"></div>
         <footer class="institutional-logos">
           <img

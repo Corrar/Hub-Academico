@@ -12,6 +12,14 @@ const titles = {
   adminStatus: "Sistema e segurança",
   myGroups: "Minhas turmas",
 };
+// Create and edit labels for the structure records.
+const recordLabels = {
+  courses: ["Novo curso", "Editar curso"],
+  subjects: ["Nova disciplina", "Editar disciplina"],
+  groups: ["Nova turma", "Editar turma"],
+  users: ["Novo usuário", "Editar usuário"],
+  memberships: ["Vincular pessoa", "Editar vínculo"],
+};
 const descriptions = {
   dashboard: "Acompanhe a base acadêmica e organize os próximos cadastros.",
   courses: "Os cursos que compõem a estrutura da unidade.",
@@ -79,6 +87,165 @@ let editing = null,
   editorResource = null,
   editorVersion = 0,
   saving = false;
+// Search and role filter of the administrative listings.
+let adminSearch = "",
+  adminRole = "";
+const searchable = new Set([
+  "courses",
+  "subjects",
+  "groups",
+  "users",
+  "memberships",
+]);
+let adminGroup = "";
+const entityLabels = {
+  users: "Usuário",
+  courses: "Curso",
+  subjects: "Disciplina",
+  class_groups: "Turma",
+  memberships: "Vínculo",
+  publications: "Publicação",
+  submissions: "Entrega",
+  event_enrollments: "Inscrição em evento",
+  schedules: "Horário",
+  attachments: "Anexo",
+  attendance_lessons: "Chamada",
+};
+const fieldLabels = {
+  name: "Nome",
+  email: "E-mail",
+  role: "Perfil",
+  code: "Código",
+  term: "Período",
+  semester: "Semestre",
+  title: "Título",
+  body: "Conteúdo",
+  draft: "Rascunho",
+  archived: "Arquivado",
+  due_at: "Prazo",
+  starts_at: "Início",
+  ends_at: "Término",
+  starts_on: "Início",
+  ends_on: "Fim",
+  capacity: "Vagas",
+  grade: "Nota",
+  feedback: "Devolutiva",
+  version: "Versão",
+  room: "Sala",
+  weekday: "Dia da semana",
+  starts_minute: "Início (min)",
+  ends_minute: "Término (min)",
+  topic: "Conteúdo da aula",
+  absent_ids: "Ausentes",
+  publish_at: "Publicar em",
+  expires_at: "Sai do ar",
+  audience: "Público",
+  kind: "Tipo",
+  reason: "Justificativa",
+  sessions_revoked: "Sessões encerradas",
+  submitted_at: "Enviada em",
+  graded_at: "Avaliada em",
+  publication_id: "Publicação",
+  student_id: "Aluno",
+  user_id: "Pessoa",
+  group_id: "Turma",
+  course_id: "Curso",
+  subject_id: "Disciplina",
+  creator_id: "Autor",
+  recorded_by: "Registrada por",
+  schedule_id: "Horário",
+  lesson_date: "Data da aula",
+  recorded_at: "Registrada em",
+  created_at: "Criado em",
+};
+function auditValue(value) {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "boolean") return value ? "Sim" : "Não";
+  if (Array.isArray(value))
+    return value.length ? plural(value.length, "item", "itens") : "nenhum";
+  if (typeof value === "object") return JSON.stringify(value);
+  const text = String(value);
+  if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(text)) return when(text);
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-/.test(text)) return "#" + text.slice(0, 8);
+  return text.length > 160 ? text.slice(0, 157) + "…" : text;
+}
+// Before/after per field instead of raw JSON; unchanged fields are omitted.
+function auditDiff(changes) {
+  let data;
+  try {
+    data = JSON.parse(changes);
+  } catch {
+    return el("pre", changes);
+  }
+  const hidden = new Set(["id", "password_hash", "fanout_at"]);
+  const lines = [];
+  const paired = data && typeof data === "object" && "after" in data;
+  if (paired) {
+    const before = data.before || {},
+      after = data.after || {};
+    for (const key of new Set([
+      ...Object.keys(before),
+      ...Object.keys(after),
+    ])) {
+      if (hidden.has(key)) continue;
+      if (
+        data.before &&
+        JSON.stringify(before[key]) === JSON.stringify(after[key])
+      )
+        continue;
+      lines.push([key, data.before ? before[key] : undefined, after[key]]);
+    }
+  } else
+    for (const [key, value] of Object.entries(data || {}))
+      if (!hidden.has(key)) lines.push([key, undefined, value]);
+  const table = el("table", undefined, "diff-table"),
+    head = el("tr");
+  const compare = paired && data.before;
+  for (const label of compare
+    ? ["Campo", "Antes", "Depois"]
+    : ["Campo", "Valor"])
+    head.append(el("th", label));
+  table.append(head);
+  for (const [key, before, after] of lines) {
+    const line = el("tr");
+    line.append(el("td", fieldLabels[key] || key));
+    if (compare) line.append(el("td", auditValue(before), "before"));
+    line.append(el("td", auditValue(after)));
+    table.append(line);
+  }
+  if (!lines.length) table.append(el("caption", "Sem alteração de campos."));
+  return table;
+}
+function personCell(name, email, role, badge = true) {
+  const cell = el("td"),
+    wrap = el("div", undefined, "person-cell");
+  const text = el("div");
+  text.append(el("strong", name), el("small", email));
+  wrap.append(el("span", initials(name), "avatar " + (role || "")), text);
+  if (role && badge) wrap.append(el("span", roles[role], "badge role-" + role));
+  cell.append(wrap);
+  return cell;
+}
+function stackedCell(main, detail) {
+  const cell = el("td");
+  cell.append(el("strong", main, "cell-main"), el("small", detail));
+  return cell;
+}
+function validity(row) {
+  const today = brDate(Date.now()),
+    cell = el("td");
+  const [text, tone] =
+    row.ends_on < today
+      ? ["Encerrado", ""]
+      : row.starts_on > today
+        ? ["Começa " + formatDate(row.starts_on), "gold"]
+        : ["Vigente", "green"];
+  cell.append(
+    el("span", text, "badge " + tone),
+    el("small", `${formatDate(row.starts_on)} a ${formatDate(row.ends_on)}`),
+  );
+  return cell;
+}
 const labels = new Map();
 function el(tag, text, className) {
   const node = document.createElement(tag);
@@ -92,9 +259,144 @@ function button(text, handler, className = "secondary") {
   node.addEventListener("click", handler);
   return node;
 }
+let statusTimer = 0;
+// Feedback appears as a toast; confirmations fade, errors stay until replaced.
 function status(message, error = false) {
+  clearTimeout(statusTimer);
   $("status").textContent = message;
-  $("status").className = error ? "error" : "";
+  $("status").className = message ? (error ? "toast error" : "toast") : "";
+  if (message && !error)
+    statusTimer = setTimeout(() => {
+      if ($("status").textContent === message) status("");
+    }, 6000);
+}
+const zone = "America/Sao_Paulo";
+function instant(value) {
+  return new Date(
+    typeof value === "string" && !/[Zz]|[+-]\d\d:\d\d$/.test(value)
+      ? value + "Z"
+      : value,
+  );
+}
+function dayKey(date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: zone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+function clock(date) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: zone,
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+// "hoje, 19:00", "amanhã, 23:59", "sex., 18 de out., 19:00" — Brasília time.
+function when(value, withTime = true) {
+  if (!value) return "—";
+  const date = instant(value),
+    today = new Date(),
+    days = Math.round(
+      (Date.parse(dayKey(date)) - Date.parse(dayKey(today))) / 86400000,
+    );
+  const time = withTime ? ", " + clock(date) : "";
+  if (days === 0) return "hoje" + time;
+  if (days === 1) return "amanhã" + time;
+  if (days === -1) return "ontem" + time;
+  const sameYear = dayKey(date).slice(0, 4) === dayKey(today).slice(0, 4);
+  return (
+    new Intl.DateTimeFormat("pt-BR", {
+      timeZone: zone,
+      weekday: Math.abs(days) < 7 ? "long" : "short",
+      day: "numeric",
+      month: "short",
+      ...(sameYear ? {} : { year: "numeric" }),
+    }).format(date) + time
+  );
+}
+// Deadline wording and tone: closed, due within a day, within three days.
+function deadline(value) {
+  const remaining = instant(value) - Date.now(),
+    hours = remaining / 3600000;
+  if (remaining <= 0)
+    return { text: "Encerrada " + when(value), tone: "closed" };
+  if (hours <= 24) return { text: "Vence " + when(value), tone: "urgent" };
+  if (hours <= 72) return { text: "Vence " + when(value), tone: "soon" };
+  return { text: "Vence " + when(value), tone: "" };
+}
+function deadlineChip(value) {
+  const info = deadline(value),
+    chip = el("span", info.text, "deadline " + info.tone);
+  chip.prepend(icon("schedule"));
+  return chip;
+}
+// Group labels arrive as "Disciplina · Turma · Semestre".
+function groupParts(label = "") {
+  const [subject = label, name = "", semester = ""] = label.split(" · ");
+  return {
+    subject,
+    name,
+    semester,
+    rest: [name, semester].filter(Boolean).join(" · "),
+  };
+}
+function greeting(name) {
+  const hour = Number(
+    new Intl.DateTimeFormat("pt-BR", {
+      timeZone: zone,
+      hour: "numeric",
+      hourCycle: "h23",
+    }).format(new Date()),
+  );
+  const first = name.trim().split(/\s+/)[0];
+  return (
+    (hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite") +
+    ", " +
+    first
+  );
+}
+function searchField(value, placeholder, submit, label = placeholder) {
+  const form = el("form", undefined, "search-field"),
+    input = el("input"),
+    go = el("button", "Buscar", "secondary");
+  input.type = "search";
+  input.maxLength = 120;
+  input.value = value;
+  input.placeholder = placeholder;
+  input.setAttribute("aria-label", label);
+  go.type = "submit";
+  form.append(icon("search"), input, go);
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    submit(input.value.trim());
+  });
+  return form;
+}
+function segmented(label, options, value, change) {
+  const group = el("div", undefined, "segmented");
+  group.setAttribute("role", "group");
+  group.setAttribute("aria-label", label);
+  for (const [key, text] of options) {
+    const option = button(text, () => change(key), "segment");
+    option.setAttribute("aria-pressed", String(key === value));
+    group.append(option);
+  }
+  return group;
+}
+function archivedToggle(label = "Mostrar arquivados") {
+  const caption = el("label", label, "toggle-chip"),
+    check = el("input");
+  check.type = "checkbox";
+  check.checked = archived;
+  check.addEventListener("change", () => {
+    archived = check.checked;
+    offset = 0;
+    render();
+  });
+  caption.prepend(check);
+  return caption;
 }
 function resetSession(message = "") {
   document
@@ -173,6 +475,7 @@ function enter(data) {
   $("app-view").hidden = false;
   $("account-name").textContent = user.name;
   setupExperience();
+  void syncPush();
   document.querySelector(".sidebar-title").textContent = user.administrator
     ? "Administração"
     : roles[user.role];
@@ -215,6 +518,7 @@ $("login-form").addEventListener("submit", async (event) => {
 $("logout").addEventListener("click", async () => {
   $("logout").disabled = true;
   try {
+    await releasePush();
     await api("/auth/logout", { method: "POST" });
     resetSession();
     $("email").focus();
@@ -230,6 +534,9 @@ function navigate(key, { groupId = "" } = {}) {
   academicGroup = groupId;
   offset = 0;
   archived = false;
+  adminSearch = adminRole = adminGroup = "";
+  activityFilter = "";
+  agendaDay = null;
   for (const item of document.querySelectorAll("nav button[data-page]")) {
     if (item.dataset.page === key) item.setAttribute("aria-current", "page");
     else item.removeAttribute("aria-current");
@@ -238,8 +545,7 @@ function navigate(key, { groupId = "" } = {}) {
   $("page-description").textContent = descriptions[key] || "";
   $("new-record").hidden =
     !resources[key] || (key === "users" && microsoftEnabled);
-  $("new-record").textContent =
-    key === "memberships" ? "Vincular pessoa" : "Novo cadastro";
+  $("new-record").textContent = recordLabels[key]?.[0] || "Novo cadastro";
   document.body.dataset.page = key;
   document.body.classList.remove("menu-open");
   $("menu-toggle").setAttribute("aria-expanded", "false");
@@ -282,8 +588,9 @@ async function resolveReferences(rows) {
 async function render() {
   const ticket = ++generation,
     resource = page;
-  status("Carregando…");
+  status("");
   $("view").replaceChildren();
+  $("view").setAttribute("aria-busy", "true");
   try {
     if (Object.hasOwn(experiencePages, resource)) {
       await renderExperience(resource, ticket);
@@ -305,35 +612,96 @@ async function render() {
           offset: String(offset),
           limit: "25",
           ...(resource === "audit" ? {} : { archived: String(archived) }),
+          ...(searchable.has(resource) && adminSearch
+            ? { q: adminSearch }
+            : {}),
+          ...(resource === "users" && adminRole ? { role: adminRole } : {}),
+          ...(resource === "memberships" && adminGroup
+            ? { group_id: adminGroup }
+            : {}),
         }),
     );
     await resolveReferences(rows);
     if (ticket !== generation) return;
     const box = el("div", undefined, "table-card");
     const toolbar = el("div", undefined, "toolbar");
-    toolbar.append(
-      el(
-        "span",
-        resource === "audit"
-          ? "Mais recentes primeiro"
-          : "Registros " + (archived ? "arquivados" : "não arquivados"),
-      ),
-    );
-    if (resource !== "audit") {
-      const label = el("label", "Mostrar arquivados");
-      const check = el("input");
-      check.type = "checkbox";
-      check.checked = archived;
-      check.addEventListener("change", () => {
-        archived = check.checked;
+    if (resource !== "audit") toolbar.append(archivedToggle());
+    else
+      toolbar.append(
+        el("span", "Mais recentes primeiro", "muted"),
+        button("Atualizar", render),
+      );
+    if (resource === "memberships")
+      toolbar.append(button("Importar lote", () => membershipBatch()));
+    if (searchable.has(resource)) {
+      const form = el("form", undefined, "table-search"),
+        input = el("input");
+      input.type = "search";
+      input.maxLength = 120;
+      input.value = adminSearch;
+      input.placeholder = ["users", "memberships"].includes(resource)
+        ? "Nome ou e-mail"
+        : "Nome ou código";
+      input.setAttribute(
+        "aria-label",
+        "Buscar em " + titles[resource].toLowerCase(),
+      );
+      form.append(input);
+      if (resource === "users") {
+        const role = el("select");
+        role.setAttribute("aria-label", "Filtrar por perfil");
+        for (const [value, label] of [
+          ["", "Todos os perfis"],
+          ...Object.entries(roles),
+        ]) {
+          const option = el("option", label);
+          option.value = value;
+          role.append(option);
+        }
+        role.value = adminRole;
+        role.addEventListener("change", () => {
+          adminRole = role.value;
+          adminSearch = input.value.trim();
+          offset = 0;
+          render();
+        });
+        form.append(role);
+      }
+      if (resource === "memberships") {
+        const group = el("select");
+        group.setAttribute("aria-label", "Filtrar por turma");
+        const all = el("option", "Todas as turmas");
+        all.value = "";
+        group.append(all);
+        api("/lookup/groups?limit=100")
+          .then((items) => {
+            for (const item of items) {
+              const option = el("option", item.label);
+              option.value = item.id;
+              group.append(option);
+            }
+            group.value = adminGroup;
+          })
+          .catch(() => {});
+        group.addEventListener("change", () => {
+          adminGroup = group.value;
+          adminSearch = input.value.trim();
+          offset = 0;
+          render();
+        });
+        form.append(group);
+      }
+      const submit = el("button", "Buscar", "secondary");
+      submit.type = "submit";
+      form.append(submit);
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        adminSearch = input.value.trim();
         offset = 0;
         render();
       });
-      label.prepend(check);
-      toolbar.append(label);
-    } else toolbar.append(button("Atualizar", render));
-    if (resource === "memberships")
-      toolbar.append(button("Importar lote", () => membershipBatch()));
+      toolbar.append(form);
+    }
     box.append(toolbar);
     if (rows.length) {
       const scroll = el("div", undefined, "table-scroll"),
@@ -344,7 +712,7 @@ async function render() {
         courses: ["Curso", "Código"],
         subjects: ["Disciplina", "Curso", "Período"],
         groups: ["Turma", "Disciplina", "Semestre"],
-        users: ["Pessoa", "E-mail", "Perfil"],
+        users: ["Pessoa", "Perfil"],
         memberships: ["Pessoa", "Turma", "Vigência"],
         audit: ["Quando", "Autor", "Operação", "Registro"],
       }[resource];
@@ -375,13 +743,24 @@ async function render() {
             row.semester,
           ];
         if (resource === "users")
-          values = [row.name, row.email, roles[row.role]];
-        if (resource === "memberships")
           values = [
-            reference("users", row.user_id),
-            reference("groups", row.group_id),
-            `${formatDate(row.starts_on)} a ${formatDate(row.ends_on)}`,
+            personCell(row.name, row.email, row.role, false),
+            el("span", roles[row.role], "badge role-" + row.role),
           ];
+        if (resource === "memberships") {
+          const label = groupParts(
+            row.group_label || reference("groups", row.group_id),
+          );
+          values = [
+            personCell(
+              row.user_name || reference("users", row.user_id),
+              row.user_email || "",
+              row.user_role,
+            ),
+            stackedCell(label.subject, label.rest),
+            validity(row),
+          ];
+        }
         if (resource === "audit")
           values = [
             new Intl.DateTimeFormat("pt-BR", {
@@ -391,38 +770,77 @@ async function render() {
             }).format(
               new Date(
                 row.occurred_at.endsWith("Z") ||
-                  /[+-]\d\d:\d\d$/.test(row.occurred_at)
+                /[+-]\d\d:\d\d$/.test(row.occurred_at)
                   ? row.occurred_at
                   : row.occurred_at + "Z",
               ),
             ),
-            reference("users", row.actor_id),
+            reference("users", row.actor_id).split(" · ")[0],
             {
               create: "Criação",
               update: "Edição",
               upsert: "Vínculo",
               archive: "Arquivamento",
               restore: "Restauração",
+              attendance_recorded: "Chamada",
+              attendance_corrected: "Correção de chamada",
+              password_changed: "Troca de senha",
+              password_reset: "Redefinição de senha",
+              graded: "Avaliação",
+              submitted: "Entrega",
+              demo_seed: "Dados fictícios",
+              batch_membership: "Matrícula em lote",
+              submission_saved: "Rascunho de entrega",
+              event_enroll: "Inscrição",
+              event_cancel: "Cancelamento",
+              attachment_added: "Anexo enviado",
+              attachment_archive: "Anexo arquivado",
+              attachment_blocked: "Anexo bloqueado",
+              schedule_saved: "Horário",
+              data_export: "Exportação de dados",
+              attendance_export: "Exportação de frequência",
+              grades_export: "Exportação de notas",
+              bootstrap: "Primeiro acesso",
+              microsoft_login: "Login Microsoft",
+              permissions_changed: "Permissões",
+              identity_changed: "Identidade",
+              sessions_revoked: "Sessões revogadas",
+              session_revoked: "Sessão revogada",
+              provision_identity: "Provisionamento",
             }[row.action] || row.action,
-            row.entity,
+            entityLabels[row.entity] || row.entity,
           ];
-        values.forEach((value) => line.append(el("td", value)));
+        values.forEach((value) =>
+          line.append(
+            value instanceof Node && value.tagName === "TD" ? value : el("td"),
+          ),
+        );
+        values.forEach((value, index) => {
+          const cell = line.children[index];
+          if (value instanceof Node && value.tagName !== "TD")
+            cell.append(value);
+          else if (!(value instanceof Node)) cell.textContent = value;
+        });
         if (resource === "audit") {
           const detail = el("details"),
-            summary = el("summary", "Ver alteração"),
-            pre = el("pre");
-          try {
-            pre.textContent = JSON.stringify(JSON.parse(row.changes), null, 2);
-          } catch {
-            pre.textContent = row.changes;
-          }
-          detail.append(summary, pre);
-          line.lastChild.append(el("small", row.entity_id), detail);
+            summary = el("summary", "Ver alteração");
+          detail.append(summary, auditDiff(row.changes));
+          line.lastChild.append(
+            el("small", " #" + row.entity_id.slice(0, 8)),
+            detail,
+          );
         } else {
           const cell = el("td"),
             actions = el("div", undefined, "row-actions");
           if (!archived && resource !== "users")
             actions.append(button("Editar", () => openEditor(row)));
+          if (!archived && resource === "users" && row.role !== "coordinator") {
+            actions.append(button("Editar", () => userEditor(row)));
+            if (localLoginEnabled)
+              actions.append(
+                button("Redefinir senha", () => passwordReset(row)),
+              );
+          }
           if (!(resource === "users" && row.role === "coordinator"))
             actions.append(
               button(
@@ -451,7 +869,9 @@ async function render() {
             ? "Os registros arquivados aparecerão aqui."
             : resource === "audit"
               ? "As alterações nos cadastros aparecerão aqui."
-              : "Use o botão de novo cadastro para começar.",
+              : adminSearch || adminRole
+                ? "Nenhum resultado para este filtro."
+                : "Use o botão de novo cadastro para começar.",
         ),
       );
       box.append(empty);
@@ -477,14 +897,19 @@ async function render() {
       ),
       next,
     );
-    box.append(pager);
+    if (offset || rows.length >= 25) box.append(pager);
     $("view").append(box);
     status("");
   } catch (error) {
     if (ticket === generation) {
       status(error.message, true);
-      $("view").append(button("Tentar novamente", render));
+      $("view").append(
+        emptyState("Não foi possível carregar", error.message, "help"),
+        button("Tentar novamente", render, "primary"),
+      );
     }
+  } finally {
+    if (ticket === generation) $("view").removeAttribute("aria-busy");
   }
 }
 async function archiveRow(resource, row) {
@@ -506,6 +931,58 @@ async function archiveRow(resource, row) {
   } catch (error) {
     status(error.message, true);
   }
+}
+function userEditor(row) {
+  const ui = learningDialog("Editar usuário");
+  ui.fields.append(el("p", row.email, "muted"));
+  ui.field("name", "Nome completo", "text", row.name);
+  ui.field("role", "Perfil", "select", row.role, [
+    ["student", roles.student],
+    ["teacher", roles.teacher],
+  ]);
+  ui.fields.append(
+    el(
+      "p",
+      "Mudar o perfil encerra as sessões abertas da pessoa. O e-mail institucional não pode ser alterado.",
+      "help",
+    ),
+  );
+  ui.form.save = async () => {
+    await api("/users/" + row.id, {
+      method: "PUT",
+      body: JSON.stringify({
+        name: ui.controls.name.value,
+        role: ui.controls.role.value,
+      }),
+    });
+    return "Cadastro salvo e registrado na auditoria.";
+  };
+}
+function passwordReset(row) {
+  const ui = learningDialog("Redefinir senha · " + row.name);
+  const input = ui.field("new_password", "Nova senha temporária", "password");
+  input.minLength = 12;
+  input.maxLength = 128;
+  input.autocomplete = "new-password";
+  ui.fields.append(
+    el(
+      "p",
+      "Mínimo de 12 caracteres. As sessões da pessoa serão encerradas. Entregue a senha por canal seguro e peça que ela a altere no perfil.",
+      "help",
+    ),
+  );
+  ui.save.textContent = "Redefinir senha";
+  ui.form.save = async () => {
+    try {
+      await api("/users/" + row.id + "/password", {
+        method: "POST",
+        body: JSON.stringify({ new_password: input.value }),
+      });
+    } finally {
+      input.value = "";
+    }
+    return "Senha redefinida e registrada na auditoria.";
+  };
 }
 function closeEditor() {
   if (saving) return;
@@ -624,7 +1101,7 @@ function openEditor(row = null) {
   editorResource = page;
   const version = ++editorVersion;
   $("editor-title").textContent =
-    (row ? "Editar · " : "Novo cadastro · ") + titles[page];
+    recordLabels[page]?.[row ? 1 : 0] || titles[page];
   $("form-error").textContent = "";
   $("fields").replaceChildren();
   $("save-record").disabled = false;
@@ -719,10 +1196,13 @@ $("record-form").addEventListener("submit", async (event) => {
     $("save-record").disabled = false;
   }
 });
-let checkingAccess = false;
+let checkingAccess = false,
+  accessRetry = 0,
+  accessAttempts = 0;
 async function connectLogin() {
   if (checkingAccess) return;
   checkingAccess = true;
+  clearTimeout(accessRetry);
   localLoginEnabled = microsoftEnabled = false;
   $("microsoft-login").disabled = true;
   $("login-submit").disabled = true;
@@ -739,6 +1219,7 @@ async function connectLogin() {
       (!data.local && !data.microsoft)
     )
       throw new Error("Resposta de acesso inválida");
+    accessAttempts = 0;
     localLoginEnabled = data.local;
     microsoftEnabled = data.microsoft;
     $("login-submit").disabled = !data.local;
@@ -759,13 +1240,18 @@ async function connectLogin() {
       }
     }
   } catch (error) {
+    // A sleeping server takes a few seconds to wake: retry quietly a few times.
+    const retrying = ++accessAttempts <= 5;
     $("login-error").textContent =
-      "O serviço de acesso está indisponível" +
-      (error.status ? " (HTTP " + error.status + ")" : "") +
-      ". Tente conectar novamente.";
+      "Não conseguimos conectar ao servidor agora" +
+      (error.status ? " (código " + error.status + ")" : "") +
+      (retrying
+        ? ". Tentando de novo automaticamente…"
+        : ". Verifique sua internet e tente novamente.");
     $("login-state").textContent =
       "Você pode preencher os campos. O botão Entrar será liberado quando o serviço confirmar o acesso por senha.";
     $("retry-login").hidden = false;
+    if (retrying) accessRetry = setTimeout(connectLogin, 4000 * accessAttempts);
   } finally {
     checkingAccess = false;
     $("login-form").setAttribute("aria-busy", "false");
@@ -780,7 +1266,10 @@ if (microsoftCallbackFailed) {
     "Não foi possível autorizar o acesso Microsoft. Confira o vínculo institucional e a política MFA com o administrador.";
   history.replaceState(null, "", location.pathname);
 }
-$("retry-login").addEventListener("click", connectLogin);
+$("retry-login").addEventListener("click", () => {
+  accessAttempts = 0;
+  void connectLogin();
+});
 
 async function microsoftLogin() {
   if (!microsoftEnabled) return;

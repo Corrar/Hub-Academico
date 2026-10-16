@@ -37,6 +37,34 @@ Herdado do bundle original, com uma correção deliberada.
 original reprovam no contraste WCAG AA (1,67:1 a 2,58:1). Foram substituídos por
 `#5A6873` e `#6B7580` em todas as telas novas. Não reintroduzir os antigos.
 
+## Padrões do painel em código
+
+O painel (`backend/app/static/`, espelhado em `frontend/assets/`) aplica o
+sistema acima com estes padrões, definidos em `panel.css` como tokens
+(`--radius*`, `--shadow*`, `--ease`):
+
+- Datas relativas (`when`, `deadline` em `panel.js`); nunca exibir data ISO ou UUID.
+- Turmas pelo rótulo estruturado (`groupParts`): disciplina em destaque, turma e
+  semestre como apoio.
+- Ação principal da página no cabeçalho (`pageAction`), filtros em controle
+  segmentado (`segmented`) e busca (`searchField`).
+- Status em aviso flutuante (`status`), carregamento com esqueleto e animação
+  desativada por `prefers-reduced-motion`.
+- Estilos só por classes e CSSOM: a CSP do painel bloqueia `style=` inline.
+
+## Ilustrações da introdução
+
+`onb1.png` a `onb3.png` (em `backend/app/static/`) vêm do [unDraw](https://undraw.co),
+de Katerina Limpitsouni: *studying*, *personal-settings* e *my-notifications*,
+com a cor de destaque trocada para `#E11D2A` e convertidas em PNG de 1200 px
+com fundo transparente. A licença do unDraw permite uso comercial sem
+atribuição; só proíbe redistribuir as ilustrações como coleção. As imagens
+anteriores eram no estilo Storyset (Freepik), cujo uso gratuito exige crédito.
+
+Para trocar uma ilustração, escolha outra no unDraw com a cor `#E11D2A`, exporte
+o SVG e converta para PNG mantendo o mesmo nome de arquivo (o backend e o
+espelhamento do frontend usam uma lista fixa de nomes).
+
 ## Regras que as telas seguem
 
 Valem para a reconstrução em código, não só para o desenho:

@@ -126,6 +126,7 @@ def test_panel_assets_headers_and_auth_boundaries(system):
         "panel.js",
         "admin.js",
         "academic.js",
+        "attendance.js",
         "experience.js",
         "plus-jakarta-sans-latin-wght-normal.woff2",
         "logo-fatec.png",
@@ -138,6 +139,15 @@ def test_panel_assets_headers_and_auth_boundaries(system):
         assert client.get("/panel/assets/" + filename).status_code == 200
     for endpoint in ["/api/v1/dashboard", "/api/v1/lookup/users", "/api/v1/courses"]:
         assert client.get(endpoint).status_code == 401
+    # Installable app: manifest, icons and a worker scoped to the whole panel.
+    manifest = client.get("/panel/assets/manifest.webmanifest")
+    assert manifest.headers["content-type"].startswith("application/manifest+json")
+    for icon in manifest.json()["icons"]:
+        assert client.get("/panel/assets/" + icon["src"]).status_code == 200
+    worker = client.get("/panel/sw.js")
+    assert worker.status_code == 200 and "javascript" in worker.headers["content-type"]
+    policy = response.headers["content-security-policy"]
+    assert "manifest-src 'self'" in policy and "worker-src 'self'" in policy
     assert client.get("/panel/assets/../main.py").status_code == 404
 
 
@@ -168,7 +178,12 @@ def test_web_academic_flow_persistence_and_scope(system):
     )
     assert membership.status_code == 200
     counts = client.get("/api/v1/dashboard").json()
+    alerts = counts.pop("alerts")
     assert counts == {"courses": 1, "subjects": 1, "groups": 1, "users": 2, "memberships": 1}
+    # The only class has a student but neither a teacher nor a timetable yet.
+    assert alerts["groups_without_teacher"]["count"] == 1
+    assert alerts["groups_without_schedule"]["items"][0]["id"] == group["id"]
+    assert alerts["teacher_memberships_ending"] == 0
     assert (
         client.get("/api/v1/lookup/groups?q=noturno").json()[0]["label"]
         == "Banco de Dados · Noturno A · 2026/2"
@@ -179,7 +194,7 @@ def test_web_academic_flow_persistence_and_scope(system):
     try:
         with TestClient(app, base_url="https://testserver") as restarted:
             restarted.cookies.update(client.cookies)
-            assert restarted.get("/api/v1/dashboard").json() == counts
+            assert restarted.get("/api/v1/dashboard").json() == {**counts, "alerts": alerts}
         client.post("/api/v1/auth/logout")
         token = client.post(
             "/api/v1/auth/login", json={"email": student["email"], "password": PASSWORD}

@@ -129,3 +129,21 @@ grade e matrícula em lote. Anexos desta homologação são somente texto UTF-8
 pequeno; PDF/Office, aplicativo Expo, push e chamada continuam pendentes.
 Estado detalhado e condições externas em `docs/RELATORIO-REVISAO.md`.
 Pentest remoto somente após confirmação explícita de que a homologação está na nuvem.
+
+## Análise e conclusão funcional — 15/10/2026
+
+Chamada pelo professor e frequência por disciplina (limite configurável, 25% por
+padrão, rotulada como não oficial), troca e redefinição de senha local, sessão por
+inatividade, anexos PDF/Office/imagem com verificação de assinatura, avisos
+agendados e com saída do ar, alcance antes de publicar, acompanhamento de entregas
+e fila de avaliação, inscritos em eventos, lembretes com não lidos, alertas da
+coordenação e `seed-demo`. Migração `0004`. Push, Expo, antivírus, Entra e a regra
+oficial de frequência continuam dependendo da instituição. Detalhes em
+`docs/RELATORIO-ANALISE-2026-10.md`.
+
+Atualização de 16/10/2026: o painel virou aplicativo instalável (PWA) com
+notificações push próprias (Web Push/VAPID, sem conta em terceiros), mantendo a
+mesma identidade no Android e no iOS; o backend também aceita tokens Expo para o
+app nativo. Entraram antivírus ClamAV opcional, cópia dos dados do titular,
+aviso de privacidade, retenção automática, backup/restauração do PostgreSQL e
+exportação CSV para o diário oficial. Migração `0005`. Operação em `docs/OPERACAO.md`.

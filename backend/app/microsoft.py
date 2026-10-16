@@ -289,7 +289,17 @@ def install_microsoft(app, sessions, settings, check_origin, *, cookie_samesite=
                 response.set_cookie(
                     "hub_session",
                     token,
-                    max_age=max(1, int((expires - now()).total_seconds())),
+                    max_age=max(
+                        1,
+                        int((expires - now()).total_seconds()),
+                        int(
+                            (
+                                datetime.fromtimestamp(claims["auth_time"], timezone.utc)
+                                + security.ABSOLUTE_TIMEOUT
+                                - now()
+                            ).total_seconds()
+                        ),
+                    ),
                     secure=True,
                     httponly=True,
                     samesite=cookie_samesite,
