@@ -174,7 +174,7 @@ inline.
 | Histórico de chamadas apertado, com "1 ausentes" e "Arquivar" em cada linha | Linhas por mês com data, disciplina, barra de presença e "3/4 · 1 falta"; tocar abre a chamada, e arquivar fica dentro dela |
 | Aula encerrada esmaecida, inclusive o botão "Fazer chamada" | Aula encerrada em tom neutro, com contraste preservado e selo "Chamada pendente" |
 | Frequência do aluno em texto corrido | Indicador circular de presença geral; por disciplina, presença e faltas em destaque; aulas perdidas com data |
-| Introdução com ilustração cortada, contorno no título, cantos com "pontas" e imagens de até 0,9 MB | Ilustrações tratadas (mancha completa, sem os cantos embutidos, cerca de 70 KB cada), ancoradas na base e carregadas durante a abertura |
+| Introdução com ilustração cortada, contorno no título, cantos com "pontas" e imagens de até 0,9 MB | Novas ilustrações do unDraw na cor da Fatec (15 a 26 KB cada, licença sem atribuição obrigatória), tela organizada em ilustração, título, explicação e indicador de passos, com "Começar" no fim; imagens carregadas durante a abertura |
 | Campos de login com caixa de foco dentro do campo, zoom no iPhone e senha de exemplo em pontos | Campo inteiro destacado no foco, texto de 16 px, preenchimento automático com as cores do campo e exemplos claros; servidor fora do ar gera nova tentativa automática |
 | Formulários com títulos como "Criar · Avisos" e botões no fim da rolagem | Títulos por entidade ("Novo aviso", "Nova turma", "Editar horário"), botões fixos no rodapé do diálogo, agendamento recolhido e caixas de seleção ao lado do texto |
 

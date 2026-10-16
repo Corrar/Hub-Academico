@@ -1236,41 +1236,56 @@ function renderOnboarding(
   onComplete = () => navigate("home"),
 ) {
   const slides = [
-    "Centralize suas atividades",
-    "Tenha controle total sobre seu ambiente",
-    "Fique por dentro das novidades dentro da comunidade",
+    [
+      "Centralize suas atividades",
+      "Aulas, prazos, entregas e materiais das suas disciplinas reunidos em um só lugar.",
+    ],
+    [
+      "Tenha controle total sobre seu ambiente",
+      "Acompanhe sua frequência, escolha suas notificações e veja primeiro o que importa.",
+    ],
+    [
+      "Fique por dentro das novidades da comunidade",
+      "Avisos, eventos e lembretes da Fatec chegam até você, inclusive no celular.",
+    ],
   ];
-  const box = el("div", undefined, "onboarding"),
-    img = onboardingImage(step);
-  box.dataset.step = String(step + 1);
-  const sheet = el("div", undefined, "onboarding-sheet"),
+  const [heading, text] = slides[step],
+    box = el("div", undefined, "onboarding"),
+    sheet = el("div", undefined, "onboarding-sheet"),
     header = el("div", undefined, "onboarding-header"),
-    brand = el("div", undefined, "onboarding-brand");
+    brand = el("div", undefined, "onboarding-brand"),
+    art = el("div", undefined, "onboarding-art"),
+    copy = el("div", undefined, "onboarding-copy"),
+    title = el("h2", heading),
+    dots = el("div", undefined, "onboarding-dots");
+  box.dataset.step = String(step + 1);
+  box.setAttribute("aria-label", `Apresentação: passo ${step + 1} de 3`);
   brand.append(
     el("div", "Fatec", "wordmark-name"),
     el("div", "Adamantina", "wordmark-city"),
   );
-  const skip = button("Pular", onComplete, "onboarding-skip");
-  header.append(brand, skip);
-  const title = el("div", undefined, "onboarding-title");
-  title.append(el("h2", slides[step]));
-  title.firstChild.tabIndex = -1;
-  sheet.append(header, title, img);
-  const actions = el("div", undefined, "onboarding-actions");
-  box.setAttribute("aria-label", `Apresentação: passo ${step + 1} de 3`);
-  const next = button(
-    "Avançar",
-    () =>
-      step === 2
-        ? onComplete()
-        : renderOnboarding(step + 1, target, onComplete),
-    "onboarding-next",
-  );
+  header.append(brand, button("Pular", onComplete, "onboarding-skip"));
+  art.append(onboardingImage(step));
+  title.tabIndex = -1;
+  copy.append(title, el("p", text));
+  dots.setAttribute("aria-hidden", "true");
+  for (let index = 0; index < slides.length; index++)
+    dots.append(el("span", undefined, index === step ? "active" : ""));
+  sheet.append(header, art, copy, dots);
+  const actions = el("div", undefined, "onboarding-actions"),
+    next = button(
+      step === 2 ? "Começar" : "Avançar",
+      () =>
+        step === 2
+          ? onComplete()
+          : renderOnboarding(step + 1, target, onComplete),
+      "onboarding-next",
+    );
   next.append(icon("arrow"));
   actions.append(next);
   box.append(sheet, actions);
   target.replaceChildren(box);
-  title.firstChild.focus();
+  title.focus();
 }
 async function renderSearch(ticket) {
   $("view").append(
